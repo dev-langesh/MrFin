@@ -5,6 +5,7 @@ import { ToastContainer } from "react-toastify";
 
 import ReduxProvider from "@/redux/ReduxProvider";
 import Header from "@/components/common/Header";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +31,10 @@ export default function RootLayout({ children }) {
         <ReduxProvider>
           <AuthProvider>
             {/* <Header /> */}
-            <main className="h-full overflow-x-hidden overflow-y-auto">{children}</main>
+            <main className="h-full overflow-x-hidden overflow-y-auto">
+              {children}
+            </main>
+            <Toaster />
           </AuthProvider>
         </ReduxProvider>
         <ToastContainer />

@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 
 import Input from "@/components/ui/Input";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { authApi } from "../api/authApi";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import { authInputSchema } from "@/schemas/auth.schema";

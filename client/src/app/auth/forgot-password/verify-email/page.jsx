@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import { authApi } from "../../api/authApi";
 import OtpInput from "@/components/ui/OtpInput";

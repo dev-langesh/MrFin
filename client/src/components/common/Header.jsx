@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthProvider";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { authApi } from "@/app/auth/api/authApi";
 import Link from "next/link";
 

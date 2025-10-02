@@ -88,7 +88,7 @@ export default function OtpInput({ digits = 6, value, onChange }) {
             onKeyDown={(e) => handleKeyDown(e, i)}
             onPaste={handlePaste}
             ref={(el) => (inputsRef.current[i] = el)}
-            className="w-10 h-12 text-center border border-zinc-300 rounded-md text-lg font-medium focus:outline-none focus:ring-2 focus:ring-black"
+            className="w-10 h-12 text-center border hover:border-border-active focus:border-border-active rounded-md text-lg font-medium outline-none focus:ring-[3px] ring-ring/50 "
           />
         ))}
       </div>

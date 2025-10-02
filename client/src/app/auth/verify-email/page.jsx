@@ -6,8 +6,8 @@ import { toast } from "react-toastify";
 import Button from "@/components/ui/Button";
 import { authApi } from "../api/authApi";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
-import OtpInput from "@/components/auth/OtpInput";
-import Card from "@/components/ui/Card";
+import OtpInput from "@/components/ui/OtpInput";
+import { Card } from "@/components/ui/Card";
 
 export default function OtpVerification() {
   const router = useRouter();
@@ -84,7 +84,7 @@ export default function OtpVerification() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="bg-background">
+      <Card className="py-12 px-8">
         <form
           onSubmit={handleVerify}
           className="space-y-4 flex items-center flex-col justify-center"

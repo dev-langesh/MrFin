@@ -2,8 +2,6 @@
 
 import { useAuth } from "@/context/AuthProvider";
 import Button from "@/components/ui/Button";
-import AccountCircle from "@/components/ui/AccountCircle";
-import { Dropdown } from "@/components/ui/Dropdown";
 import { authApi } from "@/app/auth/api/authApi";
 import Link from "next/link";
 
@@ -28,7 +26,7 @@ export default function Header() {
         DIM
       </Link>
 
-      {!isAuthenticated ? (
+      {!isAuthenticated && (
         <div className="flex gap-3">
           <Link href="/auth/login">
             <Button variant="outline" size="sm">
@@ -38,30 +36,6 @@ export default function Header() {
           <Link href="/auth/register">
             <Button size="sm">Register</Button>
           </Link>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3">
-          <Link href="/project/new" className="">
-            <Button size="sm">Deploy</Button>
-          </Link>
-
-          <Dropdown>
-            <Dropdown.Trigger>
-              <AccountCircle
-                picture={user?.picture}
-                caption={user?.name || user?.email}
-              />
-            </Dropdown.Trigger>
-
-            <Dropdown.Content>
-              <div className="px-3 py-2 border-b border-border mb-2">
-                <p className="font-medium">{user?.name}</p>
-                <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
-              </div>
-
-              <Dropdown.Item onSelect={logout}>Sign out</Dropdown.Item>
-            </Dropdown.Content>
-          </Dropdown>
         </div>
       )}
     </nav>

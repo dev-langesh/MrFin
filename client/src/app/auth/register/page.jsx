@@ -11,7 +11,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { authApi } from "../api/authApi";
 import { authInputSchema } from "@/schemas/auth.schema";
-import Card from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 
 export default function Register() {
   const router = useRouter();
@@ -71,7 +71,7 @@ export default function Register() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="w-full max-w-[400px] bg-background">
+      <Card className="py-12 px-8">
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="space-y-4 flex items-center flex-col justify-center"

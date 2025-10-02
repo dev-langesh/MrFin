@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import { authApi } from "../../api/authApi";
-import OtpInput from "@/components/auth/OtpInput";
+import OtpInput from "@/components/ui/OtpInput";
+import { Card } from "@/components/ui/Card";
 
 export default function OtpVerification() {
   const router = useRouter();
@@ -70,38 +70,40 @@ export default function OtpVerification() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white text-black p-4">
-      <form
-        onSubmit={handleVerify}
-        className="space-y-4 shadow-xl rounded-xl px-8 py-10 border border-zinc-200 flex items-center flex-col  justify-center max-w-[400px] w-full"
-      >
-        <h1 className="text-2xl font-bold text-zinc-800 text-center">
-          Verify Your Email
-        </h1>
-        <p className="text-sm text-gray-500 text-center mb-4">
-          Enter the 6-digit OTP sent to{" "}
-          <span className="font-medium">{email}</span>
-        </p>
-
-        <OtpInput digits={6} value={otp} onChange={setOtp} />
-
-        <Button disabled={loading} type="submit" className="w-full">
-          {loading ? "Verifying..." : "Verify OTP"}
-        </Button>
-
-        <Button
-          type="button"
-          onClick={() => sendOtp(true)}
-          disabled={timer > 0 || isResending || loading || limitReached}
-          variant="outline"
-          className="w-full"
+      <Card className="py-12 px-8">
+        <form
+          onSubmit={handleVerify}
+          className="space-y-4 flex items-center flex-col justify-center"
         >
-          {isResending
-            ? "Resending..."
-            : timer > 0
-            ? `Resend OTP in ${timer}s`
-            : "Resend OTP"}
-        </Button>
-      </form>
+          <h1 className="text-2xl font-bold text-zinc-800 text-center">
+            Verify Your Email
+          </h1>
+          <p className="text-sm text-gray-500 text-center mb-4">
+            Enter the 6-digit OTP sent to{" "}
+            <span className="font-medium">{email}</span>
+          </p>
+
+          <OtpInput digits={6} value={otp} onChange={setOtp} />
+
+          <Button disabled={loading} type="submit" className="w-full">
+            {loading ? "Verifying..." : "Verify OTP"}
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => sendOtp(true)}
+            disabled={timer > 0 || isResending || loading || limitReached}
+            variant="outline"
+            className="w-full"
+          >
+            {isResending
+              ? "Resending..."
+              : timer > 0
+              ? `Resend OTP in ${timer}s`
+              : "Resend OTP"}
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

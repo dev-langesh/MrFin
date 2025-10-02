@@ -1,4 +1,4 @@
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 import React from "react";
 
 function HelperTextComponent({ className, text, error, success }) {
@@ -7,7 +7,7 @@ function HelperTextComponent({ className, text, error, success }) {
   return (
     <p
       className={cn(
-        "mt-1 text-sm text-on-muted",
+        "mt-1 text-sm text-muted-foreground",
         error && "text-destructive",
         success && "text-success",
         className

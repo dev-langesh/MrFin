@@ -2,8 +2,8 @@
 
 import * as React from "react";
 
-import { cn } from "@/utils/cn";
-import Tooltip from "./Tooltip";
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
 import { FaCircleInfo } from "react-icons/fa6";
 
 function LabelComponent({ className, children, info, ...props }) {
@@ -17,8 +17,11 @@ function LabelComponent({ className, children, info, ...props }) {
     >
       {children}
       {info && (
-        <Tooltip text={info}>
-          <FaCircleInfo className="text-on-muted" />
+        <Tooltip>
+          <TooltipTrigger>
+            <FaCircleInfo className="text-muted-foreground" />
+          </TooltipTrigger>
+          <TooltipContent>{info}</TooltipContent>
         </Tooltip>
       )}
     </label>

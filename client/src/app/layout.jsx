@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
       >
         <ReduxProvider>
           <AuthProvider>
-            <Header />
+            {/* <Header /> */}
             <main className="h-full overflow-x-hidden overflow-y-auto">{children}</main>
           </AuthProvider>
         </ReduxProvider>

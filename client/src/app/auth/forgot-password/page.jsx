@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import { authApi } from "../api/authApi";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/Card";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -41,31 +42,33 @@ export default function ForgotPassword() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white text-black p-4">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          sendOtp(false);
-        }}
-        className="space-y-4 shadow-xl rounded-xl px-8 py-10 border border-zinc-200 flex items-center flex-col justify-center max-w-[400px] w-full"
-      >
-        <h1 className="text-2xl font-bold text-zinc-800 text-center">
-          Forgot Password
-        </h1>
-        <p className="text-sm text-gray-500 text-center mb-4">
-          Enter your registered email to receive a verification code.
-        </p>
+      <Card className="py-10">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendOtp(false);
+          }}
+          className="space-y-4 flex items-center flex-col justify-center"
+        >
+          <h1 className="text-2xl font-bold text-zinc-800 text-center">
+            Forgot Password
+          </h1>
+          <p className="text-sm text-gray-500 text-center mb-4">
+            Enter your registered email to receive a verification code.
+          </p>
 
-        <Input
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          <Input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "Sending..." : "Send OTP"}
-        </Button>
-      </form>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Sending..." : "Send OTP"}
+          </Button>
+        </form>
+      </Card>
     </div>
   );
 }

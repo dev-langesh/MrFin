@@ -1,6 +1,6 @@
 import React from "react";
 import { cva } from "class-variance-authority";
-import { cn } from "@/utils/cn";
+import { cn } from "@/lib/utils";
 
 const circularProgress = cva(
   "border-3 !border-t-transparent rounded-full animate-spin", // base styles

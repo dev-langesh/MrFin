@@ -66,8 +66,8 @@ export default function RevenueFilters({ filters, setFilters }) {
           <div className="space-y-2">
             <Label>Payment Processor</Label>
             <Select
-              value={filters.paymentProcessor}
-              onValueChange={(val) => handleSelectChange("paymentProcessor", val)}
+              value={filters.paymentGateway}
+              onValueChange={(val) => handleSelectChange("paymentGateway", val)}
             >
               <SelectTrigger className="w-full rounded-sm">
                 <SelectValue placeholder="Select processor" />

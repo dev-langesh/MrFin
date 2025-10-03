@@ -35,21 +35,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/Dialog";
-import { Calendar } from "@/components/ui/Calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/Popover";
-import {
-  CalendarIcon,
-  Plus,
-  Edit,
-  Trash2,
-  Download,
-  TrendingUp,
-} from "lucide-react";
-import { format } from "date-fns";
+
+import { Plus, Download } from "lucide-react";
 import { toast } from "sonner";
 import Summary from "@/components/dashboard/revenue/RevenueSummary";
 import EntryForm from "@/components/dashboard/revenue/RevenueEntryForm";
@@ -66,7 +53,7 @@ export default function Revenue() {
   const [filters, setFilters] = useState({
     dateRange: "all",
     source: "all",
-    paymentProcessor: "all",
+    paymentGateway: "all",
     sortOrder: "desc",
   });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -78,37 +65,9 @@ export default function Revenue() {
 
   return (
     <div className="p-4 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Revenue Management
-          </h1>
-          <p className="text-gray-600">Track and manage your income streams</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button onClick={handleExport} variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Revenue
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add Revenue Entry</DialogTitle>
-                <DialogDescription>
-                  Add a new revenue entry to track your income.
-                </DialogDescription>
-              </DialogHeader>
-              <EntryForm />
-            </DialogContent>
-          </Dialog>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Revenue Management</h1>
+        <p className="text-gray-600">Track and manage your income streams</p>
       </div>
 
       {/* Summary Cards */}
@@ -118,7 +77,7 @@ export default function Revenue() {
       <RevenueFilters filters={filters} setFilters={setFilters} />
 
       {/* Data Table */}
-      <RevenueTable data={data} />
+      <RevenueTable data={data} setData={setData} />
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

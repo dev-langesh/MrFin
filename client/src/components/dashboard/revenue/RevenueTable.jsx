@@ -11,18 +11,71 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
+import { Plus, Download } from "lucide-react";
 
 import { Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
+import RevenueEntryForm from "./RevenueEntryForm";
 
-export default function RevenueTable({ data }) {
+export default function RevenueTable({ data, setData }) {
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+
+  function handleEdit(entry) {
+    setEditingEntry(entry);
+    setIsEditDialogOpen(true);
+  }
+
+  function handleDelete(id) {
+    if (confirm("Are you sure you want to delete this entry?")) {
+      setData((prev) => prev.filter((entry) => entry.id !== id));
+      toast.success("Entry deleted");
+    }
+  }
+
+  function handleExport() {}
+
   return (
     <Card className="px-0 rounded-sm py-4">
       <CardHeader>
-        <CardTitle>Revenue Entries ({data.length})</CardTitle>
-        {/* <CardDescription>
-          Showing {data.length} of {data.length} entries
-        </CardDescription> */}
+        <CardTitle className="flex items-center justify-between">
+          <h1>Revenue Entries ({data.length})</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="h-8 px-2"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="h-8 px-2">
+                  <Plus className="w-4 h-4 " />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <RevenueEntryForm
+                  setData={setData}
+                  close={() => setIsAddDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="sm:max-w-md">
+                <RevenueEntryForm
+                  editingEntry={editingEntry}
+                  setData={setData}
+                  close={() => setIsEditDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -31,7 +84,7 @@ export default function RevenueTable({ data }) {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Source</TableHead>
-                <TableHead>Payment Processor</TableHead>
+                <TableHead>Payment Gateway</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -54,20 +107,21 @@ export default function RevenueTable({ data }) {
                       {format(new Date(entry.date), "MMM dd, yyyy")}
                     </TableCell>
                     <TableCell>{entry.source}</TableCell>
-                    <TableCell>{entry.paymentProcessor}</TableCell>
+                    <TableCell>{entry.paymentGateway}</TableCell>
                     <TableCell>{entry.description}</TableCell>
                     <TableCell className="text-right font-medium">
                       ₹{entry.amount.toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end">
                         <Button
+                          onClick={() => handleEdit(entry)}
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleEdit(entry)}
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"

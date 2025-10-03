@@ -25,6 +25,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/Dialog";
+import { revenueService } from "@/services/reveue.service";
+import { toast } from "sonner";
 
 function RevenueEntryForm({ editingEntry = null, setData, close }) {
   const [formData, setFormData] = useState({
@@ -35,23 +37,33 @@ function RevenueEntryForm({ editingEntry = null, setData, close }) {
     description: editingEntry?.description || "",
   });
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    setData((prev) => {
+  async function handleSubmit(e) {
+    try {
+      e.preventDefault();
+
+      const payload = {
+        ...formData,
+        amount: Number(formData.amount),
+      };
+
       if (editingEntry) {
-        return prev.map((entry) =>
-          entry._id === editingEntry._id ? { ...entry, ...formData } : entry
+        await revenueService.editRevenue(editingEntry._id, payload);
+
+        setData((prev) =>
+          prev.map((entry) =>
+            entry._id === editingEntry._id ? { ...entry, ...formData } : entry
+          )
         );
       } else {
-        const newEntry = {
-          _id: Date.now(),
-          ...formData,
-        };
-        return [newEntry, ...prev];
+        const res = await revenueService.addRevenue(payload);
+        setData((prev) => [res, ...prev]);
       }
-    });
 
-    close();
+      toast.success(`Entry ${editingEntry ? "updated" : "added"}`);
+      close();
+    } catch (e) {
+      toast.error(e.message);
+    }
   }
 
   function handleChange(name, value) {

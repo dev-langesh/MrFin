@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { toast } from "sonner";
 import Summary from "@/components/dashboard/revenue/RevenueSummary";
 import RevenueTable from "@/components/dashboard/revenue/RevenueTable";
 import RevenueFilters from "@/components/dashboard/revenue/RevenueFilters";
+import { revenueService } from "@/services/reveue.service";
 
 export default function Revenue() {
   const [data, setData] = useState([]);
@@ -18,7 +18,9 @@ export default function Revenue() {
     dateRange: "all",
     source: "all",
     paymentGateway: "all",
-    sortOrder: "desc",
+    sort: "desc",
+    limit: 10,
+    page: 1,
   });
 
   return (
@@ -35,7 +37,7 @@ export default function Revenue() {
       <RevenueFilters filters={filters} setFilters={setFilters} />
 
       {/* Data Table */}
-      <RevenueTable data={data} setData={setData} />
+      <RevenueTable filters={filters} setFilters={setFilters} />
     </div>
   );
 }

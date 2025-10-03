@@ -16,23 +16,40 @@ import { Plus, Download } from "lucide-react";
 
 import { Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import RevenueEntryForm from "./RevenueEntryForm";
+import { revenueService } from "@/services/reveue.service";
+import { toast } from "sonner";
 
-function RevenueTable({ data, setData }) {
+function RevenueTable({ setFilter, filters }) {
+  const [data, setData] = useState([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
+
+  async function fetchData() {
+    const res = await revenueService.getRevenues(filters);
+    setData(res.revenues);
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, [filters]);
 
   function handleEdit(entry) {
     setEditingEntry(entry);
     setIsEditDialogOpen(true);
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     if (confirm("Are you sure you want to delete this entry?")) {
-      setData((prev) => prev.filter((entry) => entry.id !== id));
-      toast.success("Entry deleted");
+      try {
+        await revenueService.deleteRevenue(id);
+        setData((prev) => prev.filter((entry) => entry._id !== id));
+        toast.success("Entry deleted");
+      } catch (error) {
+        toast.error(error.message);
+      }
     }
   }
 
@@ -125,7 +142,7 @@ function RevenueTable({ data, setData }) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(entry.id)}
+                          onClick={() => handleDelete(entry._id)}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4" />

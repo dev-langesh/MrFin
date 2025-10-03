@@ -85,8 +85,8 @@ function RevenueFilters({ filters, setFilters }) {
           <div className="space-y-2">
             <Label>Sort by Date</Label>
             <Select
-              value={filters.sortOrder}
-              onValueChange={(val) => handleSelectChange("sortOrder", val)}
+              value={filters.sort}
+              onValueChange={(val) => handleSelectChange("sort", val)}
             >
               <SelectTrigger className="w-full rounded-sm">
                 <SelectValue placeholder="Select order" />

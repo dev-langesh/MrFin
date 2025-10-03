@@ -1,8 +1,14 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
-
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,18 +17,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
 import { Plus, Download } from "lucide-react";
-
 import { Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { memo, useEffect, useState } from "react";
 import RevenueEntryForm from "./RevenueEntryForm";
 import { revenueService } from "@/services/reveue.service";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/Label";
+import Pagination from "../common/Pagination";
 
-function RevenueTable({ setFilter, filters }) {
+function RevenueTable({ setFilters, filters }) {
   const [data, setData] = useState([]);
+  const [totalData, setTotalData] = useState(0);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -30,6 +45,7 @@ function RevenueTable({ setFilter, filters }) {
   async function fetchData() {
     const res = await revenueService.getRevenues(filters);
     setData(res.revenues);
+    setTotalData(res.total);
   }
 
   useEffect(() => {
@@ -61,16 +77,12 @@ function RevenueTable({ setFilter, filters }) {
         <CardTitle className="flex items-center justify-between">
           <h1>Revenue Entries ({data.length})</h1>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={handleExport}
-              variant="outline"
-              className="h-8 px-2"
-            >
+            <Button onClick={handleExport} variant="outline" size="sm">
               <Download className="w-4 h-4" />
             </Button>
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="h-8 px-2">
+                <Button size="sm">
                   <Plus className="w-4 h-4 " />
                 </Button>
               </DialogTrigger>
@@ -93,6 +105,9 @@ function RevenueTable({ setFilter, filters }) {
             </Dialog>
           </div>
         </CardTitle>
+        <CardDescription>
+          Showing {data.length} of {totalData} entries
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -154,6 +169,41 @@ function RevenueTable({ setFilter, filters }) {
               )}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Pagination + Limit Controls */}
+        <div className="flex items-center justify-between mt-4">
+          {/* Rows per page */}
+          <div className="flex items-center gap-2">
+            <Label>Rows per page:</Label>
+            <Select
+              value={String(filters.limit)}
+              onValueChange={(val) =>
+                setFilters((prev) => ({ ...prev, limit: Number(val), page: 1 }))
+              }
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="30">30</SelectItem>
+                <SelectItem value="40">40</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Pagination buttons */}
+          <Pagination
+            total={totalData}
+            limit={filters.limit}
+            currentPage={filters.page}
+            handlePageChange={(page) =>
+              setFilters((prev) => ({ ...prev, page }))
+            }
+          />
         </div>
       </CardContent>
     </Card>

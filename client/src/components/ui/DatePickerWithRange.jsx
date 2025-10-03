@@ -14,18 +14,16 @@ export function DatePickerWithRange({ value, onChange }) {
     value || { from: undefined, to: undefined }
   );
 
-  console.log(date);
-
-  React.useEffect(() => {
-    if (onChange) onChange(date);
-  }, [date]);
+  function handleChange(newValue) {
+    setDate(newValue);
+  }
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="w-full justify-start text-left font-normal"
+          className="w-full justify-start text-left font-normal border-border"
         >
           {date?.from ? (
             date.to ? (
@@ -45,7 +43,7 @@ export function DatePickerWithRange({ value, onChange }) {
         <Calendar
           mode="range"
           selected={date}
-          onSelect={setDate}
+          onSelect={handleChange}
           numberOfMonths={2}
         />
       </PopoverContent>

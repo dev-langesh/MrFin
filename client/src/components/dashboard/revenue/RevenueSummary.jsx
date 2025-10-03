@@ -1,8 +1,8 @@
-import React from "react";
+import { memo } from "react";
 import SummaryCard from "../common/SummaryCard";
 import { TrendingUp } from "lucide-react";
 
-export default function RevenueSummary({ data = {} }) {
+function RevenueSummary({ data = {} }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <SummaryCard
@@ -26,3 +26,5 @@ export default function RevenueSummary({ data = {} }) {
     </div>
   );
 }
+
+export default memo(RevenueSummary);

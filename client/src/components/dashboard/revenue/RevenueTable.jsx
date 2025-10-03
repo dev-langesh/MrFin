@@ -16,10 +16,10 @@ import { Plus, Download } from "lucide-react";
 
 import { Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { memo, useState } from "react";
 import RevenueEntryForm from "./RevenueEntryForm";
 
-export default function RevenueTable({ data, setData }) {
+function RevenueTable({ data, setData }) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
@@ -102,7 +102,7 @@ export default function RevenueTable({ data, setData }) {
                 </TableRow>
               ) : (
                 data.map((entry) => (
-                  <TableRow key={entry.id}>
+                  <TableRow key={entry._id}>
                     <TableCell>
                       {format(new Date(entry.date), "MMM dd, yyyy")}
                     </TableCell>
@@ -142,3 +142,5 @@ export default function RevenueTable({ data, setData }) {
     </Card>
   );
 }
+
+export default memo(RevenueTable);

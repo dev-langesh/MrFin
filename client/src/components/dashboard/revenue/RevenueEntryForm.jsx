@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Input from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -26,11 +26,7 @@ import {
   DialogDescription,
 } from "@/components/ui/Dialog";
 
-export default function RevenueEntryForm({
-  editingEntry = null,
-  setData,
-  close,
-}) {
+function RevenueEntryForm({ editingEntry = null, setData, close }) {
   const [formData, setFormData] = useState({
     date: editingEntry?.date ? new Date(editingEntry.date) : new Date(),
     amount: editingEntry?.amount || "",
@@ -169,3 +165,5 @@ export default function RevenueEntryForm({
     </>
   );
 }
+
+export default memo(RevenueEntryForm);

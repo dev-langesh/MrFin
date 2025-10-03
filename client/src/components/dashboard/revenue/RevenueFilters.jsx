@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Label";
 import {
@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 
-export default function RevenueFilters({ filters, setFilters }) {
+function RevenueFilters({ filters, setFilters }) {
   function handleSelectChange(name, value) {
     setFilters((prev) => ({ ...prev, [name]: value }));
   }
@@ -102,3 +102,5 @@ export default function RevenueFilters({ filters, setFilters }) {
     </Card>
   );
 }
+
+export default memo(RevenueFilters);

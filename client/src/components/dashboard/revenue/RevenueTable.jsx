@@ -182,7 +182,7 @@ function RevenueTable({ setFilters, filters }) {
                 setFilters((prev) => ({ ...prev, limit: Number(val), page: 1 }))
               }
             >
-              <SelectTrigger className="w-20">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

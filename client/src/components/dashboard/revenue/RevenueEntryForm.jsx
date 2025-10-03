@@ -98,6 +98,7 @@ function RevenueEntryForm({ editingEntry = null, setData, close }) {
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
                 <Calendar
+                  disabled={(date) => date > new Date()}
                   mode="single"
                   selected={formData.date}
                   onSelect={(date) => date && handleChange("date", date)}

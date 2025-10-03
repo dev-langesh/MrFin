@@ -1,26 +1,43 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import SummaryCard from "../common/SummaryCard";
-import { TrendingUp } from "lucide-react";
+import { analyticsService } from "@/services/analytics.service";
 
-function RevenueSummary({ data = {} }) {
+function RevenueSummary() {
+  const [data, setData] = useState({});
+
+  async function fetchData() {
+    const res = await analyticsService.getAnalytics();
+    setData(res);
+  }
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <SummaryCard
+        title="Monthly Earnings"
+        value={data.earnings?.month || 0}
+        up={data.earningsChange?.month}
+        secondaryTitle="Current month"
+      />
       <SummaryCard
         title="Quarter Earnings"
-        value={data.quarterEarnings}
-        Icon={<TrendingUp className="h-4 w-4 text-purple-600" />}
+        value={data.earnings?.quarter || 0}
+        up={data.earningsChange?.quarter}
         secondaryTitle="Current quarter"
       />
       <SummaryCard
         title="Annual Earnings"
-        value={data.annualEarnings}
-        Icon={<TrendingUp className="h-4 w-4 text-blue-600" />}
+        value={data.earnings?.annual || 0}
+        up={data.earningsChange?.annual}
         secondaryTitle="Current year"
       />
       <SummaryCard
         title="Total Earnings"
-        value={data.totalEarnings}
-        Icon={<TrendingUp className="h-4 w-4 text-green-600" />}
+        value={data.earnings?.total || 0}
+        disableTrend
         secondaryTitle="All time earnings"
       />
     </div>

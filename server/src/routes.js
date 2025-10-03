@@ -1,3 +1,4 @@
+const { analyticsRouter } = require("./modules/analytics/analytics.routes");
 const { authRouter } = require("./modules/auth/auth.routes");
 const { fileRouter } = require("./modules/file/file.routes");
 const { revenueRouter } = require("./modules/revenue/revenue.routes");
@@ -9,5 +10,6 @@ router.use("/auth", authRouter);
 router.use("/user", userRouter);
 router.use("/files", fileRouter);
 router.use("/revenues", revenueRouter);
+router.use("/analytics", analyticsRouter);
 
 module.exports = { apiRouter: router };

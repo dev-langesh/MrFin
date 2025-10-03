@@ -1,9 +1,5 @@
+const { analyticsService } = require("../analytics/analytics.service");
 const { Revenue } = require("./revenue.model");
-
-async function addRevenue(data) {
-  const revenue = new Revenue(data);
-  return await revenue.save();
-}
 
 async function getRevenues(filters) {
   const {
@@ -36,22 +32,63 @@ async function getRevenues(filters) {
   return { revenues, total, page: parseInt(page), limit: parseInt(limit) };
 }
 
+async function addRevenue(data) {
+  const revenue = await Revenue.create(data);
+
+  // Update analytics using new schema
+  await analyticsService.updateAnalyticsOnAdd(
+    {
+      earnings: data.amount,
+      expenses: 0, // revenue does not affect expenses
+    },
+    data.date
+  );
+
+  return revenue;
+}
+
 async function getRevenueById(id) {
   return await Revenue.findById(id);
 }
 
 async function deleteRevenue(id) {
-  return await Revenue.findByIdAndDelete(id);
+  const revenue = await Revenue.findByIdAndDelete(id);
+  if (revenue) {
+    await analyticsService.updateAnalyticsOnDelete(
+      {
+        earnings: revenue.amount,
+        expenses: 0,
+      },
+      revenue.date
+    );
+  }
+  return revenue;
 }
 
 async function editRevenue(id, data) {
-  return await Revenue.findByIdAndUpdate(id, data, { new: true });
+  const old = await Revenue.findById(id);
+  const updated = await Revenue.findByIdAndUpdate(id, data, { new: true });
+
+  if (old && updated) {
+    await analyticsService.updateAnalyticsOnEdit({
+      oldEarnings: old.amount,
+      newEarnings: updated.amount,
+      oldExpenses: 0,
+      newExpenses: 0,
+      oldDate: old.date,
+      newDate: updated.date,
+    });
+  }
+
+  return updated;
 }
 
-module.exports = {
+const revenueService = {
   addRevenue,
   getRevenues,
   getRevenueById,
   deleteRevenue,
   editRevenue,
 };
+
+module.exports = { revenueService };

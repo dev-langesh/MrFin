@@ -28,11 +28,11 @@ export function DatePickerWithRange({ value, onChange }) {
           {date?.from ? (
             date.to ? (
               <>
-                {date.from.toLocaleDateString()} -{" "}
-                {date.to.toLocaleDateString()}
+                {date.from.toLocaleDateString("en-GB")} -{" "}
+                {date.to.toLocaleDateString("en-GB")}
               </>
             ) : (
-              date.from.toLocaleDateString()
+              date.from.toLocaleDateString("en-GB")
             )
           ) : (
             "Pick a date range"

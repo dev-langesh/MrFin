@@ -23,18 +23,18 @@ export default function Layout({ children }) {
           <Button
             variant="ghost"
             size="sm"
-            className="lg:hidden fixed top-4 left-4 z-50"
+            className="lg:hidden fixed top-4 right-4 z-50"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="size-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
+        <SheetContent side="right" className="w-64 p-0">
           <Sidebar mobile />
         </SheetContent>
       </Sheet>
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-64 p-2">
+      <div className="flex-1 lg:ml-64 p-2 max-lg:pt-10">
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>

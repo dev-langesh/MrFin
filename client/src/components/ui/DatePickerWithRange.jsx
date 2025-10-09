@@ -16,6 +16,7 @@ export function DatePickerWithRange({ value, onChange }) {
 
   function handleChange(newValue) {
     setDate(newValue);
+    onChange && onChange(newValue);
   }
 
   return (

@@ -6,6 +6,7 @@ import {
   FileText,
   LogOut,
   User,
+  Banknote
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import { usePathname } from "next/navigation";
@@ -13,6 +14,7 @@ import Link from "next/link";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Transactions", href: "/dashboard/transactions", icon: Banknote },
   { name: "Revenue", href: "/dashboard/revenue", icon: TrendingUp },
   { name: "Expenses", href: "/dashboard/expenses", icon: TrendingDown },
   { name: "Reports", href: "/dashboard/reports", icon: FileText },

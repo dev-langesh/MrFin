@@ -9,16 +9,6 @@ const analyticsSchema = new mongoose.Schema(
       annual: { type: Number, default: 0 },
       total: { type: Number, default: 0 },
     },
-    previousEarnings: {
-      month: { type: Number, default: 0 },
-      quarter: { type: Number, default: 0 },
-      annual: { type: Number, default: 0 },
-    },
-    earningsChange: {
-      month: { type: Number, default: 0 },
-      quarter: { type: Number, default: 0 },
-      annual: { type: Number, default: 0 },
-    },
 
     // Expenses
     expenses: {
@@ -27,16 +17,6 @@ const analyticsSchema = new mongoose.Schema(
       annual: { type: Number, default: 0 },
       total: { type: Number, default: 0 },
     },
-    previousExpenses: {
-      month: { type: Number, default: 0 },
-      quarter: { type: Number, default: 0 },
-      annual: { type: Number, default: 0 },
-    },
-    expensesChange: {
-      month: { type: Number, default: 0 },
-      quarter: { type: Number, default: 0 },
-      annual: { type: Number, default: 0 },
-    },
 
     // Cash flow = earnings - expenses
     cashFlow: {
@@ -44,16 +24,6 @@ const analyticsSchema = new mongoose.Schema(
       quarter: { type: Number, default: 0 },
       annual: { type: Number, default: 0 },
       total: { type: Number, default: 0 },
-    },
-    previousCashFlow: {
-      month: { type: Number, default: 0 },
-      quarter: { type: Number, default: 0 },
-      annual: { type: Number, default: 0 },
-    },
-    cashFlowChange: {
-      month: { type: Number, default: 0 },
-      quarter: { type: Number, default: 0 },
-      annual: { type: Number, default: 0 },
     },
 
     // Track last updated period for rollover

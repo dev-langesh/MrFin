@@ -90,7 +90,7 @@ function TransactionEntryForm({
         );
       } else {
         const res = await transactionService.addTransaction(payload);
-        if (txnTypeFilter === "all" || txnTypeFilter === res.txnType)
+        if (!txnTypeFilter || txnTypeFilter === "all" || txnTypeFilter === res.txnType)
           setData((prev) => [res, ...prev]);
       }
 

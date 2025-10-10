@@ -3,9 +3,12 @@ const { Analytics } = require("./analytics.model");
 // Get or create analytics document
 async function getAnalytics() {
   let analytics = await Analytics.findOne();
-  if (!analytics) {
-    analytics = await Analytics.create({});
-  }
+  return analytics;
+}
+
+// Create analytics
+async function createAnalytics() {
+  const analytics = await Analytics.create({});
   return analytics;
 }
 
@@ -157,6 +160,7 @@ const analyticsService = {
   updateAnalyticsOnAdd,
   updateAnalyticsOnDelete,
   updateAnalyticsOnEdit,
+  createAnalytics,
 };
 
 module.exports = { analyticsService };

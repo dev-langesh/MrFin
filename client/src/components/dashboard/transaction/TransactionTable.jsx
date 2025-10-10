@@ -96,7 +96,7 @@ function TransactionTable({ setFilters, filters }) {
             </Dialog>
 
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="lg:max-w-2xl">
                 <TransactionEntryForm
                   editingEntry={editingEntry}
                   setData={setData}

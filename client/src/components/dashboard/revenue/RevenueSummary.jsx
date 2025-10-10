@@ -19,25 +19,28 @@ function RevenueSummary() {
       <SummaryCard
         title="Monthly Earnings"
         value={data.earnings?.month || 0}
-        up={data.earningsChange?.month}
+        // up={data.earningsChange?.month}
+        up
         secondaryTitle="Current month"
       />
       <SummaryCard
         title="Quarter Earnings"
         value={data.earnings?.quarter || 0}
-        up={data.earningsChange?.quarter}
+        // up={data.earningsChange?.quarter}
+        up
         secondaryTitle="Current quarter"
       />
       <SummaryCard
         title="Annual Earnings"
         value={data.earnings?.annual || 0}
-        up={data.earningsChange?.annual}
+        // up={data.earningsChange?.annual}
+        up
         secondaryTitle="Current year"
       />
       <SummaryCard
         title="Total Earnings"
         value={data.earnings?.total || 0}
-        disableTrend
+        up
         secondaryTitle="All time earnings"
       />
     </div>

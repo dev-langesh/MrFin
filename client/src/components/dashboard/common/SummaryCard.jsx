@@ -10,22 +10,17 @@ function SummaryCard({ title, secondaryTitle, value, up, disableTrend }) {
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {!disableTrend && (
           <div className="flex items-center gap-1">
-            {/* <span
+            <span
               className={cn("text-sm text-muted-foreground", {
                 "text-green-600": up > 0,
                 "text-red-600": up < 0,
               })}
             >
-              {up}%
-            </span> */}
-            {/* {up >= 0 && <TrendingUp className="h-4 w-4 text-green-600" />}
-            {up < 0 && <TrendingDown className="h-4 w-4 text-red-600" />} */}
+              {up !== 0 ? `${Math.round(Math.abs(up || 0))}%` : "__"}
+            </span>
+            {up > 0 && <TrendingUp className="h-4 w-4 text-green-600" />}
+            {up < 0 && <TrendingDown className="h-4 w-4 text-red-600" />}
           </div>
-        )}
-        {up ? (
-          <TrendingUp className="h-4 w-4 text-green-600" />
-        ) : (
-          <TrendingDown className="h-4 w-4 text-red-600" />
         )}
       </CardHeader>
       <CardContent>

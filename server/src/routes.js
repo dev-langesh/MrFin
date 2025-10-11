@@ -1,7 +1,6 @@
 const { analyticsRouter } = require("./modules/analytics/analytics.routes");
 const { authRouter } = require("./modules/auth/auth.routes");
 const { fileRouter } = require("./modules/file/file.routes");
-const { revenueRouter } = require("./modules/revenue/revenue.routes");
 const { transactionRouter } = require("./modules/transaction/transaction.routes");
 const { userRouter } = require("./modules/user/user.routes");
 

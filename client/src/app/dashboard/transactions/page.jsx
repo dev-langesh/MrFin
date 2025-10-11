@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 
-import Summary from "@/components/dashboard/revenue/RevenueSummary";
 import TransactionFilters from "@/components/dashboard/transaction/TransactionFilters";
 import TransactionTable from "@/components/dashboard/transaction/TransactionTable";
 
-export default function Revenue() {
+export default function TransactionPage() {
   const [filters, setFilters] = useState({
     dateRange: "all",
     source: "all",

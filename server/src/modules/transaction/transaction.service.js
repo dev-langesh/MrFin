@@ -84,7 +84,7 @@ async function getTransactions(filters = {}, { page = 1, limit = 10 } = {}) {
 
   // Only fetch necessary fields if required
   const txns = await Transaction.find(query)
-    .sort({ createdAt: filters.sort === "asc" ? 1 : -1 })
+    .sort({ txnDate: filters.sort === "asc" ? 1 : -1 })
     .skip(skip)
     .limit(limit)
     .lean(); // lean() returns plain JS objects, lower memory footprint

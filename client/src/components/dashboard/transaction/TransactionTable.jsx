@@ -62,6 +62,7 @@ function TransactionTable({ setFilters, filters }) {
       try {
         await transactionService.deleteTransaction(id);
         setData((prev) => prev.filter((entry) => entry._id !== id));
+        setTotalData((total) => total - 1);
         toast.success("Entry deleted");
       } catch (error) {
         toast.error(error.message);
@@ -89,8 +90,14 @@ function TransactionTable({ setFilters, filters }) {
               <DialogContent className="lg:max-w-2xl">
                 <TransactionEntryForm
                   setData={setData}
+                  filters={{
+                    startDate: new Date(filters.startDate),
+                    endDate: new Date(filters.endDate),
+                    txnType: filters.txnType,
+                    sort: filters.sort,
+                  }}
+                  setTotalData={setTotalData}
                   close={() => setIsAddDialogOpen(false)}
-                  txnTypeFilter={filters.txnType}
                 />
               </DialogContent>
             </Dialog>

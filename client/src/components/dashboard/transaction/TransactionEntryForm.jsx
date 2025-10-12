@@ -39,7 +39,8 @@ function TransactionEntryForm({
   editingEntry = null,
   setData,
   close,
-  txnTypeFilter,
+  filters,
+  setTotalData,
 }) {
   const [formData, setFormData] = useState({
     txnDate: editingEntry?.txnDate
@@ -90,8 +91,39 @@ function TransactionEntryForm({
         );
       } else {
         const res = await transactionService.addTransaction(payload);
-        if (!txnTypeFilter || txnTypeFilter === "all" || txnTypeFilter === res.txnType)
-          setData((prev) => [res, ...prev]);
+
+        if (
+          (!filters.txnType ||
+            filters.txnType === "all" ||
+            filters.txnType === res.txnType) &&
+          (!filters.startDate ||
+            (formData.txnDate >= filters.startDate &&
+              formData.txnDate <= filters.endDate))
+        ) {
+          setData((prev) => {
+            let inserted = false;
+            const sorted = [];
+            for (let i = 0; i < prev.length; i++) {
+              if (!inserted) {
+                if (filters.sort === "asc") {
+                  if (formData.txnDate <= new Date(prev[i].txnDate)) {
+                    sorted.push(formData);
+                    inserted = true;
+                  }
+                } else {
+                  if (formData.txnDate >= new Date(prev[i].txnDate)) {
+                    sorted.push(formData);
+                    inserted = true;
+                  }
+                }
+              }
+              sorted.push(prev[i]);
+            }
+            if (!inserted) sorted.push(formData); // If not inserted, add at end
+            setTotalData((total) => total + 1);
+            return sorted;
+          });
+        }
       }
 
       toast.success(`Entry ${editingEntry ? "updated" : "added"}`);
@@ -102,6 +134,9 @@ function TransactionEntryForm({
   }
 
   function handleChange(name, value) {
+    if (name === "txnDate") {
+      value = new Date(value);
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
 

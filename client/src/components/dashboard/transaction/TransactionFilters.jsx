@@ -266,6 +266,22 @@ function TransactionFilters({ filters, setFilters }) {
               </div>
             </>
           )}
+
+          <div className="space-y-2 col-span-1 md:col-span-2">
+            <Label>Sort</Label>
+            <Select
+              value={filters.sort}
+              onValueChange={(val) => handleSelectChange("sort", val)}
+            >
+              <SelectTrigger className="w-full rounded-sm">
+                <SelectValue placeholder="Select order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Newest First</SelectItem>
+                <SelectItem value="asc">Oldest First</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardContent>
     </Card>

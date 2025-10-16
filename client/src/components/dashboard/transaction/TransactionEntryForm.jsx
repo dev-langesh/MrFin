@@ -54,12 +54,19 @@ function TransactionEntryForm({
     description: editingEntry?.description || "",
   });
 
+  function toUtcMidnight(date) {
+    return new Date(
+      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    );
+  }
+
   async function handleSubmit(e) {
     try {
       e.preventDefault();
 
       const payload = {
         ...formData,
+        txnDate: toUtcMidnight(formData.txnDate),
         amount: Number(formData.amount),
       };
 
@@ -134,9 +141,6 @@ function TransactionEntryForm({
   }
 
   function handleChange(name, value) {
-    if (name === "txnDate") {
-      value = new Date(value);
-    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
@@ -212,68 +216,77 @@ function TransactionEntryForm({
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="expenseCategory">Expense Category</Label>
-            <Select
-              disabled={formData.txnType !== "expense"}
-              value={formData.expenseCategory}
-              onValueChange={(value) => handleChange("expenseCategory", value)}
-            >
-              <SelectTrigger id="expenseCategory" className="w-full rounded-sm">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                {transactionFormExpenseCategoryOptions.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {formData.txnType === "expense" && (
+            <div className="space-y-2">
+              <Label htmlFor="expenseCategory">Expense Category</Label>
+              <Select
+                value={formData.expenseCategory}
+                onValueChange={(value) =>
+                  handleChange("expenseCategory", value)
+                }
+              >
+                <SelectTrigger
+                  id="expenseCategory"
+                  className="w-full rounded-sm"
+                >
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transactionFormExpenseCategoryOptions.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Row 3: Source & Payment Gateway */}
+          {formData.txnType === "revenue" && (
+            <div className="space-y-2">
+              <Label htmlFor="source">Source</Label>
+              <Select
+                value={formData.source}
+                onValueChange={(value) => handleChange("source", value)}
+              >
+                <SelectTrigger className="w-full rounded-sm" id="source">
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transactionFormSources.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {source}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {formData.txnType === "revenue" && (
+            <div className="space-y-2">
+              <Label htmlFor="paymentGateway">Payment Gateway</Label>
+              <Select
+                value={formData.paymentGateway}
+                onValueChange={(value) => handleChange("paymentGateway", value)}
+              >
+                <SelectTrigger
+                  id="paymentGateway"
+                  className="w-full rounded-sm"
+                >
+                  <SelectValue placeholder="Select processor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {transactionFormPaymentGateways.map((gateway) => (
+                    <SelectItem key={gateway} value={gateway}>
+                      {gateway}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="source">Source</Label>
-            <Select
-              disabled={formData.txnType !== "revenue"}
-              value={formData.source}
-              onValueChange={(value) => handleChange("source", value)}
-            >
-              <SelectTrigger className="w-full rounded-sm" id="source">
-                <SelectValue placeholder="Select source" />
-              </SelectTrigger>
-              <SelectContent>
-                {transactionFormSources.map((source) => (
-                  <SelectItem key={source} value={source}>
-                    {source}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="paymentGateway">Payment Gateway</Label>
-            <Select
-              disabled={formData.txnType !== "revenue"}
-              value={formData.paymentGateway}
-              onValueChange={(value) => handleChange("paymentGateway", value)}
-            >
-              <SelectTrigger id="paymentGateway" className="w-full rounded-sm">
-                <SelectValue placeholder="Select processor" />
-              </SelectTrigger>
-              <SelectContent>
-                {transactionFormPaymentGateways.map((gateway) => (
-                  <SelectItem key={gateway} value={gateway}>
-                    {gateway}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         {/* Row 4: Description */}
         <div className="space-y-2">

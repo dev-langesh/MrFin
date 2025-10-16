@@ -23,6 +23,12 @@ async function getTransactions(req, res) {
   res.json(result);
 }
 
+// Get all transactions for visualization
+async function getTransactionsToVisualize(req, res) {
+  const result = await transactionService.getTransactionsToVisualize(req.query);
+  res.json(result);
+}
+
 // Get a single transaction by ID
 async function getTransaction(req, res) {
   const txn = await transactionService.getTransaction(req.params.id);
@@ -49,6 +55,7 @@ const transactionController = {
   createTransaction: asyncHandler(createTransaction),
   createTransactions: asyncHandler(createTransactions),
   getTransactions: asyncHandler(getTransactions),
+  getTransactionsToVisualize: asyncHandler(getTransactionsToVisualize),
   getTransaction: asyncHandler(getTransaction),
   updateTransaction: asyncHandler(updateTransaction),
   deleteTransaction: asyncHandler(deleteTransaction),

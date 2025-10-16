@@ -42,6 +42,26 @@ async function getTransactions(filters) {
   }
 }
 
+// Get all transactions for visualization 
+async function getTransactionsToVisualize(filters) {
+  try {
+     const payload = {};
+     Object.keys(filters).forEach((key) => {
+       if (filters[key] !== "all") {
+         payload[key] = filters[key];
+       }
+     });
+    const { data: res } = await transactionsApi.getTransactionsToVisualize(payload);
+    return res;
+  } catch (err) {
+    console.log(err);
+
+    throw new Error(
+      err.response?.data?.message || "Failed to fetch transactions"
+    );
+  }
+}
+
 // Get a single transaction by ID
 async function getTransaction(id) {
   try {
@@ -82,6 +102,7 @@ export const transactionService = {
   addTransaction,
   addTransactions,
   getTransactions,
+  getTransactionsToVisualize,
   getTransaction,
   editTransaction,
   deleteTransaction,

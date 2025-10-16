@@ -60,7 +60,7 @@ export function AreaChart({ data, loading, direction, dataKey ,title}) {
             </defs>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="txnDate"
+              dataKey="_id"
               tickLine={false}
               axisLine={false}
               tickMargin={8}

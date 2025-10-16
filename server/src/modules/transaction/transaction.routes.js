@@ -14,6 +14,7 @@ router.post(
 );
 
 router.get("/", validateToken, transactionController.getTransactions);
+router.get("/visualize", validateToken, transactionController.getTransactionsToVisualize);
 
 router.get("/:id", validateToken, transactionController.getTransaction);
 

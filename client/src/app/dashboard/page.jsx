@@ -61,15 +61,13 @@ export default function TransactionPage() {
       const revenuePayload = {
         ...timeRange,
         txnType: "revenue",
-        sort: "asc",
-        limit: Infinity,
       };
 
       const expensePayload = { ...revenuePayload, txnType: "expense" };
 
       const req = Promise.all([
-        transactionService.getTransactions(revenuePayload),
-        transactionService.getTransactions(expensePayload),
+        transactionService.getTransactionsToVisualize(revenuePayload),
+        transactionService.getTransactionsToVisualize(expensePayload),
       ]);
 
       const res = await req;
@@ -99,7 +97,6 @@ export default function TransactionPage() {
       } else {
         setExpenseDir("up");
       }
-
     } catch (e) {
       toast.error("Error fetching Revenue Data");
     } finally {
@@ -132,7 +129,7 @@ export default function TransactionPage() {
         startDate = toUtcMidnight(startOfQuarter(now));
         endDate = toUtcEndOfDay(endOfQuarter(now));
         break;
-      case "year":
+      case "annual":
         startDate = toUtcMidnight(startOfYear(now));
         endDate = toUtcEndOfDay(endOfYear(now));
         break;

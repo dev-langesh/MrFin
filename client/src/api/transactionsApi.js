@@ -10,6 +10,9 @@ export const transactionsApi = {
   // Get all transactions with optional filters and pagination
   getTransactions: (params) => protectedApi.get("/transactions", { params }),
 
+  // Get all transactions for visualization
+  getTransactionsToVisualize: (params) => protectedApi.get("/transactions/visualize", { params }),
+
   // Get a single transaction by ID
   getTransaction: (id) => protectedApi.get(`/transactions/${id}`),
 

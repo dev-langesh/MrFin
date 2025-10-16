@@ -62,7 +62,6 @@ async function createTransactions(transactions) {
 
 async function getTransactions(filters = {}, { page = 1, limit = 10 } = {}) {
   const query = {};
-  if (filters.txnDate) query.txnDate = new Date(filters.txnDate);
   if (filters.txnType) query.txnType = filters.txnType;
   if (filters.source) query.source = filters.source;
   if (filters.paymentGateway) query.paymentGateway = filters.paymentGateway;
@@ -90,6 +89,62 @@ async function getTransactions(filters = {}, { page = 1, limit = 10 } = {}) {
     .lean(); // lean() returns plain JS objects, lower memory footprint
 
   return { transactions: txns, total: totalDocuments };
+}
+
+async function getTransactionsToVisualize(filters = {}) {
+  const query = {};
+  let yearDifference = undefined;
+  let unit = "day";
+
+  if (filters.txnType) query.txnType = filters.txnType;
+  if (filters.source) query.source = filters.source;
+  if (filters.paymentGateway) query.paymentGateway = filters.paymentGateway;
+  if (filters.expenseCategory) query.expenseCategory = filters.expenseCategory;
+  if (filters.startDate && filters.endDate) {
+    filters.startDate = new Date(filters.startDate);
+    filters.endDate = new Date(filters.endDate);
+
+    query.txnDate = {
+      $gte: filters.startDate,
+      $lte: filters.endDate,
+    };
+
+    yearDifference =
+      filters.endDate.getFullYear() - filters.startDate.getFullYear();
+  }
+
+  if (yearDifference <= 1) {
+    unit = "day";
+  } else if (yearDifference < 3) {
+    unit = "week";
+  } else if (!yearDifference || yearDifference > 3) {
+    unit = "month";
+  }
+
+  const txns = await Transaction.aggregate([
+    {
+      $match: query,
+    },
+    {
+      $group: {
+        _id: {
+          $dateTrunc: {
+            date: "$txnDate",
+            unit,
+            timezone: "Asia/Kolkata",
+          },
+        },
+        amount: { $sum: "$amount" },
+      },
+    },
+    {
+      $sort: {
+        _id: 1,
+      },
+    },
+  ]);
+
+  return { transactions: txns };
 }
 
 async function getTransaction(id) {
@@ -172,6 +227,7 @@ const transactionService = {
   getTransaction,
   updateTransaction,
   deleteTransaction,
+  getTransactionsToVisualize,
 };
 
 module.exports = { transactionService };

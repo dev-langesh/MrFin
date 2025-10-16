@@ -8,19 +8,27 @@ import {
   YAxis,
 } from "recharts";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/Chart";
+import { useEffect, useState } from "react";
 
-export function AreaChart({ data, loading, direction, dataKey ,title}) {
+export function AreaChart({ data, loading, direction, dataKey, title }) {
+  const [showYear, setShowYear] = useState(false);
+
+  useEffect(() => {
+    const start = new Date(data[0]?._id);
+    const end = new Date(data[data.length - 1]?._id);
+    if (start.getFullYear() !== end.getFullYear()) {
+      setShowYear(true);
+    } else {
+      setShowYear(false);
+    }
+  }, [data]);
+
   const chartConfig = {
     amount: {
       label: dataKey === "revenue" ? "Revenue" : "Expenses",
@@ -70,6 +78,7 @@ export function AreaChart({ data, loading, direction, dataKey ,title}) {
                 return date.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
+                  year: showYear ? "2-digit" : undefined,
                 });
               }}
             />
@@ -79,7 +88,9 @@ export function AreaChart({ data, loading, direction, dataKey ,title}) {
               axisLine={false}
               domain={[0, "auto"]}
               padding={{ top: 10, bottom: 10 }}
-              tickFormatter={(value) => value > 1000 ? `${value / 1000}k` : value}
+              tickFormatter={(value) =>
+                value > 1000 ? `${value / 1000}k` : value
+              }
             />
 
             <ChartTooltip
@@ -90,6 +101,7 @@ export function AreaChart({ data, loading, direction, dataKey ,title}) {
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
+                      year: showYear ? "numeric" : undefined,
                     });
                   }}
                   indicator="dot"

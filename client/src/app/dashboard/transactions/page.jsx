@@ -16,7 +16,7 @@ export default function TransactionPage() {
   });
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
         <p className="text-gray-600">Track and manage your transactions</p>

@@ -15,6 +15,7 @@ import Link from "next/link";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Transactions", href: "/dashboard/transactions", icon: Banknote },
+  { name: "Import Transactions", href: "/dashboard/import-transactions", icon: FileText },
 ];
 
 export function Sidebar({ mobile = false }) {

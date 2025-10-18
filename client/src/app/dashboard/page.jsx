@@ -139,7 +139,7 @@ export default function TransactionPage() {
   }, [summaryPeriod]);
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
 

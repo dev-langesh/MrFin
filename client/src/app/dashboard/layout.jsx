@@ -35,7 +35,7 @@ export default function Layout({ children }) {
 
       {/* Main Content */}
       <div className="flex-1 lg:ml-64 p-2 max-lg:pt-10">
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto p-4 ">{children}</main>
       </div>
     </div>
   );

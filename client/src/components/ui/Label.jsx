@@ -3,8 +3,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
-import { FaCircleInfo } from "react-icons/fa6";
+import Info from "./info";
 
 function LabelComponent({ className, children, info, ...props }) {
   return (
@@ -16,14 +15,7 @@ function LabelComponent({ className, children, info, ...props }) {
       {...props}
     >
       {children}
-      {info && (
-        <Tooltip>
-          <TooltipTrigger>
-            <FaCircleInfo className="text-muted-foreground" />
-          </TooltipTrigger>
-          <TooltipContent>{info}</TooltipContent>
-        </Tooltip>
-      )}
+      {info && <Info info={info} />}
     </label>
   );
 }

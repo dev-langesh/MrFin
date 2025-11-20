@@ -35,7 +35,7 @@ function DashboardSummary({ period }) {
         up={data.expensesChange?.[period] || 0}
         secondaryTitle={
           period === "total"
-            ? "All time earnings"
+            ? "All time expenses"
             : period === "annual"
             ? "Current year"
             : `Current ${period}`
@@ -48,7 +48,7 @@ function DashboardSummary({ period }) {
         up={data.cashFlowChange?.[period] || 0}
         secondaryTitle={
           period === "total"
-            ? "All time earnings"
+            ? "All time cash flow"
             : period === "annual"
             ? "Current year"
             : `Current ${period}`

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ function UploadFileComponent({
   multiple = false,
   preview = false,
   className,
+  value,
   ...props
 }) {
   const [files, setFiles] = useState([]);
@@ -28,6 +29,12 @@ function UploadFileComponent({
       return type.replace(/^.*\/|^\./g, "");
     })
     .join(", ");
+
+  useEffect(() => {
+    if (value) {
+      setFiles(value);
+    }
+  }, [value]);
 
   function filterFilesByType(selectedFiles) {
     return Array.from(selectedFiles).filter((file) => validateFileType(file));
@@ -50,7 +57,7 @@ function UploadFileComponent({
 
     if (!isValid) {
       toast.error(
-        `File type not accepted: ${file.name}. Accepted types: ${acceptte}`
+        `File type not accepted: ${file.name}. Accepted types: ${plainAcceptedTypes}`
       );
     }
     return isValid;

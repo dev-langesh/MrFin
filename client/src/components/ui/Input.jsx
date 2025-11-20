@@ -2,8 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Label } from "./Label";
 import { HelperText } from "./HelperText";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
-import { FaCircleInfo } from "react-icons/fa6";
+import Info from "./info";
 
 const Input = React.forwardRef(
   (
@@ -28,7 +27,7 @@ const Input = React.forwardRef(
     const hasIcon = !!icon;
 
     return (
-      <div className="w-full">
+      <div>
         {label && (
           <Label className="pb-2" info={info}>
             {label}
@@ -58,7 +57,7 @@ const Input = React.forwardRef(
               value={value}
               onChange={onChange}
               className={cn(
-                "placeholder:text-muted-foreground border border-border w-full min-w-0 rounded-[6px] px-3 py-2 md:text-base shadow-xs transition-[color] outline-none",
+                "placeholder:text-muted-foreground border border-border w-full min-w-0 rounded-[6px] px-3 py-2 text-sm shadow-xs transition-[color] outline-none",
                 "focus-visible:border-border-active focus-visible:ring-ring/50 focus-visible:ring-[3px] hover:border-border-active",
                 "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-disabled disabled:border-none disabled:shadow-none text-sm",
                 "read-only:opacity-70 read-only:focus-visible:ring-0 read-only:focus-visible:border-border read-only:hover:border-border",
@@ -72,14 +71,7 @@ const Input = React.forwardRef(
               )}
               {...props}
             />
-            {!label && info && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <FaCircleInfo className="text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>{info}</TooltipContent>
-              </Tooltip>
-            )}
+            {!label && info && <Info info={info} />}
           </div>
         </div>
 

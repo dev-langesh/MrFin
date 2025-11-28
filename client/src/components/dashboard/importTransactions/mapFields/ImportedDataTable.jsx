@@ -19,30 +19,21 @@ import {
 } from "@/components/ui/Select";
 import { Trash2 } from "lucide-react";
 import { memo, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { Label } from "@/components/ui/Label";
-import Pagination from "@/components/dashboard/common/Pagination";
+import Pagination from "../../common/Pagination";
 import {
   selectImportData,
-  selectMappedFields,
   setData as setImportData,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { cn } from "@/lib/utils";
 
-function MappedDataTable() {
-  const [keys, setKeys] = useState([
-    "Txn Date",
-    "Description",
-    "Credit",
-    "Debit",
-  ]);
+function ImportedDataTable() {
+  const [keys, setKeys] = useState([]);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
   const [data, setData] = useState([]);
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
 
   const importData = useSelector(selectImportData);
 
@@ -52,6 +43,8 @@ function MappedDataTable() {
     if (importData?.length > 0) {
       const skip = (page - 1) * limit;
       setData(importData.slice(skip, skip + limit));
+
+      setKeys(Object.keys(importData[0]));
     }
   }, [importData, page, limit]);
 
@@ -59,38 +52,18 @@ function MappedDataTable() {
     if (confirm("Are you sure you want to delete this entry?")) {
       const filteredRows = [...importData].filter((_, i) => !rows.includes(i));
       dispatch(setImportData(filteredRows));
-      setSelectedRows([]);
-      setSelectAll(false);
     }
   }
 
-  function toggleSelectAll(checked) {
-    setSelectAll(checked);
-    if (checked) setSelectedRows(data.map((_, i) => i));
-    else setSelectedRows([]);
-  }
-
-  function toggleSelectRow(index, checked) {
-    if (checked) setSelectedRows([...selectedRows, index]);
-    else setSelectedRows(selectedRows.filter((i) => i !== index));
-  }
-
   return (
-    <CardContent className="">
+    <CardContent>
       <div className="rounded-md border grid grid-cols-1">
         <Table className="overflow-x-auto">
           <TableHeader>
             <TableRow>
-              <TableHead>
-                <Checkbox
-                  checked={selectAll}
-                  onCheckedChange={toggleSelectAll}
-                />
-              </TableHead>{" "}
               <TableHead>ID</TableHead>
-              {keys.map((key) => (
-                <TableHead key={key}>{key}</TableHead>
-              ))}
+              {data.length > 0 &&
+                keys.map((key) => <TableHead key={key}>{key}</TableHead>)}
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -107,12 +80,6 @@ function MappedDataTable() {
             ) : (
               data.map((entry, i) => (
                 <TableRow key={`row-${i}`}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedRows.includes(i)}
-                      onCheckedChange={(checked) => toggleSelectRow(i, checked)}
-                    />
-                  </TableCell>
                   <TableCell>{i + 1}</TableCell>
 
                   {keys.map((key) => (
@@ -192,4 +159,4 @@ function MappedDataTable() {
   );
 }
 
-export default memo(MappedDataTable);
+export default memo(ImportedDataTable);

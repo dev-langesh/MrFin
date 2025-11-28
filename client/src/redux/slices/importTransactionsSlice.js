@@ -10,17 +10,18 @@ const initialState = {
       removeCharacters: "",
       quote: '"',
     },
+    transformedData: [],
     data: [
       {
-        "Txn Date": "01-09-2025 08:27:54",
+        "Txn Date": "44-09-2025 08:27:54",
         "Value Date": "01 Sep 2025",
         "Cheque No.": "561015327618",
         Description:
           "UPI/DR/561015327618/FOURDEGRE/UTIB/**7.rzp@rxaxis/UPI//ICI0556599e6c44402092eac82811725857/01/09/2025 08:27:54",
         "Branch Code": "33",
-        Debit: "59,877.69",
+        Debit: "59,877.6a9",
         Credit: "",
-        Balance: "11,623.71",
+        Balance: "11,623.7a1",
       },
       {
         "Txn Date": "01-09-2025 08:33:36",
@@ -140,3 +141,5 @@ export const selectImportData = (state) => state.importTransactions.value.data;
 export const selectMappedFields = (state) =>
   state.importTransactions.value.mappedFields;
 export const selectOptions = (state) => state.importTransactions.value.options;
+export const selectTransformedData = (state) =>
+  state.importTransactions.value.transformedData;

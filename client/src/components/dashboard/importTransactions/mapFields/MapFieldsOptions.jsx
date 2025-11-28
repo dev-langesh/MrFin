@@ -1,7 +1,9 @@
 import {
   selectImportData,
   selectMappedFields,
+  setData,
   updateMappedFields,
+  updateState,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -27,45 +29,115 @@ import {
   CollapsibleTrigger,
 } from "@radix-ui/react-collapsible";
 import { FaRegSquarePlus, FaRegSquareMinus } from "react-icons/fa6";
+import { Button } from "@/components/ui/button";
+import { dateFormatsOptions, formFields } from "./contsants";
+import { isValid, parse, parseISO, formatISO } from "date-fns";
 
-const formFields = [
-  { key: "txnDate", label: "Date" },
-  { key: "description", label: "Description" },
-  { key: "credit", label: "Credit" },
-  { key: "debit", label: "Debit" },
-];
+export function toISODateString(str, dateFormat) {
+  if (!str) return null;
 
-function isValidDateString(str) {
-  const date = new Date(str);
-  return !isNaN(date.getTime());
+  const trimmed = String(str).trim();
+
+  // --- 1. Handle Timestamps ---
+  // If string is purely digits, treat as timestamp
+  if (/^\d+$/.test(trimmed)) {
+    const num = Number(trimmed);
+    // Convert seconds (10 digits) to milliseconds (13 digits) if needed
+    const date = new Date(trimmed.length <= 10 ? num * 1000 : num);
+    if (isValid(date)) return date.toISOString();
+  }
+
+  // --- 2. Handle Explicit ISO 8601 ---
+  // Try standard ISO parsing first to avoid custom format errors
+  if (trimmed.includes("T") || trimmed.includes("Z")) {
+    const isoDate = parseISO(trimmed);
+    if (isValid(isoDate)) return isoDate.toISOString();
+  }
+
+  // --- 3. Flexible Parsing based on `dateFormat` ---
+  const formatVariations = generateFormatPermutations(dateFormat);
+
+  for (const fmt of formatVariations) {
+    try {
+      const parsed = parse(trimmed, fmt, new Date());
+      if (isValid(parsed)) {
+        return parsed.toISOString();
+      }
+    } catch (e) {
+      // Ignore specific parsing errors and continue loop
+      continue;
+    }
+  }
+
+  // --- 4. Native Fallback ---
+  const nativeDate = new Date(trimmed);
+  if (isValid(nativeDate)) {
+    return nativeDate.toISOString();
+  }
+
+  return false;
+}
+
+function generateFormatPermutations(baseFormat) {
+  const formats = [];
+
+  const monthFormats = [
+    baseFormat,
+    baseFormat.replace("MM", "MMM"),
+    baseFormat.replace("MM", "MMMM"),
+  ];
+
+  const timeExtensions = [
+    "",
+    " HH:mm",
+    " HH:mm:ss",
+    " HH:mm:ss.SSS",
+    "'T'HH:mm:ss", // Escaped T
+    "'T'HH:mm:ss.SSS", // Escaped T
+  ];
+
+  monthFormats.forEach((mf) => {
+    timeExtensions.forEach((time) => {
+      formats.push(`${mf}${time}`);
+    });
+  });
+
+  return formats;
 }
 
 export default function MapFieldsOptions() {
   const [isOpen, setIsOpen] = useState(true);
   const [keys, setKeys] = useState([]);
+  const [state, setState] = useState({});
 
   const importedData = useSelector(selectImportData);
-  const mappedFields = useSelector(selectMappedFields);
   const dispatch = useDispatch();
 
-  const testData = importedData?.length ? [...importedData].slice(0, 20) : [];
+  console.log(toISODateString("01-09-2025 08:33:36", "dd-MM-yyyy"));
+  useEffect(() => {
+    // detect local date format
+    const parts = new Intl.DateTimeFormat().formatToParts(
+      new Date(2003, 11, 22)
+    );
 
-  function validateKey(key, columnKey) {
-    switch (key) {
-      case "txnDate":
-        return testData.every((d) => isValidDateString(d[columnKey]));
-      case "credit":
-        return testData.every(
-          (d) => !isNaN(Number(d[columnKey]?.replace(/,/g, "")))
-        );
-      case "debit":
-        return testData.every(
-          (d) => !isNaN(Number(d[columnKey]?.replace(/,/g, "")))
-        );
-      default:
-        return true;
-    }
-  }
+    const localDateFormat = parts
+      .filter((p) => p.type !== "literal")
+      .map((p) => {
+        switch (p.type) {
+          case "day":
+            return "dd";
+          case "month":
+            return "MM";
+          case "year":
+            return "yyyy";
+          default:
+            return "";
+        }
+      })
+      .join("-");
+
+    setState((p) => ({ ...p, dateFormat: localDateFormat }));
+  }, []);
 
   useEffect(() => {
     if (!importedData?.length) return;
@@ -80,11 +152,54 @@ export default function MapFieldsOptions() {
     });
   }, [importedData]);
 
-  function handleChange(key, value) {
-    if (!validateKey(key, value)) {
-      return toast.error("Invalid type");
+  function validateEntry(entry) {
+    const validatedData = { description: entry[state.description], errors: {} };
+
+    const dateStr = entry[state.txnDate];
+    const isoDate = toISODateString(dateStr, state.dateFormat);
+
+    if (isoDate) {
+      validatedData.txnDate = isoDate;
+    } else {
+      validatedData.errors.txnDate = `Invalid date`;
     }
-    dispatch(updateMappedFields({ [key]: value }));
+
+    const creditStr = entry[state.credit]?.replace(/,/g, "");
+    if (!!isNaN(Number(creditStr))) {
+      validatedData.errors.credit = `Invalid number`;
+    } else {
+      validatedData.credit = creditStr;
+    }
+
+    const debitStr = entry[state.debit]?.replace(/,/g, "");
+    if (!!isNaN(Number(debitStr))) {
+      validatedData.errors.debit = `Invalid number`;
+    } else {
+      validatedData.debit = debitStr;
+    }
+
+    return validatedData;
+  }
+
+  function handleChange(key, value) {
+    setState((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleApply() {
+    let hasError = false;
+    const validatedData = importedData.map((data, index) => {
+      const val = validateEntry(data);
+      if (Object.keys(val.errors).length > 0) {
+        hasError = true;
+      }
+      return val;
+    });
+    dispatch(updateMappedFields({ ...state, hasError }));
+    dispatch(
+      updateState({
+        transformedData: validatedData,
+      })
+    );
   }
 
   return (
@@ -107,6 +222,9 @@ export default function MapFieldsOptions() {
                 </CardDescription>
               </div>
             </CollapsibleTrigger>
+            <Button size="sm" onClick={handleApply}>
+              Apply
+            </Button>
           </div>
         </CardHeader>
         <CollapsibleContent>
@@ -116,18 +234,24 @@ export default function MapFieldsOptions() {
                 <div key={field.key} className="space-y-2 w-full">
                   <Label htmlFor={field.key}>{field.label}</Label>
                   <Select
-                    value={mappedFields[field.key]}
+                    value={state[field.key]}
                     onValueChange={(value) => handleChange(field.key, value)}
                   >
                     <SelectTrigger id={field.key} className="w-full rounded-sm">
                       <SelectValue placeholder="Select column" />
                     </SelectTrigger>
                     <SelectContent>
-                      {keys.map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {key}
-                        </SelectItem>
-                      ))}
+                      {field.key === "dateFormat"
+                        ? dateFormatsOptions.map((format) => (
+                            <SelectItem key={format} value={format}>
+                              {format}
+                            </SelectItem>
+                          ))
+                        : keys.map((key) => (
+                            <SelectItem key={key} value={key}>
+                              {key}
+                            </SelectItem>
+                          ))}
                     </SelectContent>
                   </Select>
                 </div>

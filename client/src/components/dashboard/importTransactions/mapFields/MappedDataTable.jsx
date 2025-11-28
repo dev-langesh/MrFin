@@ -23,42 +23,44 @@ import { toast } from "sonner";
 import { Label } from "@/components/ui/Label";
 import Pagination from "@/components/dashboard/common/Pagination";
 import {
-  selectImportData,
+  selecttData,
   selectMappedFields,
-  setData as setImportData,
+  selectTransformedData,
+  setData as settData,
+  updateState,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { MdError } from "react-icons/md";
+import { format, parseISO } from "date-fns";
+
+const cols = ["Txn Date", "Description", "Credit", "Debit"];
+const rowKeys = ["txnDate", "description", "credit", "debit"];
 
 function MappedDataTable() {
-  const [keys, setKeys] = useState([
-    "Txn Date",
-    "Description",
-    "Credit",
-    "Debit",
-  ]);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
   const [data, setData] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
 
-  const importData = useSelector(selectImportData);
+  const tData = useSelector(selectTransformedData);
+  const mappedFields = useSelector(selectMappedFields);
 
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (importData?.length > 0) {
+    if (tData?.length > 0) {
       const skip = (page - 1) * limit;
-      setData(importData.slice(skip, skip + limit));
+      setData(tData.slice(skip, skip + limit));
     }
-  }, [importData, page, limit]);
+  }, [tData, page, limit]);
 
   async function deleteRows(rows) {
     if (confirm("Are you sure you want to delete this entry?")) {
-      const filteredRows = [...importData].filter((_, i) => !rows.includes(i));
-      dispatch(setImportData(filteredRows));
+      const filteredRows = [...tData].filter((_, i) => !rows.includes(i));
+      dispatch(updateState({transformedData: filteredRows}));
       setSelectedRows([]);
       setSelectAll(false);
     }
@@ -88,7 +90,7 @@ function MappedDataTable() {
                 />
               </TableHead>{" "}
               <TableHead>ID</TableHead>
-              {keys.map((key) => (
+              {cols.map((key) => (
                 <TableHead key={key}>{key}</TableHead>
               ))}
               <TableHead>Actions</TableHead>
@@ -106,7 +108,7 @@ function MappedDataTable() {
               </TableRow>
             ) : (
               data.map((entry, i) => (
-                <TableRow key={`row-${i}`}>
+                <TableRow className={cn(Object.keys(entry.errors).length > 0 ? "bg-red-100" : "")} key={`row-${i}`}>
                   <TableCell>
                     <Checkbox
                       checked={selectedRows.includes(i)}
@@ -115,16 +117,21 @@ function MappedDataTable() {
                   </TableCell>
                   <TableCell>{i + 1}</TableCell>
 
-                  {keys.map((key) => (
+                  {rowKeys.map((key) => (
                     <TableCell
                       key={`${i}-${key}`}
                       className={cn(
-                        "min-w-[100px] whitespace-break-spaces break-all",
-                        entry[key]?.length > 10 && "min-w-[150px]",
-                        entry[key]?.length > 100 && "min-w-[300px]"
+                        "min-w-[120px] whitespace-break-spaces break-all",
+                        entry[key]?.length >= 10 && "min-w-[170px]",
+                        entry[key]?.length >= 20 && "min-w-[200px]",
+                        entry[key]?.length >= 100 && "min-w-[300px]"
                       )}
                     >
-                      {entry[key]}
+                      {entry.errors[key]
+                        ? entry.errors[key]
+                        : key === "txnDate"
+                        ? format(parseISO(entry[key]), `${mappedFields.dateFormat} hh:mm a`)
+                        : entry[key]}
                     </TableCell>
                   ))}
 
@@ -179,9 +186,9 @@ function MappedDataTable() {
           </Select>
         </div>
 
-        {Math.ceil((importData?.length || 0) / limit) > 1 && (
+        {Math.ceil((tData?.length || 0) / limit) > 1 && (
           <Pagination
-            total={importData?.length || 0}
+            total={tData?.length || 0}
             limit={limit}
             currentPage={page}
             handlePageChange={setPage}

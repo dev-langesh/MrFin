@@ -38,23 +38,17 @@ export function toISODateString(str, dateFormat) {
 
   const trimmed = String(str).trim();
 
-  // --- 1. Handle Timestamps ---
-  // If string is purely digits, treat as timestamp
   if (/^\d+$/.test(trimmed)) {
     const num = Number(trimmed);
-    // Convert seconds (10 digits) to milliseconds (13 digits) if needed
     const date = new Date(trimmed.length <= 10 ? num * 1000 : num);
     if (isValid(date)) return date.toISOString();
   }
 
-  // --- 2. Handle Explicit ISO 8601 ---
-  // Try standard ISO parsing first to avoid custom format errors
   if (trimmed.includes("T") || trimmed.includes("Z")) {
     const isoDate = parseISO(trimmed);
     if (isValid(isoDate)) return isoDate.toISOString();
   }
 
-  // --- 3. Flexible Parsing based on `dateFormat` ---
   const formatVariations = generateFormatPermutations(dateFormat);
 
   for (const fmt of formatVariations) {
@@ -64,12 +58,10 @@ export function toISODateString(str, dateFormat) {
         return parsed.toISOString();
       }
     } catch (e) {
-      // Ignore specific parsing errors and continue loop
       continue;
     }
   }
 
-  // --- 4. Native Fallback ---
   const nativeDate = new Date(trimmed);
   if (isValid(nativeDate)) {
     return nativeDate.toISOString();
@@ -105,7 +97,7 @@ function generateFormatPermutations(baseFormat) {
   return formats;
 }
 
-export default function MapFieldsOptions() {
+export default function MapFieldsOptions({ onApply }) {
   const [isOpen, setIsOpen] = useState(true);
   const [keys, setKeys] = useState([]);
   const [state, setState] = useState({});
@@ -153,7 +145,25 @@ export default function MapFieldsOptions() {
   }, [importedData]);
 
   function validateEntry(entry) {
-    const validatedData = { description: entry[state.description], errors: {} };
+    const mappedColumns = [
+      state.txnDate,
+      state.description,
+      state.credit,
+      state.debit,
+    ];
+
+    const unmappedFields = Object.keys(entry).reduce((acc, key) => {
+      if (!mappedColumns.includes(key)) {
+        acc[key] = entry[key];
+      }
+      return acc;
+    }, {});
+
+    const validatedData = {
+      ...unmappedFields,
+      description: entry[state.description],
+      errors: {},
+    };
 
     const dateStr = entry[state.txnDate];
     const isoDate = toISODateString(dateStr, state.dateFormat);
@@ -197,15 +207,16 @@ export default function MapFieldsOptions() {
     dispatch(updateMappedFields({ ...state, hasError }));
     dispatch(
       updateState({
-        transformedData: validatedData,
+        mappedData: validatedData,
       })
     );
+    if (onApply) onApply();
   }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className=" rounded-sm p-3">
-        <CardHeader className={"px-0 " + (!isOpen && "gap-0 ")}>
+      <Card className="px-0 rounded-sm py-5">
+        <CardHeader className={" " + (!isOpen && "gap-0 ")}>
           <div className="flex items-center justify-between">
             <CollapsibleTrigger className="flex items-start gap-2 flex-1 cursor-pointer">
               {isOpen ? (
@@ -216,9 +227,8 @@ export default function MapFieldsOptions() {
               <div className="text-left">
                 <CardTitle>Map Fields</CardTitle>
                 <CardDescription className="pt-1">
-                  Assign columns from your CSV to the matching transaction
-                  fields below. Only the fields you map will be used during
-                  import and saved to the database.{" "}
+                  Assign CSV columns to matching transaction fields. Only mapped
+                  fields will be used for import and saved to the database.
                 </CardDescription>
               </div>
             </CollapsibleTrigger>
@@ -229,7 +239,7 @@ export default function MapFieldsOptions() {
         </CardHeader>
         <CollapsibleContent>
           <CardContent>
-            <div className="grid grid-cols-4 max-md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-5 max-md:grid-cols-2 gap-4">
               {formFields.map((field) => (
                 <div key={field.key} className="space-y-2 w-full">
                   <Label htmlFor={field.key}>{field.label}</Label>

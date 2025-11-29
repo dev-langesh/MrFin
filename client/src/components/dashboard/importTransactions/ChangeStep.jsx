@@ -27,14 +27,14 @@ export default function ChangeStep() {
       case 2:
         break;
       case 3:
-        if (state.transformedData.length === 0) {
+        if (state.mappedData.length === 0) {
           toast.error(
             "No valid data to import. Please check the mapped fields."
           );
           isValid = false;
         }
 
-        const errorIds = state.transformedData
+        const errorIds = state.mappedData
           .map((entry, index) =>
             Object.keys(entry.errors || {}).length > 0 ? index + 1 : null
           )

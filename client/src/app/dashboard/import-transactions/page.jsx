@@ -3,7 +3,7 @@
 import ChangeStep from "@/components/dashboard/importTransactions/ChangeStep";
 import MapFields from "@/components/dashboard/importTransactions/mapFields/MapFields";
 import PreProcessData from "@/components/dashboard/importTransactions/preProcess/PreProcessData";
-import TransformData from "@/components/dashboard/importTransactions/transFormData/TransformData";
+import TransformData from "@/components/dashboard/importTransactions/transformData/TransformData";
 import { Stepper } from "@/components/ui/Stepper";
 import { UploadFile } from "@/components/ui/UploadFile";
 import {

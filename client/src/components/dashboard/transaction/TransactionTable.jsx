@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/Label";
 import Pagination from "../common/Pagination";
 import TransactionEntryForm from "./TransactionEntryForm";
 import { transactionService } from "@/services/transactions.service";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
 function TransactionTable({ setFilters, filters }) {
   const [data, setData] = useState([]);
@@ -58,15 +59,13 @@ function TransactionTable({ setFilters, filters }) {
   }
 
   async function handleDelete(id) {
-    if (confirm("Are you sure you want to delete this entry?")) {
-      try {
-        await transactionService.deleteTransaction(id);
-        setData((prev) => prev.filter((entry) => entry._id !== id));
-        setTotalData((total) => total - 1);
-        toast.success("Entry deleted");
-      } catch (error) {
-        toast.error(error.message);
-      }
+    try {
+      await transactionService.deleteTransaction(id);
+      setData((prev) => prev.filter((entry) => entry._id !== id));
+      setTotalData((total) => total - 1);
+      toast.success("Entry deleted");
+    } catch (error) {
+      toast.error(error.message);
     }
   }
 
@@ -172,14 +171,21 @@ function TransactionTable({ setFilters, filters }) {
                           <Edit className="w-4 h-4" />
                         </Button>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(entry._id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <ConfirmationDialog
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          }
+                          title="Delete Transaction"
+                          description="Are you sure you want to delete this transaction? This action cannot be undone."
+                          onConfirm={() => handleDelete(entry._id)}
+                          confirmText="Delete"
+                        />
                       </div>
                     </TableCell>
                   </TableRow>

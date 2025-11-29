@@ -29,6 +29,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
 function CsvTable() {
   const [keys, setKeys] = useState([]);
@@ -52,12 +53,10 @@ function CsvTable() {
   }, [importData, page, limit]);
 
   async function deleteRows(rows) {
-    if (confirm("Are you sure you want to delete this entry?")) {
-      const filteredRows = [...importData].filter((_, i) => !rows.includes(i));
-      dispatch(setImportData(filteredRows));
-      setSelectedRows([]);
-      setSelectAll(false);
-    }
+    const filteredRows = [...importData].filter((_, i) => !rows.includes(i));
+    dispatch(setImportData(filteredRows));
+    setSelectedRows([]);
+    setSelectAll(false);
   }
 
   function toggleSelectAll(checked) {
@@ -78,10 +77,18 @@ function CsvTable() {
           <h1>Imported data ({importData?.length})</h1>
           <div className="flex items-center gap-2">
             {selectedRows.length > 0 && (
-              <Button size="sm" onClick={() => deleteRows(selectedRows)}>
-                Delete
-                {/* <Trash2 className="w-4 h-4" /> */}
-              </Button>
+              <ConfirmationDialog
+                trigger={
+                  <Button size="sm">
+                    Delete
+                    {/* <Trash2 className="w-4 h-4" /> */}
+                  </Button>
+                }
+                title="Delete Selected Rows"
+                description="Are you sure you want to delete the selected entries? This action cannot be undone."
+                onConfirm={() => deleteRows(selectedRows)}
+                confirmText="Delete"
+              />
             )}
           </div>
         </CardTitle>
@@ -149,14 +156,21 @@ function CsvTable() {
                           <Edit className="w-4 h-4" />
                         </Button> */}
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteRows([i])}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <ConfirmationDialog
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          }
+                          title="Delete Entry"
+                          description="Are you sure you want to delete this entry?"
+                          onConfirm={() => deleteRows([i])}
+                          confirmText="Delete"
+                        />
                       </div>
                     </TableCell>
                   </TableRow>

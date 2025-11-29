@@ -25,7 +25,7 @@ import Pagination from "@/components/dashboard/common/Pagination";
 import {
   selecttData,
   selectMappedFields,
-  selectTransformedData,
+  selectMappedData,
   setData as settData,
   updateState,
 } from "@/redux/slices/importTransactionsSlice";
@@ -34,18 +34,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { MdError } from "react-icons/md";
 import { format, parseISO } from "date-fns";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
 const cols = ["Txn Date", "Description", "Credit", "Debit"];
 const rowKeys = ["txnDate", "description", "credit", "debit"];
 
-function MappedDataTable() {
+function MappedDataTable({ selectedRows, setSelectedRows }) {
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
   const [data, setData] = useState([]);
-  const [selectedRows, setSelectedRows] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
 
-  const tData = useSelector(selectTransformedData);
+  const tData = useSelector(selectMappedData);
   const mappedFields = useSelector(selectMappedFields);
 
   const dispatch = useDispatch();
@@ -58,12 +58,10 @@ function MappedDataTable() {
   }, [tData, page, limit]);
 
   async function deleteRows(rows) {
-    if (confirm("Are you sure you want to delete this entry?")) {
-      const filteredRows = [...tData].filter((_, i) => !rows.includes(i));
-      dispatch(updateState({transformedData: filteredRows}));
-      setSelectedRows([]);
-      setSelectAll(false);
-    }
+    const filteredRows = [...tData].filter((_, i) => !rows.includes(i));
+    dispatch(updateState({ mappedData: filteredRows }));
+    setSelectedRows([]);
+    setSelectAll(false);
   }
 
   function toggleSelectAll(checked) {
@@ -103,12 +101,17 @@ function MappedDataTable() {
                   colSpan={6}
                   className="text-center py-8 text-muted-foreground"
                 >
-                  No data available.
+                  No data available. Please map the fields.
                 </TableCell>
               </TableRow>
             ) : (
               data.map((entry, i) => (
-                <TableRow className={cn(Object.keys(entry.errors).length > 0 ? "bg-red-100" : "")} key={`row-${i}`}>
+                <TableRow
+                  className={cn(
+                    Object.keys(entry.errors).length > 0 ? "bg-red-100" : ""
+                  )}
+                  key={`row-${i}`}
+                >
                   <TableCell>
                     <Checkbox
                       checked={selectedRows.includes(i)}
@@ -130,7 +133,10 @@ function MappedDataTable() {
                       {entry.errors[key]
                         ? entry.errors[key]
                         : key === "txnDate"
-                        ? format(parseISO(entry[key]), `${mappedFields.dateFormat} hh:mm a`)
+                        ? format(
+                            parseISO(entry[key]),
+                            `${mappedFields.dateFormat} hh:mm a`
+                          )
                         : entry[key]}
                     </TableCell>
                   ))}
@@ -145,14 +151,21 @@ function MappedDataTable() {
                           <Edit className="w-4 h-4" />
                         </Button> */}
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteRows([i])}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <ConfirmationDialog
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        }
+                        title="Delete Entry"
+                        description="Are you sure you want to delete this entry?"
+                        onConfirm={() => deleteRows([i])}
+                        confirmText="Delete"
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

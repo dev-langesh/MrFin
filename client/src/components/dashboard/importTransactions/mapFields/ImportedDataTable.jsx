@@ -21,11 +21,8 @@ import { Trash2 } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 import { Label } from "@/components/ui/Label";
 import Pagination from "../../common/Pagination";
-import {
-  selectImportData,
-  setData as setImportData,
-} from "@/redux/slices/importTransactionsSlice";
-import { useDispatch, useSelector } from "react-redux";
+import { selectImportData } from "@/redux/slices/importTransactionsSlice";
+import { useSelector } from "react-redux";
 
 import { cn } from "@/lib/utils";
 
@@ -37,7 +34,6 @@ function ImportedDataTable() {
 
   const importData = useSelector(selectImportData);
 
-  const dispatch = useDispatch();
 
   useEffect(() => {
     if (importData?.length > 0) {
@@ -48,13 +44,6 @@ function ImportedDataTable() {
     }
   }, [importData, page, limit]);
 
-  async function deleteRows(rows) {
-    if (confirm("Are you sure you want to delete this entry?")) {
-      const filteredRows = [...importData].filter((_, i) => !rows.includes(i));
-      dispatch(setImportData(filteredRows));
-    }
-  }
-
   return (
     <CardContent>
       <div className="rounded-md border grid grid-cols-1">
@@ -64,7 +53,6 @@ function ImportedDataTable() {
               <TableHead>ID</TableHead>
               {data.length > 0 &&
                 keys.map((key) => <TableHead key={key}>{key}</TableHead>)}
-              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -94,27 +82,6 @@ function ImportedDataTable() {
                       {entry[key]}
                     </TableCell>
                   ))}
-
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end">
-                      {/* <Button
-                          onClick={() => handleEdit(entry)}
-                          variant="ghost"
-                          size="sm"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button> */}
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteRows([i])}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
                 </TableRow>
               ))
             )}

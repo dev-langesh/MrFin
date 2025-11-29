@@ -10,7 +10,7 @@ const initialState = {
       removeCharacters: "",
       quote: '"',
     },
-    transformedData: [],
+    mappedData: [],
     data: [
       {
         "Txn Date": "44-09-2025 08:27:54",
@@ -141,5 +141,5 @@ export const selectImportData = (state) => state.importTransactions.value.data;
 export const selectMappedFields = (state) =>
   state.importTransactions.value.mappedFields;
 export const selectOptions = (state) => state.importTransactions.value.options;
-export const selectTransformedData = (state) =>
-  state.importTransactions.value.transformedData;
+export const selectMappedData = (state) =>
+  state.importTransactions.value.mappedData;

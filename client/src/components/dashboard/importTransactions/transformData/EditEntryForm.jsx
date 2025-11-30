@@ -64,20 +64,6 @@ export default function EditEntryForm({ initialData, onSubmit, onCancel }) {
           )}
         </div>
 
-        <Input
-          {...register("amount")}
-          label="Amount"
-          placeholder="Amount"
-          error={!!errors.amount}
-          helperText={errors.amount?.message}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (/^[0-9]*\.?[0-9]*$/.test(value)) {
-              register("amount").onChange(e);
-            }
-          }}
-        />
-
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Type</Label>
@@ -109,6 +95,20 @@ export default function EditEntryForm({ initialData, onSubmit, onCancel }) {
             placeholder="Category"
           />
         </div>
+
+        <Input
+          {...register("amount")}
+          label="Amount"
+          placeholder="Amount"
+          error={!!errors.amount}
+          helperText={errors.amount?.message}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (/^[0-9]*\.?[0-9]*$/.test(value)) {
+              register("amount").onChange(e);
+            }
+          }}
+        />
 
         <div className="space-y-2">
           <Label>Description</Label>

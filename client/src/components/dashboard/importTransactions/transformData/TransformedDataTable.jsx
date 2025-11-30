@@ -102,7 +102,7 @@ function TransformedDataTable({ ...props }) {
       if (!dateStr) return "";
       const date = parseISO(dateStr);
       if (isValid(date)) {
-        return format(date, `${dateFormat} hh:mm a`);
+        return format(date, dateFormat);
       }
       return dateStr;
     } catch (e) {

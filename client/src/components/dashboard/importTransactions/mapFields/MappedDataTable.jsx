@@ -136,7 +136,7 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
                         : key === "txnDate"
                         ? format(
                             parseISO(entry[key]),
-                            `${mappedFields.dateFormat} hh:mm a`
+                            `${mappedFields.dateFormat}`
                           )
                         : entry[key]}
                     </TableCell>

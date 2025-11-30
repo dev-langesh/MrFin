@@ -36,65 +36,85 @@ import { isValid, parse, parseISO, formatISO } from "date-fns";
 export function toISODateString(str, dateFormat) {
   if (!str) return null;
 
+  // Trim first to handle trailing spaces
   const trimmed = String(str).trim();
 
-  if (/^\d+$/.test(trimmed)) {
-    const num = Number(trimmed);
-    const date = new Date(trimmed.length <= 10 ? num * 1000 : num);
-    if (isValid(date)) return date.toISOString();
-  }
+  // Remove time component before parsing
+  // Matches T or space followed by time-like patterns
+  const dateOnlyStr = trimmed
+    .replace(
+      /[\sT]\d{1,2}:\d{1,2}(:\d{1,2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/,
+      ""
+    )
+    .trim();
 
-  if (trimmed.includes("T") || trimmed.includes("Z")) {
-    const isoDate = parseISO(trimmed);
-    if (isValid(isoDate)) return isoDate.toISOString();
-  }
+  let date;
 
-  const formatVariations = generateFormatPermutations(dateFormat);
-
-  for (const fmt of formatVariations) {
-    try {
-      const parsed = parse(trimmed, fmt, new Date());
-      if (isValid(parsed)) {
-        return parsed.toISOString();
+  if (/^\d+$/.test(dateOnlyStr)) {
+    const num = Number(dateOnlyStr);
+    date = new Date(dateOnlyStr.length <= 10 ? num * 1000 : num);
+  } else {
+    // Try parsing as ISO first (handles yyyy-MM-dd)
+    const isoDate = parseISO(dateOnlyStr);
+    if (isValid(isoDate)) {
+      date = isoDate;
+    } else {
+      const formatVariations = generateFormatPermutations(dateFormat);
+      for (const fmt of formatVariations) {
+        try {
+          const parsed = parse(dateOnlyStr, fmt, new Date());
+          if (isValid(parsed)) {
+            date = parsed;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
       }
-    } catch (e) {
-      continue;
     }
   }
 
-  const nativeDate = new Date(trimmed);
-  if (isValid(nativeDate)) {
-    return nativeDate.toISOString();
+  if (!date) {
+    const nativeDate = new Date(dateOnlyStr);
+    if (isValid(nativeDate)) {
+      date = nativeDate;
+    }
+  }
+
+  if (date && isValid(date)) {
+    // Set time to midnight UTC to ignore time component
+    date.setHours(0, 0, 0, 0);
+    // Adjust for timezone offset to keep the date correct
+    const offset = date.getTimezoneOffset() * 60000;
+    const adjustedDate = new Date(date.getTime() - offset);
+    return adjustedDate.toISOString();
   }
 
   return false;
 }
 
 function generateFormatPermutations(baseFormat) {
-  const formats = [];
+  const formats = new Set();
 
-  const monthFormats = [
-    baseFormat,
-    baseFormat.replace("MM", "MMM"),
-    baseFormat.replace("MM", "MMMM"),
-  ];
+  // Generate variations for separators
+  const separators = ["-", "/", "."];
+  const parts = baseFormat.split(/[-/.]/);
 
-  const timeExtensions = [
-    "",
-    " HH:mm",
-    " HH:mm:ss",
-    " HH:mm:ss.SSS",
-    "'T'HH:mm:ss", // Escaped T
-    "'T'HH:mm:ss.SSS", // Escaped T
-  ];
-
-  monthFormats.forEach((mf) => {
-    timeExtensions.forEach((time) => {
-      formats.push(`${mf}${time}`);
+  if (parts.length === 3) {
+    separators.forEach((sep) => {
+      const fmt = parts.join(sep);
+      formats.add(fmt);
+      formats.add(fmt.replace("MM", "MMM"));
+      formats.add(fmt.replace("MM", "MMMM"));
     });
-  });
+  } else {
+    // Fallback if format doesn't match expected structure
+    formats.add(baseFormat);
+    formats.add(baseFormat.replace("MM", "MMM"));
+    formats.add(baseFormat.replace("MM", "MMMM"));
+  }
 
-  return formats;
+  return Array.from(formats);
 }
 
 export default function MapFieldsOptions({ onApply }) {
@@ -236,8 +256,7 @@ export default function MapFieldsOptions({ onApply }) {
               <div className="text-left">
                 <CardTitle>Map Fields</CardTitle>
                 <CardDescription className="pt-1">
-                  Assign CSV columns to matching transaction fields. Only mapped
-                  fields will be used for import and saved to the database.
+                  Assign CSV columns to matching transaction fields.
                 </CardDescription>
               </div>
             </CollapsibleTrigger>

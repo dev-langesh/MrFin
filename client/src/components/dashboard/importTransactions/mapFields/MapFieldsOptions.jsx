@@ -174,18 +174,27 @@ export default function MapFieldsOptions({ onApply }) {
       validatedData.errors.txnDate = `Invalid date`;
     }
 
-    const creditStr = entry[state.credit]?.replace(/,/g, "");
-    if (!!isNaN(Number(creditStr))) {
-      validatedData.errors.credit = `Invalid number`;
-    } else {
-      validatedData.credit = creditStr;
+    const creditStr = entry[state.credit]?.replace(/[^0-9.-]/g, "");
+    const debitStr = entry[state.debit]?.replace(/[^0-9.-]/g, "");
+
+    if (creditStr) {
+      if (isNaN(Number(creditStr))) {
+        validatedData.errors.credit = `Invalid number`;
+      } else {
+        validatedData.credit = creditStr;
+      }
     }
 
-    const debitStr = entry[state.debit]?.replace(/,/g, "");
-    if (!!isNaN(Number(debitStr))) {
-      validatedData.errors.debit = `Invalid number`;
-    } else {
-      validatedData.debit = debitStr;
+    if (debitStr) {
+      if (isNaN(Number(debitStr))) {
+        validatedData.errors.debit = `Invalid number`;
+      } else {
+        validatedData.debit = debitStr;
+      }
+    }
+
+    if (!validatedData.credit && !validatedData.debit) {
+      validatedData.errors.amount = "Either Credit or Debit is required";
     }
 
     return validatedData;

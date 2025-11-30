@@ -9,6 +9,8 @@ export const operationsOptions = [
   { label: "does not contain", value: "not-contain" },
   { label: "starts with", value: "starts-with" },
   { label: "ends with", value: "ends-with" },
+  { label: "Exists", value: "exists" },
+  { label: "Does Not Exist", value: "not-exists" },
 ];
 
 export const actionsOptions = [

@@ -1,12 +1,12 @@
 import React from "react";
 import Rules from "./Rules";
-import DataTable from "./DataTable";
+import TransformedDataTable from "./TransformedDataTable";
 
 export default function TransformData() {
   return (
     <div className="space-y-6">
       <Rules />
-      <DataTable />
+      <TransformedDataTable />
     </div>
   );
 }

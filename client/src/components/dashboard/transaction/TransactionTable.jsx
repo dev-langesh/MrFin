@@ -35,6 +35,7 @@ import Pagination from "../common/Pagination";
 import TransactionEntryForm from "./TransactionEntryForm";
 import { transactionService } from "@/services/transactions.service";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
 
 function TransactionTable({ setFilters, filters }) {
   const [data, setData] = useState([]);
@@ -198,26 +199,35 @@ function TransactionTable({ setFilters, filters }) {
         {/* Pagination + Limit Controls */}
         <div className="flex items-center justify-between mt-4">
           {/* Rows per page */}
-          <div className="flex items-center gap-2">
-            <Label>Rows per page:</Label>
-            <Select
-              value={String(filters.limit)}
-              onValueChange={(val) =>
-                setFilters((prev) => ({ ...prev, limit: Number(val), page: 1 }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="30">30</SelectItem>
-                <SelectItem value="40">40</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Rows per page */}
+          {totalData > 10 && (
+            <div className="flex items-center gap-2">
+              <Label>Rows per page:</Label>
+              <Select
+                value={
+                  filters.limit === totalData ? "all" : String(filters.limit)
+                }
+                onValueChange={(val) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    limit: val === "all" ? totalData : Number(val),
+                    page: 1,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAGINATION_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option === "all" ? "All" : option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Pagination buttons */}
           <Pagination

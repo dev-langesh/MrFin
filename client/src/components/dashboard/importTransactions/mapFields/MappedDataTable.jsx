@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { MdError } from "react-icons/md";
 import { format, parseISO } from "date-fns";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
 
 const cols = ["Txn Date", "Description", "Credit", "Debit"];
 const rowKeys = ["txnDate", "description", "credit", "debit"];
@@ -91,7 +92,7 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
               {cols.map((key) => (
                 <TableHead key={key}>{key}</TableHead>
               ))}
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -177,27 +178,28 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
 
       {/* Pagination + Limit Controls */}
       <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center gap-2">
-          <Label>Rows per page:</Label>
-          <Select
-            value={String(limit)}
-            onValueChange={(val) => setLimit(Number(val))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="40">40</SelectItem>
-              <SelectItem value="60">60</SelectItem>
-              <SelectItem value="80">80</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-              <SelectItem value="200">200</SelectItem>
-              <SelectItem value="400">400</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {tData?.length > 10 && (
+          <div className="flex items-center gap-2">
+            <Label>Rows per page:</Label>
+            <Select
+              value={limit === tData?.length ? "all" : String(limit)}
+              onValueChange={(val) =>
+                setLimit(val === "all" ? tData?.length : Number(val))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGINATION_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option === "all" ? "All" : option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {Math.ceil((tData?.length || 0) / limit) > 1 && (
           <Pagination

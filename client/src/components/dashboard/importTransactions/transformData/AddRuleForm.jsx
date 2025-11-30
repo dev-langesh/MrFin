@@ -1,182 +1,273 @@
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
   DialogClose,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/Dialog";
 import Input from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
-import { selectImportData } from "@/redux/slices/importTransactionsSlice";
+import { selectMappedData } from "@/redux/slices/importTransactionsSlice";
 import {
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { useState } from "react";
 import { useSelector } from "react-redux";
 import { actionsOptions, operationsOptions } from "./constants";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
-const initialState = {
+import { ruleSchema } from "@/schemas/rules.schema";
+
+const defaultValues = {
   name: "",
   source: "",
-  target: "",
   operation: "",
   operationValue: "",
   action: "",
+  target: "",
   targetValue: "",
 };
 
 export default function AddRuleForm(props) {
-  const [rule, setRule] = useState(initialState);
-  const importedData = useSelector(selectImportData);
-  const importedDataKeys = Object.keys(importedData[0] || {});
+  const mappedData = useSelector(selectMappedData);
+  const sourceOptions = Object.keys(mappedData[0] || {});
 
-  function handleChange(name, value) {
-    setRule((prev) => ({ ...prev, [name]: value }));
-  }
+  const {
+    control,
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(ruleSchema),
+    defaultValues: props.initialData || defaultValues,
+  });
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    props.setRules?.((prev) => [...prev, rule]);
-    props.close();
-  }
+  const operation = watch("operation");
+  const action = watch("action");
+  const name = watch("name");
 
-  function handleCancel() {
-    setRule(initialState);
+  function onSubmit(data) {
+    props.onSubmit?.(data);
+    props.close?.();
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Add Rules</DialogTitle>
+        <DialogTitle>
+          {props.index !== undefined ? "Edit Rule" : "Add Rule"}
+        </DialogTitle>
       </DialogHeader>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-3">
+      <div className="grid grid-cols-1 gap-6">
+        {/* Rule Name */}
+        <div className="space-y-2">
           <Input
-            type="text"
-            name="name"
             label="Rule Name"
-            placeholder="Rule Name"
-            value={rule.name}
-            onChange={(e) => handleChange("name", e.target.value)}
+            placeholder="e.g., Categorize Rent"
+            {...register("name")}
             maxLength={40}
+            error={!!errors.name}
+            helperText={errors.name?.message}
           />
+          <p className="text-xs text-muted-foreground">
+            Give your rule a descriptive name to easily identify it later.
+          </p>
         </div>
-        <div className="space-y-2 max-md:col-span-3">
-          <Label htmlFor="source">Source Field</Label>
-          <Select
-            value={rule.source}
-            onValueChange={(value) => handleChange("source", value)}
-          >
-            <SelectTrigger id="source" className="w-full rounded-sm">
-              <SelectValue placeholder="Select Source" />
-            </SelectTrigger>
-            <SelectContent>
-              {importedDataKeys.map((key) => (
-                <SelectItem key={`source-${key}`} value={key}>
-                  {key}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>{" "}
-        <div className="space-y-2 max-md:col-span-3">
-          <Label htmlFor="operation">Operation</Label>
-          <Select
-            value={rule.operation}
-            onValueChange={(value) => handleChange("operation", value)}
-          >
-            <SelectTrigger id="operation" className="w-full rounded-sm">
-              <SelectValue placeholder="Select Operation" />
-            </SelectTrigger>
-            <SelectContent>
-              {operationsOptions.map((op, i) => (
-                <SelectItem key={`operation-${i}`} value={op.value}>
-                  {op.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>{" "}
-        <div className="max-md:col-span-3">
-          <Input
-            type="text"
-            name="operationValue"
-            label="Value"
-            placeholder="Value"
-            value={rule.operationValue}
-            onChange={(e) => handleChange("operationValue", e.target.value)}
-            maxLength={40}
-          />
-        </div>
-        <div className="space-y-2 max-md:col-span-3">
-          <Label htmlFor="action">Action</Label>
-          <Select
-            value={rule.action}
-            onValueChange={(value) => handleChange("action", value)}
-          >
-            <SelectTrigger id="action" className="w-full rounded-sm">
-              <SelectValue placeholder="Select Action" />
-            </SelectTrigger>
-            <SelectContent>
-              {actionsOptions.map((action, i) => (
-                <SelectItem key={`action-${i}`} value={action.value}>
-                  {action.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {rule.action === "update" && (
-          <>
-            <div className="space-y-2 max-md:col-span-3">
-              <Label htmlFor="target">Target Field</Label>
-              <Select
-                value={rule.target}
-                onValueChange={(value) => handleChange("target", value)}
-              >
-                <SelectTrigger id="target" className="w-full rounded-sm">
-                  <SelectValue placeholder="Select Target" />
-                </SelectTrigger>
-                <SelectContent>
-                  {actionsOptions.map((action, i) => (
-                    <SelectItem key={`action-${i}`} value={action.value}>
-                      {action.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            <div className="max-md:col-span-3">
-              <Input
-                type="text"
-                name="targetValue"
-                label="Value"
-                placeholder="Value"
-                value={rule.targetValue}
-                onChange={(e) => handleChange("targetValue", e.target.value)}
-                maxLength={40}
+        {/* Condition Section */}
+        <div className="space-y-4 border p-4 rounded-md bg-muted/20">
+          <h3 className="font-medium text-sm text-foreground/80">Condition</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>If Field</Label>
+              <Controller
+                name="source"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    error={!!errors.source}
+                    helperText={errors.source?.message}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Field" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sourceOptions.map((key) => (
+                        <SelectItem key={`source-${key}`} value={key}>
+                          {key}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               />
             </div>
-          </>
-        )}
+
+            <div className="space-y-2">
+              <Label>Operator</Label>
+              <Controller
+                name="operation"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    error={!!errors.operation}
+                    helperText={errors.operation?.message}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Operator" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {operationsOptions.map((op, i) => (
+                        <SelectItem key={`op-${i}`} value={op.value}>
+                          {op.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          </div>
+
+          {!["exists", "not-exists"].includes(operation) && (
+            <Input
+              label="Value"
+              placeholder="Value to match"
+              {...register("operationValue")}
+              error={!!errors.operationValue}
+              helperText={errors.operationValue?.message}
+            />
+          )}
+          <p className="text-xs text-muted-foreground">
+            Example: If <strong>Description</strong> contains{" "}
+            <strong>"Netflix"</strong>
+          </p>
+        </div>
+
+        {/* Action Section */}
+        <div className="space-y-4 border p-4 rounded-md bg-muted/20">
+          <h3 className="font-medium text-sm text-foreground/80">Action</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Action</Label>
+              <Controller
+                name="action"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    error={!!errors.action}
+                    helperText={errors.action?.message}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select Action" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {actionsOptions.map((action, i) => (
+                        <SelectItem key={`action-${i}`} value={action.value}>
+                          {action.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {action === "update" && (
+              <div className="space-y-2">
+                <Label>Target Field</Label>
+                <Controller
+                  name="target"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      error={!!errors.target}
+                      helperText={errors.target?.message}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Target" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="txnType">
+                          Transaction Type
+                        </SelectItem>
+                        <SelectItem value="category">Category</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            )}
+          </div>
+
+          {action === "update" && (
+            <div className="space-y-2">
+              {watch("target") === "txnType" ? (
+                <>
+                  <Label>Set Value To</Label>
+                  <Controller
+                    name="targetValue"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        error={!!errors.targetValue}
+                        helperText={errors.targetValue?.message}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="expense">Expense</SelectItem>
+                          <SelectItem value="revenue">Revenue</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </>
+              ) : (
+                <Input
+                  label="Set Value To"
+                  placeholder="New Value"
+                  {...register("targetValue")}
+                  error={!!errors.targetValue}
+                  helperText={errors.targetValue?.message}
+                />
+              )}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Example: Set <strong>Category</strong> to{" "}
+            <strong>"Entertainment"</strong>
+          </p>
+        </div>
       </div>
+
       <DialogFooter>
         <DialogClose asChild>
-          <Button variant="outline" onClick={handleCancel}>
+          <Button variant="outline" onClick={props.handleCancel}>
             Cancel
           </Button>
         </DialogClose>
-        <Button type="submit">Add</Button>
+        <Button type="submit">
+          {props.index !== undefined ? "Update" : "Add"}
+        </Button>
       </DialogFooter>
     </form>
   );

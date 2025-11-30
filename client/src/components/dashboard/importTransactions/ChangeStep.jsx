@@ -49,6 +49,17 @@ export default function ChangeStep() {
           isValid = false;
         }
 
+        // Check for global errors (like missing credit/debit)
+        const globalErrors = state.mappedData.some(
+          (entry) => entry.errors?.amount
+        );
+        if (globalErrors) {
+          toast.error(
+            "Some entries are missing both Credit and Debit values. Please check your mapping."
+          );
+          isValid = false;
+        }
+
         break;
       case 4:
 

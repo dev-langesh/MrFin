@@ -25,6 +25,7 @@ import { selectImportData } from "@/redux/slices/importTransactionsSlice";
 import { useSelector } from "react-redux";
 
 import { cn } from "@/lib/utils";
+import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
 
 function ImportedDataTable() {
   const [keys, setKeys] = useState([]);
@@ -33,7 +34,6 @@ function ImportedDataTable() {
   const [data, setData] = useState([]);
 
   const importData = useSelector(selectImportData);
-
 
   useEffect(() => {
     if (importData?.length > 0) {
@@ -91,27 +91,28 @@ function ImportedDataTable() {
 
       {/* Pagination + Limit Controls */}
       <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center gap-2">
-          <Label>Rows per page:</Label>
-          <Select
-            value={String(limit)}
-            onValueChange={(val) => setLimit(Number(val))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="20">20</SelectItem>
-              <SelectItem value="40">40</SelectItem>
-              <SelectItem value="60">60</SelectItem>
-              <SelectItem value="80">80</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-              <SelectItem value="200">200</SelectItem>
-              <SelectItem value="400">400</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {importData?.length > 10 && (
+          <div className="flex items-center gap-2">
+            <Label>Rows per page:</Label>
+            <Select
+              value={limit === importData?.length ? "all" : String(limit)}
+              onValueChange={(val) =>
+                setLimit(val === "all" ? importData?.length : Number(val))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PAGINATION_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option === "all" ? "All" : option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {Math.ceil((importData?.length || 0) / limit) > 1 && (
           <Pagination

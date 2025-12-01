@@ -2,7 +2,7 @@ import csv from "csvtojson";
 import {
   selectImportData,
   selectImportFiles,
-  setData,
+  setImportedData,
   updateState,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useEffect, useState } from "react";
@@ -37,7 +37,7 @@ export default function PreProcessData({
       }
     });
 
-    dispatch(setData(data));
+    dispatch(setImportedData(data));
   }
 
   useEffect(() => {

@@ -1,7 +1,6 @@
 import {
   selectImportData,
   selectMappedFields,
-  setData,
   updateMappedFields,
   updateState,
 } from "@/redux/slices/importTransactionsSlice";
@@ -165,55 +164,75 @@ export default function MapFieldsOptions({ onApply }) {
   }, [importedData]);
 
   function validateEntry(entry) {
+    // Only include fields that are mapped
     const mappedColumns = [
       state.txnDate,
       state.description,
       state.credit,
       state.debit,
-    ];
+    ].filter(Boolean); // Filter out undefined/null
 
-    const unmappedFields = Object.keys(entry).reduce((acc, key) => {
-      if (!mappedColumns.includes(key)) {
+    // Create object with only mapped fields using original keys
+    const validatedData = mappedColumns.reduce((acc, key) => {
+      if (entry[key] !== undefined) {
         acc[key] = entry[key];
       }
       return acc;
     }, {});
 
-    const validatedData = {
-      ...unmappedFields,
-      description: entry[state.description],
-      errors: {},
-    };
+    validatedData.errors = {};
 
-    const dateStr = entry[state.txnDate];
-    const isoDate = toISODateString(dateStr, state.dateFormat);
+    // Validate Date
+    if (state.txnDate) {
+      const dateStr = entry[state.txnDate];
+      const isoDate = toISODateString(dateStr, state.dateFormat);
 
-    if (isoDate) {
-      validatedData.txnDate = isoDate;
-    } else {
-      validatedData.errors.txnDate = `Invalid date`;
+      if (isoDate) {
+        // Store standardized date in a separate property if needed,
+        // but user requested original keys.
+        // We might need to store the parsed date for sorting/display logic
+        // or update the original key's value.
+        // The requirement says "store the data in it's original key in csv".
+        // If I replace the value, I lose the original format.
+        // But `toISODateString` returns ISO.
+        // Let's assume we should update the value to the standardized format
+        // OR keep it as is and parse on fly?
+        // The previous code did: `validatedData.txnDate = isoDate`.
+        // Now we don't have `txnDate` key. We have `entry[state.txnDate]`.
+        // Let's update the value at `state.txnDate` to the ISO string for consistency in DB?
+        // Actually, if we want to "ignore time", we need to parse it.
+        // Let's update the value in the object.
+        validatedData[state.txnDate] = isoDate;
+      } else {
+        validatedData.errors[state.txnDate] = `Invalid date`;
+      }
     }
 
-    const creditStr = entry[state.credit]?.replace(/[^0-9.-]/g, "");
-    const debitStr = entry[state.debit]?.replace(/[^0-9.-]/g, "");
-
-    if (creditStr) {
+    // Validate Credit
+    if (state.credit && entry[state.credit]) {
+      const creditStr = entry[state.credit]?.replace(/[^0-9.-]/g, "");
       if (isNaN(Number(creditStr))) {
-        validatedData.errors.credit = `Invalid number`;
+        validatedData.errors[state.credit] = `Invalid number`;
       } else {
-        validatedData.credit = creditStr;
+        validatedData[state.credit] = creditStr;
       }
     }
 
-    if (debitStr) {
+    // Validate Debit
+    if (state.debit && entry[state.debit]) {
+      const debitStr = entry[state.debit]?.replace(/[^0-9.-]/g, "");
       if (isNaN(Number(debitStr))) {
-        validatedData.errors.debit = `Invalid number`;
+        validatedData.errors[state.debit] = `Invalid number`;
       } else {
-        validatedData.debit = debitStr;
+        validatedData[state.debit] = debitStr;
       }
     }
 
-    if (!validatedData.credit && !validatedData.debit) {
+    // Validate Amount Presence
+    const creditVal = state.credit ? validatedData[state.credit] : null;
+    const debitVal = state.debit ? validatedData[state.debit] : null;
+
+    if (!creditVal && !debitVal) {
       validatedData.errors.amount = "Either Credit or Debit is required";
     }
 

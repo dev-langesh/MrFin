@@ -25,6 +25,7 @@ import {
   selectTransformedData,
   selectMappedFields,
   updateState,
+  deleteRow,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,8 +33,16 @@ import { cn } from "@/lib/utils";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { format, parseISO, isValid } from "date-fns";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
-import EditEntryForm from "./EditEntryForm";
 import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
+import EditTransformedEntryForm from "./EditTransformedEntryForm";
+import { transformedEntrySchema } from "@/schemas/transformedEntry.schema";
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/Tooltip";
 
 function TransformedDataTable({ ...props }) {
   const keys = ["txnDate", "txnType", "category", "description", "amount"];
@@ -60,11 +69,29 @@ function TransformedDataTable({ ...props }) {
     }
   }, [transformedData, page, limit]);
 
-  async function deleteRows(rows) {
-    const filteredRows = [...transformedData].filter(
-      (_, i) => !rows.includes(i)
-    );
-    dispatch(updateState({ transformedData: filteredRows }));
+  async function deleteRows(rowsToDeleteFromCurrentPage) {
+    // rowsToDeleteFromCurrentPage contains indices relative to the 'data' array (current page's displayed data)
+    const originalIndices = rowsToDeleteFromCurrentPage
+      .map((i) => {
+        const globalIndex = (page - 1) * limit + i;
+        // Ensure globalIndex is valid and transformedData[globalIndex] exists
+        if (transformedData && transformedData[globalIndex]) {
+          return transformedData[globalIndex]._originalIndex;
+        }
+        return undefined; // Or handle error
+      })
+      .filter((index) => index !== undefined); // Filter out any undefined indices
+
+    // Sort descending to delete from end first. This is crucial when deleting multiple items
+    // from the *source* array (importedData) using `deleteRow` action, as indices shift.
+    const sortedOriginalIndices = [...originalIndices].sort((a, b) => b - a);
+
+    sortedOriginalIndices.forEach((originalIdx) => {
+      dispatch(deleteRow(originalIdx));
+    });
+
+    // After deletion, the transformedData array will change.
+    // We need to clear selected rows and reset select all state.
     setSelectedRows([]);
     setSelectAll(false);
   }
@@ -110,6 +137,29 @@ function TransformedDataTable({ ...props }) {
     }
   }
 
+  // Helper to generate consistent colors for strings
+  function getColorForValue(value) {
+    if (!value) return "bg-gray-100 text-gray-800";
+    const colors = [
+      "bg-blue-100 text-blue-800",
+      "bg-green-100 text-green-800",
+      "bg-yellow-100 text-yellow-800",
+      "bg-purple-100 text-purple-800",
+      "bg-pink-100 text-pink-800",
+      "bg-indigo-100 text-indigo-800",
+      "bg-red-100 text-red-800",
+      "bg-orange-100 text-orange-800",
+      "bg-teal-100 text-teal-800",
+      "bg-cyan-100 text-cyan-800",
+    ];
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+      hash = value.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  }
+
   return (
     <Card className="px-0 rounded-sm py-5">
       <CardHeader>
@@ -145,6 +195,7 @@ function TransformedDataTable({ ...props }) {
                     {key.replace(/([A-Z])/g, " $1").trim()}
                   </TableHead>
                 ))}
+                <TableHead>Applied Rules</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -152,7 +203,7 @@ function TransformedDataTable({ ...props }) {
               {data.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={keys.length + 3}
+                    colSpan={keys.length + 4}
                     className="text-center py-8 text-muted-foreground"
                   >
                     No data available.
@@ -188,12 +239,43 @@ function TransformedDataTable({ ...props }) {
                           ) : key === "txnDate" ? (
                             formatDate(entry[key])
                           ) : key === "txnType" || key === "category" ? (
-                            <span className="capitalize">{entry[key]}</span>
+                            entry[key] ? (
+                              <span
+                                className={cn(
+                                  "px-2 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap",
+                                  getColorForValue(entry[key])
+                                )}
+                              >
+                                {entry[key]}
+                              </span>
+                            ) : (
+                              entry[key]
+                            )
                           ) : (
                             entry[key]
                           )}
                         </TableCell>
                       ))}
+
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {entry.appliedRules &&
+                            entry.appliedRules.map((rule, idx) => (
+                              <TooltipProvider key={idx}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="font-mono text-xs text-muted-foreground bg-muted w-5 h-5 flex items-center justify-center rounded-[2px] shrink-0 cursor-help">
+                                      {rule.index}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{rule.name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ))}
+                        </div>
+                      </TableCell>
 
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
@@ -218,7 +300,7 @@ function TransformedDataTable({ ...props }) {
                               </Button>
                             </DialogTrigger>
                             <DialogContent>
-                              <EditEntryForm
+                              <EditTransformedEntryForm
                                 initialData={entry}
                                 onSubmit={handleUpdateEntry}
                                 onCancel={() => setIsDialogOpen(false)}

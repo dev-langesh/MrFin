@@ -13,43 +13,52 @@ import { Edit2, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   selectMappedData,
+  selectImportData,
+  selectMappedFields,
   updateState,
 } from "@/redux/slices/importTransactionsSlice";
-import { useAuth } from "@/context/AuthProvider";
 
 export default function Rules() {
   const [open, setOpen] = useState(true);
   const [editingRuleIndex, setEditingRuleIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [rules, setRules] = useState([
-    {
-      name: "Set Expense Type",
-      source: "debit",
-      operation: "exists",
-      operationValue: "",
-      action: "update",
-      target: "txnType",
-      targetValue: "expense",
-    },
-    {
-      name: "Set Revenue Type",
-      source: "credit",
-      operation: "exists",
-      operationValue: "",
-      action: "update",
-      target: "txnType",
-      targetValue: "revenue",
-    },
-  ]);
+  const [rules, setRules] = useState([]);
   const mappedData = useSelector(selectMappedData);
-  const { auth } = useAuth();
+  const importedData = useSelector(selectImportData);
+  const mappedFields = useSelector(selectMappedFields);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Initialize default rules if not already set and mappedFields are available
+    if (rules.length === 0 && mappedFields) {
+      setRules([
+        {
+          name: "Set Expense Type",
+          source: mappedFields.debit || "Debit", // Use mapped field or fallback
+          operation: "exists",
+          operationValue: "",
+          action: "update",
+          target: "txnType",
+          targetValue: "expense",
+        },
+        {
+          name: "Set Revenue Type",
+          source: mappedFields.credit || "Credit", // Use mapped field or fallback
+          operation: "exists",
+          operationValue: "",
+          action: "update",
+          target: "txnType",
+          targetValue: "revenue",
+        },
+      ]);
+    }
+  }, [mappedFields, rules.length]);
 
   useEffect(() => {
     if (mappedData?.length > 0) {
       applyRules();
     }
-  }, [mappedData, rules, auth]);
+  }, [mappedData, rules]);
 
   function handleAddRule(rule) {
     setRules((prev) => [...prev, rule]);
@@ -66,47 +75,81 @@ export default function Rules() {
   function applyRules(e) {
     e?.stopPropagation();
     if (!mappedData) return;
-    let newData = [...mappedData];
 
-    rules.forEach((rule) => {
-      newData = newData.filter((row) => {
+    // Pre-compute keys for faster access
+    const creditKey = mappedFields.credit;
+    const debitKey = mappedFields.debit;
+    const txnDateKey = mappedFields.txnDate;
+    const descKey = mappedFields.description;
+
+    const finalData = [];
+
+    // Single pass optimization: O(N * R) instead of O(R * 2N)
+    for (let i = 0; i < mappedData.length; i++) {
+      // Create a mutable copy of the row with original index
+      let row = { ...mappedData[i], _originalIndex: i };
+      let keepRow = true;
+      let rowAppliedRules = [];
+
+      for (let j = 0; j < rules.length; j++) {
+        const rule = rules[j];
+        const matches = checkCondition(row, rule, importedData);
+
         if (rule.action === "delete") {
-          return !checkCondition(row, rule);
-        }
-        return true;
-      });
-
-      newData = newData.map((row) => {
-        if (rule.action === "update") {
-          if (checkCondition(row, rule)) {
-            return { ...row, [rule.target]: rule.targetValue };
+          if (matches) {
+            keepRow = false;
+            break; // Stop processing rules for this row if deleted
+          }
+        } else if (rule.action === "update") {
+          if (matches) {
+            row[rule.target] = rule.targetValue;
+            rowAppliedRules.push({ index: j + 1, name: rule.name });
           }
         }
-        return row;
-      });
-    });
+      }
 
-    // Filter fields and format amount
-    newData = newData.map((row) => {
-      const credit = parseFloat(String(row.credit || "0").replace(/,/g, ""));
-      const debit = parseFloat(String(row.debit || "0").replace(/,/g, ""));
-      const amount = Math.abs(credit > 0 ? credit : debit > 0 ? -debit : 0);
+      if (keepRow) {
+        // Transform logic
+        const credit = parseFloat(
+          String(row[creditKey] || "0").replace(/,/g, "")
+        );
+        const debit = parseFloat(
+          String(row[debitKey] || "0").replace(/,/g, "")
+        );
+        const amount = Math.abs(credit > 0 ? credit : debit > 0 ? -debit : 0);
 
-      return {
-        txnDate: row.txnDate,
-        description: row.description,
-        amount: amount,
-        txnType: row.txnType,
-        category: row.category,
-        userId: auth?.user?._id,
-      };
-    });
+        finalData.push({
+          txnDate: row[txnDateKey],
+          description: row[descKey],
+          amount: amount,
+          txnType: row.txnType,
+          category: row.category,
+          _originalIndex: row._originalIndex,
+          appliedRules: rowAppliedRules,
+        });
+      }
+    }
 
-    dispatch(updateState({ transformedData: newData }));
+    dispatch(updateState({ transformedData: finalData }));
   }
 
-  function checkCondition(row, rule) {
-    const value = row[rule.source];
+  function checkCondition(row, rule, importedData) {
+    // If source is in row (mappedData), use it. Otherwise use importedData.
+    // row has _originalIndex.
+    let value = row[rule.source];
+
+    if (value === undefined) {
+      // Not in mapped data, check imported data
+      const originalIndex = row._originalIndex;
+      if (
+        originalIndex !== undefined &&
+        importedData &&
+        importedData[originalIndex]
+      ) {
+        value = importedData[originalIndex][rule.source];
+      }
+    }
+
     const opValue = rule.operationValue;
 
     const numValue = Number(String(value).replace(/,/g, ""));

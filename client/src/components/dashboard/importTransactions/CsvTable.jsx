@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/Label";
 import Pagination from "../common/Pagination";
 import {
   selectImportData,
-  setData as setImportData,
+  setImportedData as setImportData,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Checkbox } from "@/components/ui/checkbox";

@@ -8,7 +8,7 @@ import {
 import Input from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
-import { selectMappedData } from "@/redux/slices/importTransactionsSlice";
+import { selectImportData } from "@/redux/slices/importTransactionsSlice";
 import {
   SelectContent,
   SelectItem,
@@ -34,8 +34,8 @@ const defaultValues = {
 };
 
 export default function AddRuleForm(props) {
-  const mappedData = useSelector(selectMappedData);
-  const sourceOptions = Object.keys(mappedData[0] || {});
+  const importedData = useSelector(selectImportData);
+  const sourceOptions = Object.keys(importedData[0] || {});
 
   const {
     control,

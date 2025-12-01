@@ -43,6 +43,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/Tooltip";
+import { selectIsLoading } from "@/redux/slices/importTransactionsSlice";
+import Loading from "@/components/ui/Loading";
 
 function TransformedDataTable({ ...props }) {
   const keys = ["txnDate", "txnType", "category", "description", "amount"];
@@ -57,6 +59,7 @@ function TransformedDataTable({ ...props }) {
   const transformedData = useSelector(selectTransformedData);
   const mappedFields = useSelector(selectMappedFields);
   const dateFormat = mappedFields?.dateFormat || "yyyy-MM-dd";
+  const isLoading = useSelector(selectIsLoading);
 
   const dispatch = useDispatch();
 
@@ -161,7 +164,12 @@ function TransformedDataTable({ ...props }) {
   }
 
   return (
-    <Card className="px-0 rounded-sm py-5">
+    <Card className="px-0 rounded-sm py-5 relative">
+      {isLoading && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
+          <Loading variant="spinner" size="lg" text="Processing..." />
+        </div>
+      )}
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <h1>Transformed Data ({transformedData?.length})</h1>

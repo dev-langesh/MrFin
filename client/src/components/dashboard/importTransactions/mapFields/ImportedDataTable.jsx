@@ -93,7 +93,7 @@ function ImportedDataTable() {
       <div className="flex items-center justify-between mt-4">
         {importData?.length > 10 && (
           <div className="flex items-center gap-2">
-            <Label>Rows per page:</Label>
+            <Label className="whitespace-nowrap">Rows per page:</Label>
             <Select
               value={limit === importData?.length ? "all" : String(limit)}
               onValueChange={(val) =>

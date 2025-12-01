@@ -38,6 +38,7 @@ export default function ImportTransactionsPage() {
           className="h-[250px]"
           onFileUpload={handleUpload}
           value={state.files}
+          maxFileSize={5 * 1024 * 1024} // 5MB
         />
       );
       break;

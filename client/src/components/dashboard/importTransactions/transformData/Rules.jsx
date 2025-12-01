@@ -16,8 +16,11 @@ import {
   selectImportData,
   selectMappedFields,
   updateState,
+  setIsLoading,
+  selectIsLoading,
 } from "@/redux/slices/importTransactionsSlice";
 import { applyRulesToData } from "@/utils/ruleEngine";
+import Loading from "@/components/ui/Loading";
 
 export default function Rules() {
   const [open, setOpen] = useState(true);
@@ -27,6 +30,7 @@ export default function Rules() {
   const mappedData = useSelector(selectMappedData);
   const importedData = useSelector(selectImportData);
   const mappedFields = useSelector(selectMappedFields);
+  const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -56,15 +60,29 @@ export default function Rules() {
   }, [mappedFields, rules.length]);
 
   useEffect(() => {
-    if (mappedData?.length > 0) {
-      const finalData = applyRulesToData(
-        mappedData,
-        rules,
-        mappedFields,
-        importedData
-      );
-      dispatch(updateState({ transformedData: finalData }));
-    }
+    const applyRules = async () => {
+      if (mappedData?.length > 0) {
+        dispatch(setIsLoading(true));
+        // Allow UI to update
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        try {
+          const finalData = applyRulesToData(
+            mappedData,
+            rules,
+            mappedFields,
+            importedData
+          );
+          dispatch(updateState({ transformedData: finalData }));
+        } catch (error) {
+          console.error("Failed to apply rules:", error);
+        } finally {
+          dispatch(setIsLoading(false));
+        }
+      }
+    };
+
+    applyRules();
   }, [mappedData, rules, mappedFields, importedData, dispatch]);
 
   function handleAddRule(rule) {

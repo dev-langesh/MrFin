@@ -12,6 +12,8 @@ function UploadFileComponent({
   displayAcceptedTypes = false,
   multiple = false,
   preview = false,
+  maxFileSize,
+  minFileSize,
   className,
   value,
   ...props
@@ -25,10 +27,8 @@ function UploadFileComponent({
     : acceptedFileTypes;
 
   const plainAcceptedTypes = acceptedFileTypes
-    .map((type) => {
-      return type.replace(/^.*\/|^\./g, "");
-    })
-    .join(", ");
+    ? acceptedFileTypes.map((type) => type.replace(/^.*\/|^\./g, "")).join(", ")
+    : "";
 
   useEffect(() => {
     if (value) {
@@ -36,8 +36,33 @@ function UploadFileComponent({
     }
   }, [value]);
 
-  function filterFilesByType(selectedFiles) {
-    return Array.from(selectedFiles).filter((file) => validateFileType(file));
+  function formatBytes(bytes, decimals = 2) {
+    if (!+bytes) return "0 Bytes";
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+  }
+
+  function validateFileSize(file) {
+    if (maxFileSize && file.size > maxFileSize) {
+      toast.error(
+        `File "${file.name}" exceeds the maximum size of ${formatBytes(
+          maxFileSize
+        )}`
+      );
+      return false;
+    }
+    if (minFileSize && file.size < minFileSize) {
+      toast.error(
+        `File "${file.name}" is smaller than the minimum size of ${formatBytes(
+          minFileSize
+        )}`
+      );
+      return false;
+    }
+    return true;
   }
 
   function validateFileType(file) {
@@ -63,16 +88,24 @@ function UploadFileComponent({
     return isValid;
   }
 
+  function filterFiles(selectedFiles) {
+    return Array.from(selectedFiles).filter(
+      (file) => validateFileType(file) && validateFileSize(file)
+    );
+  }
+
   const handleFiles = useCallback(
     (selected) => {
       const selectedFiles = Array.from(selected);
-      const newFiles = multiple ? [...files, ...selectedFiles] : selectedFiles;
-      const filteredFiles = filterFilesByType(newFiles);
+      const validFiles = filterFiles(selectedFiles);
 
-      setFiles(filteredFiles);
-      onFileUpload?.(filteredFiles);
+      if (validFiles.length === 0) return;
+
+      const newFiles = multiple ? [...files, ...validFiles] : validFiles;
+      setFiles(newFiles);
+      onFileUpload?.(newFiles);
     },
-    [files, multiple, onFileUpload]
+    [files, multiple, onFileUpload, maxFileSize, minFileSize, acceptedFileTypes]
   );
 
   const handleDrop = useCallback(
@@ -120,8 +153,8 @@ function UploadFileComponent({
         onDragLeave={handleDragLeave}
         onClick={handleBrowseClick}
         className={cn(
-          "bg-white relative flex flex-col items-center justify-center p-6 mb-2 border-2 border-dashed hover:border-border-active rounded-sm transition-all cursor-pointer select-none overflow-hidden",
-          isDragging && "border-border-active",
+          "bg-background relative flex flex-col items-center justify-center p-8 mb-4 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50 rounded-lg transition-all cursor-pointer select-none overflow-hidden group",
+          isDragging && "border-primary bg-primary/5 ring-2 ring-primary/20",
           className
         )}
       >
@@ -134,21 +167,38 @@ function UploadFileComponent({
           onChange={(e) => {
             const selected = e.target.files;
             if (selected.length) handleFiles(selected);
+            // Reset value to allow re-selecting same file
+            e.target.value = null;
           }}
         />
 
         {/* Default center content */}
-        <div className="flex flex-col items-center text-center text-muted-foreground">
-          <UploadCloud className="w-10 h-10 mb-2 " />
-          <p className="text-sm font-medium">
-            {isDragging ? "Drop files here..." : "Drag & drop files here"}
-          </p>
-          <p className="text-xs mt-1">or click to browse</p>
-          {displayAcceptedTypes && (
-            <p className="text-xs mt-3">
-              Accepted file types: {plainAcceptedTypes}
+        <div className="flex flex-col items-center text-center space-y-2">
+          <div
+            className={cn(
+              "p-4 rounded-full bg-muted transition-colors group-hover:bg-background",
+              isDragging && "bg-background"
+            )}
+          >
+            <UploadCloud
+              className={cn(
+                "w-8 h-8 text-muted-foreground transition-colors group-hover:text-primary",
+                isDragging && "text-primary"
+              )}
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">
+              {isDragging
+                ? "Drop files now"
+                : "Click to upload or drag and drop"}
             </p>
-          )}
+            <p className="text-xs text-muted-foreground">
+              {plainAcceptedTypes && `Accepted: ${plainAcceptedTypes}`}
+              {plainAcceptedTypes && maxFileSize && " • "}
+              {maxFileSize && `Max size: ${formatBytes(maxFileSize)}`}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -156,13 +206,13 @@ function UploadFileComponent({
       {files.length > 0 && (
         <div className="relative w-full flex flex-col items-center gap-2">
           {preview && files.every(isImage) ? (
-            <div className="flex items-center gap-3 w-full">
+            <div className="flex items-center gap-3 w-full flex-wrap">
               {files.map((file, i) => {
                 const url = URL.createObjectURL(file);
                 return (
                   <div
                     key={i}
-                    className="relative group rounded-sm overflow-hidden border  "
+                    className="relative group rounded-md overflow-hidden border bg-background shadow-sm"
                   >
                     <img
                       src={url}
@@ -171,43 +221,53 @@ function UploadFileComponent({
                       onLoad={() => URL.revokeObjectURL(url)}
                     />
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="bg-white absolute top-1 right-1  rounded-full opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 px-1 "
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={(e) => {
                         e.stopPropagation();
                         removeFile(i);
                       }}
                     >
-                      <X className="size-3" />
+                      <X className="w-3 h-3" />
                     </Button>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center text-center w-full">
-              <div className="flex items-center gap-1 w-full">
-                {files.map((file, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border rounded-full px-3 py-1 gap-3"
-                  >
-                    <span className="truncate text-sm ">{file.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="!px-0 rounded-full flex-shrink-0 h-auto hover:bg-none hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFile(i);
-                      }}
-                    >
-                      <X className="size-3" />
-                    </Button>
+            <div className="flex flex-col gap-2 w-full">
+              {files.map((file, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-3 border rounded-md bg-card shadow-sm group hover:border-primary/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="p-2 rounded-md bg-muted">
+                      <UploadCloud className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {file.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatBytes(file.size)}
+                      </span>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(i);
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -215,5 +275,4 @@ function UploadFileComponent({
     </div>
   );
 }
-
 export const UploadFile = memo(UploadFileComponent);

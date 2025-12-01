@@ -9,7 +9,7 @@ export const delimiterOptions = [
   },
   {
     label: "Tab",
-    value: "\\t",
+    value: "\t",
   },
   {
     label: "Semicolon",
@@ -20,7 +20,6 @@ export const delimiterOptions = [
     value: "|",
   },
 ];
-
 
 export const quoteOptions = [
   {

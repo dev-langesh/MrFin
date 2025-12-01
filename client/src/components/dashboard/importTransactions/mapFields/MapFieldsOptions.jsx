@@ -3,6 +3,8 @@ import {
   selectMappedFields,
   updateMappedFields,
   updateState,
+  setIsLoading,
+  selectIsLoading,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,90 +33,11 @@ import { FaRegSquarePlus, FaRegSquareMinus } from "react-icons/fa6";
 import { Button } from "@/components/ui/button";
 import { dateFormatsOptions, formFields } from "./contsants";
 import { isValid, parse, parseISO, formatISO } from "date-fns";
+import Loading from "@/components/ui/Loading";
 
-export function toISODateString(str, dateFormat) {
-  if (!str) return null;
+import { toISODateString } from "@/utils/dateUtils";
 
-  // Trim first to handle trailing spaces
-  const trimmed = String(str).trim();
-
-  // Remove time component before parsing
-  // Matches T or space followed by time-like patterns
-  const dateOnlyStr = trimmed
-    .replace(
-      /[\sT]\d{1,2}:\d{1,2}(:\d{1,2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/,
-      ""
-    )
-    .trim();
-
-  let date;
-
-  if (/^\d+$/.test(dateOnlyStr)) {
-    const num = Number(dateOnlyStr);
-    date = new Date(dateOnlyStr.length <= 10 ? num * 1000 : num);
-  } else {
-    // Try parsing as ISO first (handles yyyy-MM-dd)
-    const isoDate = parseISO(dateOnlyStr);
-    if (isValid(isoDate)) {
-      date = isoDate;
-    } else {
-      const formatVariations = generateFormatPermutations(dateFormat);
-      for (const fmt of formatVariations) {
-        try {
-          const parsed = parse(dateOnlyStr, fmt, new Date());
-          if (isValid(parsed)) {
-            date = parsed;
-            break;
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-    }
-  }
-
-  if (!date) {
-    const nativeDate = new Date(dateOnlyStr);
-    if (isValid(nativeDate)) {
-      date = nativeDate;
-    }
-  }
-
-  if (date && isValid(date)) {
-    // Set time to midnight UTC to ignore time component
-    date.setHours(0, 0, 0, 0);
-    // Adjust for timezone offset to keep the date correct
-    const offset = date.getTimezoneOffset() * 60000;
-    const adjustedDate = new Date(date.getTime() - offset);
-    return adjustedDate.toISOString();
-  }
-
-  return false;
-}
-
-function generateFormatPermutations(baseFormat) {
-  const formats = new Set();
-
-  // Generate variations for separators
-  const separators = ["-", "/", "."];
-  const parts = baseFormat.split(/[-/.]/);
-
-  if (parts.length === 3) {
-    separators.forEach((sep) => {
-      const fmt = parts.join(sep);
-      formats.add(fmt);
-      formats.add(fmt.replace("MM", "MMM"));
-      formats.add(fmt.replace("MM", "MMMM"));
-    });
-  } else {
-    // Fallback if format doesn't match expected structure
-    formats.add(baseFormat);
-    formats.add(baseFormat.replace("MM", "MMM"));
-    formats.add(baseFormat.replace("MM", "MMMM"));
-  }
-
-  return Array.from(formats);
-}
+// ... existing imports
 
 export default function MapFieldsOptions({ onApply }) {
   const [isOpen, setIsOpen] = useState(true);
@@ -122,6 +45,7 @@ export default function MapFieldsOptions({ onApply }) {
   const [state, setState] = useState({});
 
   const importedData = useSelector(selectImportData);
+  const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
 
   console.log(toISODateString("01-09-2025 08:33:36", "dd-MM-yyyy"));
@@ -188,20 +112,6 @@ export default function MapFieldsOptions({ onApply }) {
       const isoDate = toISODateString(dateStr, state.dateFormat);
 
       if (isoDate) {
-        // Store standardized date in a separate property if needed,
-        // but user requested original keys.
-        // We might need to store the parsed date for sorting/display logic
-        // or update the original key's value.
-        // The requirement says "store the data in it's original key in csv".
-        // If I replace the value, I lose the original format.
-        // But `toISODateString` returns ISO.
-        // Let's assume we should update the value to the standardized format
-        // OR keep it as is and parse on fly?
-        // The previous code did: `validatedData.txnDate = isoDate`.
-        // Now we don't have `txnDate` key. We have `entry[state.txnDate]`.
-        // Let's update the value at `state.txnDate` to the ISO string for consistency in DB?
-        // Actually, if we want to "ignore time", we need to parse it.
-        // Let's update the value in the object.
         validatedData[state.txnDate] = isoDate;
       } else {
         validatedData.errors[state.txnDate] = `Invalid date`;
@@ -209,22 +119,36 @@ export default function MapFieldsOptions({ onApply }) {
     }
 
     // Validate Credit
-    if (state.credit && entry[state.credit]) {
-      const creditStr = entry[state.credit]?.replace(/[^0-9.-]/g, "");
-      if (isNaN(Number(creditStr))) {
+    if (
+      state.credit &&
+      entry[state.credit] !== undefined &&
+      entry[state.credit] !== null
+    ) {
+      let val = entry[state.credit];
+      if (typeof val === "string") {
+        val = val.replace(/[^0-9.-]/g, "");
+      }
+      if (isNaN(Number(val))) {
         validatedData.errors[state.credit] = `Invalid number`;
       } else {
-        validatedData[state.credit] = creditStr;
+        validatedData[state.credit] = val;
       }
     }
 
     // Validate Debit
-    if (state.debit && entry[state.debit]) {
-      const debitStr = entry[state.debit]?.replace(/[^0-9.-]/g, "");
-      if (isNaN(Number(debitStr))) {
+    if (
+      state.debit &&
+      entry[state.debit] !== undefined &&
+      entry[state.debit] !== null
+    ) {
+      let val = entry[state.debit];
+      if (typeof val === "string") {
+        val = val.replace(/[^0-9.-]/g, "");
+      }
+      if (isNaN(Number(val))) {
         validatedData.errors[state.debit] = `Invalid number`;
       } else {
-        validatedData[state.debit] = debitStr;
+        validatedData[state.debit] = val;
       }
     }
 
@@ -243,22 +167,33 @@ export default function MapFieldsOptions({ onApply }) {
     setState((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleApply() {
-    let hasError = false;
-    const validatedData = importedData.map((data, index) => {
-      const val = validateEntry(data);
-      if (Object.keys(val.errors).length > 0) {
-        hasError = true;
-      }
-      return val;
-    });
-    dispatch(updateMappedFields({ ...state, hasError }));
-    dispatch(
-      updateState({
-        mappedData: validatedData,
-      })
-    );
-    if (onApply) onApply();
+  async function handleApply() {
+    dispatch(setIsLoading(true));
+    // Allow UI to update
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    try {
+      let hasError = false;
+      const validatedData = importedData.map((data, index) => {
+        const val = validateEntry(data);
+        if (Object.keys(val.errors).length > 0) {
+          hasError = true;
+        }
+        return val;
+      });
+      dispatch(updateMappedFields({ ...state, hasError }));
+      dispatch(
+        updateState({
+          mappedData: validatedData,
+        })
+      );
+      if (onApply) onApply();
+    } catch (error) {
+      console.error("Failed to apply mapping:", error);
+      toast.error("Failed to apply mapping.");
+    } finally {
+      dispatch(setIsLoading(false));
+    }
   }
 
   return (
@@ -279,8 +214,8 @@ export default function MapFieldsOptions({ onApply }) {
                 </CardDescription>
               </div>
             </CollapsibleTrigger>
-            <Button size="sm" onClick={handleApply}>
-              Apply
+            <Button size="sm" onClick={handleApply} disabled={isLoading}>
+              {isLoading ? <Loading size="sm" text="Applying..." /> : "Apply"}
             </Button>
           </div>
         </CardHeader>

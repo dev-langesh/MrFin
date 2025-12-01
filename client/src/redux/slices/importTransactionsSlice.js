@@ -19,6 +19,7 @@ const initialState = {
       debit: undefined,
       description: undefined,
     },
+    isLoading: false,
   },
 };
 
@@ -34,6 +35,9 @@ const importTransactionsSlice = createSlice({
     },
     setImportedData: (state, action) => {
       state.value.importedData = action.payload;
+    },
+    setIsLoading: (state, action) => {
+      state.value.isLoading = action.payload;
     },
     nextStep: (state) => {
       state.value.step += 1;
@@ -84,6 +88,7 @@ export const {
   setFiles,
   setStep,
   setImportedData,
+  setIsLoading,
   nextStep,
   previousStep,
   reset,
@@ -109,3 +114,5 @@ export const selectMappedData = (state) =>
   state.importTransactions.value.mappedData;
 export const selectTransformedData = (state) =>
   state.importTransactions.value.transformedData;
+export const selectIsLoading = (state) =>
+  state.importTransactions.value.isLoading;

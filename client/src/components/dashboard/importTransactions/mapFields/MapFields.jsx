@@ -22,7 +22,7 @@ export default function MapFields({}) {
 
   console.log(selectedRows);
 
-  const [activeTab, setActiveTab] = useState("importedData");
+  const [activeTab, setActiveTab] = useState("mappedData");
 
   function handleDelete() {
     const filteredRows = [...tData].filter((_, i) => !selectedRows.includes(i));

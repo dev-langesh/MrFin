@@ -19,33 +19,11 @@ export default function PreProcessData({
   const data = useSelector(selectImportData);
   const dispatch = useDispatch();
 
-  async function preProcessData() {
-    if (readedDataFromFile) return;
-
-    const data = await new Promise((resolve, reject) => {
-      try {
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          const json = await csv({}).fromString(event.target.result);
-          console.log(json);
-          resolve(json);
-        };
-        reader.readAsText(files[0]);
-        setReadedDataFromFile(true);
-      } catch (e) {
-        reject(e);
-      }
-    });
-
-    dispatch(setImportedData(data));
-  }
-
   useEffect(() => {
     if (!files || files.length === 0) {
       toast.error("No files to preprocess");
       dispatch(updateState({ step: 1 }));
     }
-    preProcessData();
   }, [files]);
 
   return (

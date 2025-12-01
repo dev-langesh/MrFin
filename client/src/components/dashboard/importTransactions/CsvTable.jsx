@@ -25,12 +25,14 @@ import Pagination from "../common/Pagination";
 import {
   selectImportData,
   setImportedData as setImportData,
+  selectIsLoading,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
+import Loading from "@/components/ui/Loading";
 
 function CsvTable() {
   const [keys, setKeys] = useState([]);
@@ -40,6 +42,7 @@ function CsvTable() {
   const [selectedRows, setSelectedRows] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
 
+  const isLoading = useSelector(selectIsLoading);
   const importData = useSelector(selectImportData);
 
   const dispatch = useDispatch();
@@ -72,7 +75,12 @@ function CsvTable() {
   }
 
   return (
-    <Card className="px-0 rounded-sm py-5">
+    <Card className="px-0 rounded-sm py-5 relative">
+      {isLoading && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
+          <Loading variant="spinner" size="lg" text="Processing..." />
+        </div>
+      )}
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <h1>Imported data ({importData?.length})</h1>
@@ -97,20 +105,23 @@ function CsvTable() {
       <CardContent>
         <div className="rounded-md border grid grid-cols-1">
           <Table className="overflow-x-auto">
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Checkbox
-                    checked={selectAll}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>{" "}
-                <TableHead>ID</TableHead>
-                {data.length > 0 &&
-                  keys.map((key) => <TableHead key={key}>{key}</TableHead>)}
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+            {data.length > 0 && (
+              <TableHeader>
+                <TableRow>
+                  <TableHead>
+                    <Checkbox
+                      checked={selectAll}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>{" "}
+                  <TableHead>ID</TableHead>
+                  {keys.map((key) => (
+                    <TableHead key={key}>{key}</TableHead>
+                  ))}
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+            )}
             <TableBody>
               {data.length === 0 ? (
                 <TableRow>
@@ -185,7 +196,7 @@ function CsvTable() {
         <div className="flex items-center justify-between mt-4">
           {importData?.length > 10 && (
             <div className="flex items-center gap-2">
-              <Label>Rows per page:</Label>
+              <Label className="whitespace-nowrap">Rows per page:</Label>
               <Select
                 value={limit === importData?.length ? "all" : String(limit)}
                 onValueChange={(val) =>

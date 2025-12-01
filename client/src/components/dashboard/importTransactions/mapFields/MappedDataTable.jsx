@@ -36,6 +36,8 @@ import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
 import GenericEditForm from "../GenericEditForm";
 import { createMappedEntrySchema } from "@/schemas/mappedEntry.schema";
+import { selectIsLoading } from "@/redux/slices/importTransactionsSlice";
+import Loading from "@/components/ui/Loading";
 
 function MappedDataTable({ selectedRows, setSelectedRows }) {
   const [limit, setLimit] = useState(10);
@@ -114,8 +116,15 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
     }
   }
 
+  const isLoading = useSelector(selectIsLoading);
+
   return (
-    <CardContent className="">
+    <CardContent className="relative">
+      {isLoading && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
+          <Loading variant="spinner" size="lg" text="Processing..." />
+        </div>
+      )}
       <div className="rounded-md border grid grid-cols-1">
         <Table className="overflow-x-auto">
           <TableHeader>
@@ -258,7 +267,7 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
       <div className="flex items-center justify-between mt-4">
         {mappedData?.length > 10 && (
           <div className="flex items-center gap-2">
-            <Label>Rows per page:</Label>
+            <Label className="whitespace-nowrap">Rows per page:</Label>
             <Select
               value={limit === mappedData?.length ? "all" : String(limit)}
               onValueChange={(val) =>

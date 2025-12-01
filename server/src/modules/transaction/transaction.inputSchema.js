@@ -10,9 +10,7 @@ const createTransactionSchema = z.object({
       required_error: "Transaction type is required",
     }),
     description: z.string().optional(),
-    source: z.string().optional(),
-    paymentGateway: z.string().optional(),
-    expenseCategory: z.string().optional(),
+    category: z.string().optional(),
     amount: z
       .number({ required_error: "Amount is required" })
       .positive({ message: "Amount must be positive" }),
@@ -30,9 +28,7 @@ const createTransactionsSchema = z.object({
         required_error: "Transaction type is required",
       }),
       description: z.string().optional(),
-      source: z.string().optional(),
-      paymentGateway: z.string().optional(),
-      expenseCategory: z.string().optional(),
+      category: z.string().optional(),
       amount: z
         .number({ required_error: "Amount is required" })
         .positive({ message: "Amount must be positive" }),
@@ -49,9 +45,7 @@ const updateTransactionSchema = z.object({
       .optional(),
     txnType: z.enum(["expense", "revenue"]).optional(),
     description: z.string().optional(),
-    source: z.string().optional(),
-    paymentGateway: z.string().optional(),
-    expenseCategory: z.string().optional(),
+    category: z.string().optional(),
     amount: z
       .number()
       .positive({ message: "Amount must be positive" })

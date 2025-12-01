@@ -1,0 +1,6 @@
+Date,Desc,In,Out
+2025-12-01,Valid Row,100,
+invalid-date,Bad Date,,50
+2025-12-03,Bad Amount,,abc
+2025-12-04,Both Values,100,100
+2025-12-05,No Values,,

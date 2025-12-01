@@ -213,7 +213,14 @@ function TransformedDataTable({ ...props }) {
                 data.map((entry, i) => {
                   const globalIndex = (page - 1) * limit + i;
                   return (
-                    <TableRow key={`row-${globalIndex}`}>
+                    <TableRow
+                      key={`row-${globalIndex}`}
+                      className={cn(
+                        Object.keys(entry.errors || {}).length > 0
+                          ? "bg-red-100"
+                          : ""
+                      )}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedRows.includes(i)}
@@ -234,7 +241,11 @@ function TransformedDataTable({ ...props }) {
                             entry[key]?.length > 100 && "min-w-[300px]"
                           )}
                         >
-                          {key === "amount" ? (
+                          {entry.errors && entry.errors[key] ? (
+                            <span className="text-red-600 font-medium">
+                              {entry.errors[key]}
+                            </span>
+                          ) : key === "amount" ? (
                             getAmount(entry)
                           ) : key === "txnDate" ? (
                             formatDate(entry[key])

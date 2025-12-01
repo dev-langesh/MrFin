@@ -3,13 +3,18 @@ const { transactionService } = require("./transaction.service");
 
 // Create a single transaction
 async function createTransaction(req, res) {
-  const txn = await transactionService.createTransaction(req.body);
+  const data = { ...req.body, userId: req.user.id };
+  const txn = await transactionService.createTransaction(data);
   res.status(201).json(txn);
 }
 
 // Create multiple transactions
 async function createTransactions(req, res) {
-  const txns = await transactionService.createTransactions(req.body);
+  const transactions = req.body.map((txn) => ({
+    ...txn,
+    userId: req.user.id,
+  }));
+  const txns = await transactionService.createTransactions(transactions);
   res.status(201).json(txns);
 }
 

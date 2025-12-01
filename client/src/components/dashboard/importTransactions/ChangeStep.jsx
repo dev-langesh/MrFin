@@ -5,15 +5,22 @@ import {
   nextStep,
   previousStep,
   selectImportTransactions,
+  reset,
+  updateState,
 } from "@/redux/slices/importTransactionsSlice";
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
+import { protectedApi } from "@/api/axios";
+import { transactionArraySchema } from "@/schemas/transaction.schema";
+import { useRouter } from "next/navigation";
 
 export default function ChangeStep() {
   const state = useSelector(selectImportTransactions);
   const dispatch = useDispatch();
+  const router = useRouter();
   const lastStep = 4;
+  const [isImporting, setIsImporting] = useState(false);
 
   function validateStepData() {
     let isValid = true;
@@ -73,7 +80,6 @@ export default function ChangeStep() {
   async function handleChange(action) {
     if (action === "next" && state.step < lastStep) {
       const isValid = validateStepData();
-      console.log(isValid, state.step);
       if (!isValid) return;
       dispatch(nextStep());
     } else if (action === "back" && state.step > 1) {
@@ -81,16 +87,85 @@ export default function ChangeStep() {
     }
   }
 
+  async function handleImport() {
+    setIsImporting(true);
+    try {
+      // 1. Validate Data
+      const result = transactionArraySchema.safeParse(state.transformedData);
+
+      if (!result.success) {
+        // Map errors back to transformedData
+        const errors = result.error.format();
+        const newTransformedData = [...state.transformedData];
+        let hasErrors = false;
+
+        // Zod array errors are indexed by key (index string)
+        Object.keys(errors).forEach((key) => {
+          if (key === "_errors") return; // Array-level errors
+          const index = Number(key);
+          if (!isNaN(index) && newTransformedData[index]) {
+            const rowErrors = errors[key];
+            const formattedErrors = {};
+
+            // Extract field errors
+            Object.keys(rowErrors).forEach((field) => {
+              if (field !== "_errors") {
+                formattedErrors[field] = rowErrors[field]._errors[0];
+              }
+            });
+
+            if (Object.keys(formattedErrors).length > 0) {
+              newTransformedData[index] = {
+                ...newTransformedData[index],
+                errors: formattedErrors,
+              };
+              hasErrors = true;
+            }
+          }
+        });
+
+        if (hasErrors) {
+          dispatch(updateState({ transformedData: newTransformedData }));
+          toast.error("Validation failed. Please check the highlighted rows.");
+          setIsImporting(false);
+          return;
+        }
+      }
+
+      // 2. Call API
+      await protectedApi.post("/transactions/bulk", state.transformedData);
+
+      toast.success("Transactions imported successfully!");
+      dispatch(reset());
+      router.push("/dashboard/transactions");
+    } catch (error) {
+      console.error("Import failed:", error);
+      toast.error("Failed to import transactions. Please try again.");
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
   return (
     <div className="flex items-center justify-end gap-3 pr-4 self-stretch">
       {state.step > 1 && (
-        <Button onClick={() => handleChange("back")} className="px-6">
+        <Button
+          onClick={() => handleChange("back")}
+          className="px-6"
+          variant="outline"
+          disabled={isImporting}
+        >
           Back
         </Button>
       )}
       {state.step < lastStep && (
         <Button onClick={() => handleChange("next")} className="px-6">
           Next
+        </Button>
+      )}
+      {state.step === lastStep && (
+        <Button onClick={handleImport} className="px-6" disabled={isImporting}>
+          {isImporting ? "Importing..." : "Import"}
         </Button>
       )}
     </div>

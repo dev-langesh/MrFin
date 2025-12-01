@@ -1,15 +1,20 @@
-import * as z from "zod";
+import { z } from "zod";
 
-export const entrySchema = z.object({
-  txnDate: z.string().min(1, "Date is required"),
-  description: z.string().min(1, "Description is required"),
-  amount: z.string().refine((val) => !isNaN(Number(val)), {
-    message: "Amount must be a number",
-  }).refine((val) => Number(val) > 0, {
-    message: "Amount must be greater than 0",
+export const transactionSchema = z.object({
+  txnDate: z
+    .string({ required_error: "Date is required" })
+    .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" }),
+  txnType: z.enum(["expense", "revenue"], {
+    required_error: "Type is required",
+    invalid_type_error: "Type must be 'expense' or 'revenue'",
   }),
-  txnType: z.string({
-    required_error: "Transaction type is required",
-  }),
+  description: z.string().optional(),
   category: z.string().optional(),
+  amount: z
+    .number({ required_error: "Amount is required" })
+    .refine((val) => val > 0, {
+      message: "Amount must be positive greater than 0",
+    }),
 });
+
+export const transactionArraySchema = z.array(transactionSchema);

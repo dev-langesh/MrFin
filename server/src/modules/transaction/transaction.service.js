@@ -35,24 +35,7 @@ async function createTransactions(transactions) {
     const savedTxns = await Transaction.insertMany(transactions, {
       ordered: false,
     });
-    // Batch analytics update (avoid sequential loops)
-    const revenueTxns = savedTxns.filter((txn) => txn.txnType === "revenue");
-    const expenseTxns = savedTxns.filter((txn) => txn.txnType === "expense");
-
-    await Promise.all([
-      ...revenueTxns.map((txn) =>
-        analyticsService.updateAnalyticsOnAdd(
-          { earnings: txn.amount },
-          txn.txnDate
-        )
-      ),
-      ...expenseTxns.map((txn) =>
-        analyticsService.updateAnalyticsOnAdd(
-          { expenses: txn.amount },
-          txn.txnDate
-        )
-      ),
-    ]);
+    await analyticsService.updateAnalyticsBatch(savedTxns);
 
     return savedTxns;
   } catch (err) {

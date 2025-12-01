@@ -17,6 +17,7 @@ import {
   selectMappedFields,
   updateState,
 } from "@/redux/slices/importTransactionsSlice";
+import { applyRulesToData } from "@/utils/ruleEngine";
 
 export default function Rules() {
   const [open, setOpen] = useState(true);
@@ -56,9 +57,15 @@ export default function Rules() {
 
   useEffect(() => {
     if (mappedData?.length > 0) {
-      applyRules();
+      const finalData = applyRulesToData(
+        mappedData,
+        rules,
+        mappedFields,
+        importedData
+      );
+      dispatch(updateState({ transformedData: finalData }));
     }
-  }, [mappedData, rules]);
+  }, [mappedData, rules, mappedFields, importedData, dispatch]);
 
   function handleAddRule(rule) {
     setRules((prev) => [...prev, rule]);
@@ -70,127 +77,6 @@ export default function Rules() {
       newRules[editingRuleIndex] = rule;
       return newRules;
     });
-  }
-
-  function applyRules(e) {
-    e?.stopPropagation();
-    if (!mappedData) return;
-
-    // Pre-compute keys for faster access
-    const creditKey = mappedFields.credit;
-    const debitKey = mappedFields.debit;
-    const txnDateKey = mappedFields.txnDate;
-    const descKey = mappedFields.description;
-
-    const finalData = [];
-
-    // Single pass optimization: O(N * R) instead of O(R * 2N)
-    for (let i = 0; i < mappedData.length; i++) {
-      // Create a mutable copy of the row with original index
-      let row = { ...mappedData[i], _originalIndex: i };
-      let keepRow = true;
-      let rowAppliedRules = [];
-
-      for (let j = 0; j < rules.length; j++) {
-        const rule = rules[j];
-        const matches = checkCondition(row, rule, importedData);
-
-        if (rule.action === "delete") {
-          if (matches) {
-            keepRow = false;
-            break; // Stop processing rules for this row if deleted
-          }
-        } else if (rule.action === "update") {
-          if (matches) {
-            row[rule.target] = rule.targetValue;
-            rowAppliedRules.push({ index: j + 1, name: rule.name });
-          }
-        }
-      }
-
-      if (keepRow) {
-        // Transform logic
-        const credit = parseFloat(
-          String(row[creditKey] || "0").replace(/,/g, "")
-        );
-        const debit = parseFloat(
-          String(row[debitKey] || "0").replace(/,/g, "")
-        );
-        const amount = Math.abs(credit > 0 ? credit : debit > 0 ? -debit : 0);
-
-        finalData.push({
-          txnDate: row[txnDateKey],
-          description: row[descKey],
-          amount: amount,
-          txnType: row.txnType,
-          category: row.category,
-          _originalIndex: row._originalIndex,
-          appliedRules: rowAppliedRules,
-        });
-      }
-    }
-
-    dispatch(updateState({ transformedData: finalData }));
-  }
-
-  function checkCondition(row, rule, importedData) {
-    // If source is in row (mappedData), use it. Otherwise use importedData.
-    // row has _originalIndex.
-    let value = row[rule.source];
-
-    if (value === undefined) {
-      // Not in mapped data, check imported data
-      const originalIndex = row._originalIndex;
-      if (
-        originalIndex !== undefined &&
-        importedData &&
-        importedData[originalIndex]
-      ) {
-        value = importedData[originalIndex][rule.source];
-      }
-    }
-
-    const opValue = rule.operationValue;
-
-    const numValue = Number(String(value).replace(/,/g, ""));
-    const numOpValue = Number(String(opValue).replace(/,/g, ""));
-
-    switch (rule.operation) {
-      case "=":
-        return value == opValue;
-      case "!=":
-        return value != opValue;
-      case "<":
-        return !isNaN(numValue) && !isNaN(numOpValue) && numValue < numOpValue;
-      case "<=":
-        return !isNaN(numValue) && !isNaN(numOpValue) && numValue <= numOpValue;
-      case ">":
-        return !isNaN(numValue) && !isNaN(numOpValue) && numValue > numOpValue;
-      case ">=":
-        return !isNaN(numValue) && !isNaN(numOpValue) && numValue >= numOpValue;
-      case "contains":
-        return String(value)
-          .toLowerCase()
-          .includes(String(opValue).toLowerCase());
-      case "not-contain":
-        return !String(value)
-          .toLowerCase()
-          .includes(String(opValue).toLowerCase());
-      case "starts-with":
-        return String(value)
-          .toLowerCase()
-          .startsWith(String(opValue).toLowerCase());
-      case "ends-with":
-        return String(value)
-          .toLowerCase()
-          .endsWith(String(opValue).toLowerCase());
-      case "exists":
-        return value !== undefined && value !== null && value !== "";
-      case "not-exists":
-        return value === undefined || value === null || value === "";
-      default:
-        return false;
-    }
   }
 
   function handleDelete(index) {

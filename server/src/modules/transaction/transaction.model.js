@@ -5,10 +5,13 @@ const transactionSchema = new mongoose.Schema(
     txnDate: { type: Date, required: true },
     txnType: { type: String, enum: ["expense", "revenue"], required: true },
     description: { type: String },
-    source: { type: String },
-    paymentGateway: { type: String },
-    expenseCategory: { type: String },
-    amount: { type: Number, required: true }, 
+    category: { type: String },
+    amount: { type: Number, required: true },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   { timestamps: true }
 );

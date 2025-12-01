@@ -1,20 +1,15 @@
-import csv from "csvtojson";
 import {
   selectImportData,
   selectImportFiles,
-  setImportedData,
   updateState,
 } from "@/redux/slices/importTransactionsSlice";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import CsvTable from "../CsvTable";
 import PreProcessOptions from "./PreProcessOptions";
 import { toast } from "sonner";
 
-export default function PreProcessData({
-  readedDataFromFile,
-  setReadedDataFromFile,
-}) {
+export default function PreProcessData() {
   const files = useSelector(selectImportFiles);
   const data = useSelector(selectImportData);
   const dispatch = useDispatch();

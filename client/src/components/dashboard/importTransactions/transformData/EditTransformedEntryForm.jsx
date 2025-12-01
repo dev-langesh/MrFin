@@ -20,12 +20,9 @@ import {
 } from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/text-area";
 import { transformedEntrySchema } from "@/schemas/transformedEntry.schema";
+import React, { memo } from "react";
 
-export default function EditTransformedEntryForm({
-  initialData,
-  onSubmit,
-  onCancel,
-}) {
+function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
   const {
     register,
     handleSubmit,
@@ -139,3 +136,5 @@ export default function EditTransformedEntryForm({
     </form>
   );
 }
+
+export default memo(EditTransformedEntryForm);

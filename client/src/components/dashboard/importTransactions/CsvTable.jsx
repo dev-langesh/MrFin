@@ -1,233 +1,98 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/Table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
-import { Trash2 } from "lucide-react";
-import { memo, useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Label } from "@/components/ui/Label";
-import Pagination from "../common/Pagination";
+import { memo, useMemo } from "react";
 import {
   selectImportData,
   setImportedData as setImportData,
   selectIsLoading,
+  deleteRows,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import GenericDataTable from "./GenericDataTable";
+import { useTable } from "@/hooks/useTable";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
-import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
-import Loading from "@/components/ui/Loading";
 
 function CsvTable() {
-  const [keys, setKeys] = useState([]);
-  const [limit, setLimit] = useState(10);
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState([]);
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [selectAll, setSelectAll] = useState(false);
-
   const isLoading = useSelector(selectIsLoading);
   const importData = useSelector(selectImportData);
-
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    if (importData?.length > 0) {
-      const skip = (page - 1) * limit;
-      setData(importData.slice(skip, skip + limit));
+  const pagination = useTable({ data: importData });
+  const { resetSelection } = pagination;
 
-      setKeys(Object.keys(importData[0]));
-    }
-  }, [importData, page, limit]);
+  const keys = useMemo(() => {
+    return importData && importData.length > 0
+      ? Object.keys(importData[0])
+      : [];
+  }, [importData]);
 
-  async function deleteRows(rows) {
-    const filteredRows = [...importData].filter((_, i) => !rows.includes(i));
-    dispatch(setImportData(filteredRows));
-    setSelectedRows([]);
-    setSelectAll(false);
-  }
+  const columns = useMemo(() => {
+    const cols = keys.map((key) => ({
+      header: key,
+      accessor: key,
+      render: (entry) => (
+        <div
+          className={cn(
+            "whitespace-break-spaces break-all",
+            entry[key]?.length > 10 && "min-w-[150px]",
+            entry[key]?.length > 100 && "min-w-[300px]"
+          )}
+        >
+          {entry[key]}
+        </div>
+      ),
+    }));
 
-  function toggleSelectAll(checked) {
-    setSelectAll(checked);
-    if (checked) setSelectedRows(data.map((_, i) => i));
-    else setSelectedRows([]);
-  }
+    // Add Actions column
+    cols.push({
+      header: "Actions",
+      className: "text-right",
+      cellClassName: "text-right",
+      render: (entry, globalIndex) => (
+        <div className="flex items-center justify-end">
+          <ConfirmationDialog
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            }
+            title="Delete Entry"
+            description="Are you sure you want to delete this entry?"
+            onConfirm={() => handleDeleteRows([globalIndex])}
+            confirmText="Delete"
+          />
+        </div>
+      ),
+    });
 
-  function toggleSelectRow(index, checked) {
-    if (checked) setSelectedRows([...selectedRows, index]);
-    else setSelectedRows(selectedRows.filter((i) => i !== index));
+    return cols;
+  }, [keys]);
+
+  function handleDeleteRows(rows) {
+    // CsvTable uses setImportData directly in original code for deleteRows,
+    // but we added deleteRows action to slice which handles all arrays.
+    // However, CsvTable is for PRE-PROCESS step, where mappedData/transformedData might not exist yet.
+    // The deleteRows action in slice filters ALL arrays. This is correct behavior if we delete from source.
+    dispatch(deleteRows(rows));
+    resetSelection();
   }
 
   return (
-    <Card className="px-0 rounded-sm py-5 relative">
-      {isLoading && (
-        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
-          <Loading variant="spinner" size="lg" text="Processing..." />
-        </div>
-      )}
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <h1>Imported data ({importData?.length})</h1>
-          <div className="flex items-center gap-2">
-            {selectedRows.length > 0 && (
-              <ConfirmationDialog
-                trigger={
-                  <Button size="sm">
-                    Delete
-                    {/* <Trash2 className="w-4 h-4" /> */}
-                  </Button>
-                }
-                title="Delete Selected Rows"
-                description="Are you sure you want to delete the selected entries? This action cannot be undone."
-                onConfirm={() => deleteRows(selectedRows)}
-                confirmText="Delete"
-              />
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border grid grid-cols-1">
-          <Table className="overflow-x-auto">
-            {data.length > 0 && (
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <Checkbox
-                      checked={selectAll}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>{" "}
-                  <TableHead>ID</TableHead>
-                  {keys.map((key) => (
-                    <TableHead key={key}>{key}</TableHead>
-                  ))}
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-            )}
-            <TableBody>
-              {data.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    No data available.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.map((entry, i) => (
-                  <TableRow key={`row-${i}`}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedRows.includes(i)}
-                        onCheckedChange={(checked) =>
-                          toggleSelectRow(i, checked)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>{i + 1}</TableCell>
-
-                    {keys.map((key) => (
-                      <TableCell
-                        key={`${i}-${key}`}
-                        className={cn(
-                          "min-w-[100px] whitespace-break-spaces break-all",
-                          entry[key]?.length > 10 && "min-w-[150px]",
-                          entry[key]?.length > 100 && "min-w-[300px]"
-                        )}
-                      >
-                        {entry[key]}
-                      </TableCell>
-                    ))}
-
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end">
-                        {/* <Button
-                          onClick={() => handleEdit(entry)}
-                          variant="ghost"
-                          size="sm"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button> */}
-
-                        <ConfirmationDialog
-                          trigger={
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          }
-                          title="Delete Entry"
-                          description="Are you sure you want to delete this entry?"
-                          onConfirm={() => deleteRows([i])}
-                          confirmText="Delete"
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination + Limit Controls */}
-        <div className="flex items-center justify-between mt-4">
-          {importData?.length > 10 && (
-            <div className="flex items-center gap-2">
-              <Label className="whitespace-nowrap">Rows per page:</Label>
-              <Select
-                value={limit === importData?.length ? "all" : String(limit)}
-                onValueChange={(val) =>
-                  setLimit(val === "all" ? importData?.length : Number(val))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGINATION_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option === "all" ? "All" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {Math.ceil((importData?.length || 0) / limit) > 1 && (
-            <Pagination
-              total={importData?.length || 0}
-              limit={limit}
-              currentPage={page}
-              handlePageChange={setPage}
-            />
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <GenericDataTable
+      data={importData}
+      columns={columns}
+      isLoading={isLoading}
+      title="Imported Data"
+      pagination={pagination}
+      onDelete={handleDeleteRows}
+    />
   );
 }
 

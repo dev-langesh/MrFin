@@ -36,6 +36,7 @@ import { isValid, parse, parseISO, formatISO } from "date-fns";
 import Loading from "@/components/ui/Loading";
 
 import { toISODateString } from "@/utils/dateUtils";
+import { validateEntry } from "@/utils/importUtils";
 
 // ... existing imports
 
@@ -87,82 +88,6 @@ export default function MapFieldsOptions({ onApply }) {
     });
   }, [importedData]);
 
-  function validateEntry(entry) {
-    // Only include fields that are mapped
-    const mappedColumns = [
-      state.txnDate,
-      state.description,
-      state.credit,
-      state.debit,
-    ].filter(Boolean); // Filter out undefined/null
-
-    // Create object with only mapped fields using original keys
-    const validatedData = mappedColumns.reduce((acc, key) => {
-      if (entry[key] !== undefined) {
-        acc[key] = entry[key];
-      }
-      return acc;
-    }, {});
-
-    validatedData.errors = {};
-
-    // Validate Date
-    if (state.txnDate) {
-      const dateStr = entry[state.txnDate];
-      const isoDate = toISODateString(dateStr, state.dateFormat);
-
-      if (isoDate) {
-        validatedData[state.txnDate] = isoDate;
-      } else {
-        validatedData.errors[state.txnDate] = `Invalid date`;
-      }
-    }
-
-    // Validate Credit
-    if (
-      state.credit &&
-      entry[state.credit] !== undefined &&
-      entry[state.credit] !== null
-    ) {
-      let val = entry[state.credit];
-      if (typeof val === "string") {
-        val = val.replace(/[^0-9.-]/g, "");
-      }
-      if (isNaN(Number(val))) {
-        validatedData.errors[state.credit] = `Invalid number`;
-      } else {
-        validatedData[state.credit] = val;
-      }
-    }
-
-    // Validate Debit
-    if (
-      state.debit &&
-      entry[state.debit] !== undefined &&
-      entry[state.debit] !== null
-    ) {
-      let val = entry[state.debit];
-      if (typeof val === "string") {
-        val = val.replace(/[^0-9.-]/g, "");
-      }
-      if (isNaN(Number(val))) {
-        validatedData.errors[state.debit] = `Invalid number`;
-      } else {
-        validatedData[state.debit] = val;
-      }
-    }
-
-    // Validate Amount Presence
-    const creditVal = state.credit ? validatedData[state.credit] : null;
-    const debitVal = state.debit ? validatedData[state.debit] : null;
-
-    if (!creditVal && !debitVal) {
-      validatedData.errors.amount = "Either Credit or Debit is required";
-    }
-
-    return validatedData;
-  }
-
   function handleChange(key, value) {
     setState((prev) => ({ ...prev, [key]: value }));
   }
@@ -174,8 +99,8 @@ export default function MapFieldsOptions({ onApply }) {
 
     try {
       let hasError = false;
-      const validatedData = importedData.map((data, index) => {
-        const val = validateEntry(data);
+      const validatedData = importedData.map((data) => {
+        const val = validateEntry(data, state, state.dateFormat);
         if (Object.keys(val.errors).length > 0) {
           hasError = true;
         }

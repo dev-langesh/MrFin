@@ -20,6 +20,7 @@ import { actionsOptions, operationsOptions } from "./constants";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import React, { memo } from "react";
 
 import { ruleSchema } from "@/schemas/rules.schema";
 
@@ -33,7 +34,7 @@ const defaultValues = {
   targetValue: "",
 };
 
-export default function AddRuleForm(props) {
+function AddRuleForm(props) {
   const importedData = useSelector(selectImportData);
   const sourceOptions = Object.keys(importedData[0] || {});
 
@@ -272,3 +273,5 @@ export default function AddRuleForm(props) {
     </form>
   );
 }
+
+export default memo(AddRuleForm);

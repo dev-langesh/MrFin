@@ -81,6 +81,24 @@ const importTransactionsSlice = createSlice({
         );
       }
     },
+    deleteRows: (state, action) => {
+      const indices = new Set(action.payload); // Expecting array of indices
+      if (state.value.importedData) {
+        state.value.importedData = state.value.importedData.filter(
+          (_, i) => !indices.has(i)
+        );
+      }
+      if (state.value.mappedData) {
+        state.value.mappedData = state.value.mappedData.filter(
+          (_, i) => !indices.has(i)
+        );
+      }
+      if (state.value.transformedData) {
+        state.value.transformedData = state.value.transformedData.filter(
+          (_, i) => !indices.has(i)
+        );
+      }
+    },
   },
 });
 
@@ -96,6 +114,7 @@ export const {
   setState,
   updateState,
   deleteRow,
+  deleteRows,
 } = importTransactionsSlice.actions;
 
 export default importTransactionsSlice.reducer;

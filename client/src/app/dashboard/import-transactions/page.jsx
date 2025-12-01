@@ -73,10 +73,10 @@ export default function ImportTransactionsPage() {
             name: "Upload File",
           },
           {
-            name: "Process Data",
+            name: "Pre Process",
           },
           {
-            name: "Map Data",
+            name: "Map Fields",
           },
           {
             name: "Transform Data",

@@ -126,7 +126,7 @@ function TransactionEntryForm({
               }
               sorted.push(prev[i]);
             }
-            if (!inserted) sorted.push(formData); // If not inserted, add at end
+            if (!inserted) sorted.push(formData);
             setTotalData((total) => total + 1);
             return sorted;
           });

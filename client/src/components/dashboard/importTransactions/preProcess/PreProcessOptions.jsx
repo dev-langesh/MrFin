@@ -13,7 +13,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@radix-ui/react-collapsible";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { FaRegSquarePlus, FaRegSquareMinus } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
 import { Label } from "@/components/ui/Label";
@@ -51,79 +51,79 @@ function PreProcessOptions() {
     if (reduxOptions) setOptions(reduxOptions);
   }, [reduxOptions]);
 
-  // Auto-detect delimiter and quote when file changes
   useEffect(() => {
     if (files && files.length > 0) {
       detectAndProcess(files[0]);
     }
   }, [files]);
 
-  async function detectAndProcess(file) {
-    try {
+  const handleChange = useCallback(
+    (name, value) => {
+      if (
+        name === "removeCharacters" &&
+        value.trim().includes(options.delimiter)
+      )
+        return toast.error(
+          "Remove Characters cannot include the delimiter character"
+        );
+      setOptions((prev) => ({ ...prev, [name]: value }));
+    },
+    [options.delimiter]
+  );
+
+  const handleProcessFile = useCallback(
+    async (file, currentOptions) => {
       dispatch(setIsLoading(true));
-      const content = await readFilePreview(file);
-      const detectedDelimiter = detectDelimiter(content);
-      const detectedQuote = detectQuote(content, detectedDelimiter);
+      try {
+        const data = await processFile(file, currentOptions);
 
-      const newOptions = {
-        ...options,
-        delimiter: detectedDelimiter,
-        quote: detectedQuote,
-      };
-
-      setOptions(newOptions);
-
-      // Immediately process with detected options
-      await handleProcessFile(file, newOptions);
-    } catch (error) {
-      console.error("Failed to auto-detect options:", error);
-      toast.error("Failed to auto-detect CSV options.");
-      dispatch(setIsLoading(false));
-    }
-  }
-
-  function handleChange(name, value) {
-    if (name === "removeCharacters" && value.trim().includes(options.delimiter))
-      return toast.error(
-        "Remove Characters cannot include the delimiter character"
-      );
-    setOptions((prev) => ({ ...prev, [name]: value }));
-  }
-
-  async function handleProcessFile(file, currentOptions) {
-    dispatch(setIsLoading(true));
-    try {
-      const data = await processFile(file, currentOptions);
-
-      // Check for single column warning (heuristic)
-      if (data.length > 0) {
-        const keys = Object.keys(data[0]);
-        // We can't easily check the raw CSV content here without reading it again or passing it from processFile
-        // Let's assume processFile handles the parsing correctly.
-        // If we want the warning, we should update processFile to return it.
-        // For now, let's skip the warning or re-implement it if critical.
-        // The original code had it inside the reader onload.
+        dispatch(
+          updateState({
+            options: currentOptions,
+            importedData: data,
+          })
+        );
+      } catch (error) {
+        console.error("Process file error:", error);
+        toast.error(error.message || "Failed to process file.");
+        dispatch(updateState({ importedData: [] }));
+      } finally {
+        dispatch(setIsLoading(false));
       }
+    },
+    [dispatch]
+  );
 
-      dispatch(
-        updateState({
-          options: currentOptions,
-          importedData: data,
-        })
-      );
-    } catch (error) {
-      console.error("Process file error:", error);
-      toast.error(error.message || "Failed to process file.");
-      dispatch(updateState({ importedData: [] }));
-    } finally {
-      dispatch(setIsLoading(false));
-    }
-  }
+  const detectAndProcess = useCallback(
+    async (file) => {
+      try {
+        dispatch(setIsLoading(true));
+        const content = await readFilePreview(file);
+        const detectedDelimiter = detectDelimiter(content);
+        const detectedQuote = detectQuote(content, detectedDelimiter);
 
-  async function applyOptions() {
+        const newOptions = {
+          ...options,
+          delimiter: detectedDelimiter,
+          quote: detectedQuote,
+        };
+
+        setOptions(newOptions);
+
+        await handleProcessFile(file, newOptions);
+      } catch (error) {
+        console.error("Failed to auto-detect options:", error);
+        toast.error("Failed to auto-detect CSV options.");
+        dispatch(setIsLoading(false));
+      }
+    },
+    [dispatch, options, handleProcessFile]
+  );
+
+  const applyOptions = useCallback(async () => {
     await handleProcessFile(files[0], options);
     // toast.success("Options applied successfully.");
-  }
+  }, [files, options, handleProcessFile]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

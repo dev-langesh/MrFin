@@ -25,18 +25,19 @@ function Rules() {
   const [editingRuleIndex, setEditingRuleIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [rules, setRules] = useState([]);
+
   const mappedData = useSelector(selectMappedData);
   const importedData = useSelector(selectImportData);
   const mappedFields = useSelector(selectMappedFields);
+
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Initialize default rules if not already set and mappedFields are available
     if (rules.length === 0 && mappedFields) {
       setRules([
         {
           name: "Set Expense Type",
-          source: mappedFields.debit || "Debit", // Use mapped field or fallback
+          source: mappedFields.debit,
           operation: "exists",
           operationValue: "",
           action: "update",
@@ -45,7 +46,7 @@ function Rules() {
         },
         {
           name: "Set Revenue Type",
-          source: mappedFields.credit || "Credit", // Use mapped field or fallback
+          source: mappedFields.credit,
           operation: "exists",
           operationValue: "",
           action: "update",
@@ -60,7 +61,6 @@ function Rules() {
     const applyRules = async () => {
       if (mappedData?.length > 0) {
         dispatch(setIsLoading(true));
-        // Allow UI to update
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         try {

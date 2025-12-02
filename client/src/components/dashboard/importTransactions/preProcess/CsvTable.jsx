@@ -3,13 +3,12 @@
 import { memo, useMemo } from "react";
 import {
   selectImportData,
-  setImportedData as setImportData,
   selectIsLoading,
   deleteRows,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { cn } from "@/lib/utils";
-import GenericDataTable from "./GenericDataTable";
+import GenericDataTable from "@/components/dashboard/importTransactions/GenericDataTable";
 import { useTable } from "@/hooks/useTable";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
@@ -46,7 +45,6 @@ function CsvTable() {
       ),
     }));
 
-    // Add Actions column
     cols.push({
       header: "Actions",
       className: "text-right",
@@ -76,10 +74,6 @@ function CsvTable() {
   }, [keys]);
 
   function handleDeleteRows(rows) {
-    // CsvTable uses setImportData directly in original code for deleteRows,
-    // but we added deleteRows action to slice which handles all arrays.
-    // However, CsvTable is for PRE-PROCESS step, where mappedData/transformedData might not exist yet.
-    // The deleteRows action in slice filters ALL arrays. This is correct behavior if we delete from source.
     dispatch(deleteRows(rows));
     resetSelection();
   }

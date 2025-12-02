@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit2 } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import {
   selectTransformedData,
   selectMappedFields,
@@ -87,7 +87,6 @@ function TransformedDataTable({ ...props }) {
       },
     }));
 
-    // Applied Rules Column
     cols.push({
       header: "Applied Rules",
       render: (entry) => (
@@ -111,7 +110,6 @@ function TransformedDataTable({ ...props }) {
       ),
     });
 
-    // Actions Column
     cols.push({
       header: "Actions",
       className: "text-right",
@@ -169,22 +167,28 @@ function TransformedDataTable({ ...props }) {
     return cols;
   }, [keys, dateFormat, isDialogOpen, editingIndex]);
 
-  function handleDeleteRows(rows) {
-    dispatch(deleteRows(rows));
-    resetSelection();
-  }
+  const handleDeleteRows = useCallback(
+    (rows) => {
+      dispatch(deleteRows(rows));
+      resetSelection();
+    },
+    [dispatch, resetSelection]
+  );
 
-  function handleUpdateEntry(updatedEntry) {
-    const newData = [...transformedData];
-    newData[editingIndex] = {
-      ...newData[editingIndex],
-      ...updatedEntry,
-      amount: Number(updatedEntry.amount),
-    };
-    dispatch(updateState({ transformedData: newData }));
-    setIsDialogOpen(false);
-    setEditingIndex(null);
-  }
+  const handleUpdateEntry = useCallback(
+    (updatedEntry) => {
+      const newData = [...transformedData];
+      newData[editingIndex] = {
+        ...newData[editingIndex],
+        ...updatedEntry,
+        amount: Number(updatedEntry.amount),
+      };
+      dispatch(updateState({ transformedData: newData }));
+      setIsDialogOpen(false);
+      setEditingIndex(null);
+    },
+    [transformedData, editingIndex, dispatch]
+  );
 
   return (
     <GenericDataTable

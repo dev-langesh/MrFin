@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit2 } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import {
   selectMappedFields,
   selectMappedData,
@@ -29,10 +29,8 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-
   const pagination = useTable({ data: mappedData });
   const { selectedRows: hookSelectedRows, resetSelection } = pagination;
-
 
   const orderedFields = ["txnDate", "description", "credit", "debit"];
   const dynamicCols = useMemo(
@@ -50,7 +48,6 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
       className: "capitalize",
       cellClassName: cn(
         "min-w-[120px] whitespace-break-spaces break-all"
-        // We can't easily access entry value here for length check unless we use render
       ),
       render: (entry) => {
         const val = entry[key];
@@ -77,9 +74,6 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
       },
     }));
 
-    // Add Actions column logic via a specialized render or just pass it to GenericDataTable?
-    // GenericDataTable expects `columns` to be data columns. Actions are handled separately or as a column.
-    // Let's add an actions column.
     cols.push({
       header: "Actions",
       className: "text-right",
@@ -150,23 +144,28 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
     return cols;
   }, [dynamicCols, mappedFields, isDialogOpen, editingIndex]);
 
-  function handleDeleteRows(rows) {
-    dispatch(deleteRows(rows));
-    resetSelection();
-    // If we were using parent state: setSelectedRows([]);
-  }
+  const handleDeleteRows = useCallback(
+    (rows) => {
+      dispatch(deleteRows(rows));
+      resetSelection();
+    },
+    [dispatch, resetSelection]
+  );
 
-  function handleUpdateEntry(updatedEntry) {
-    const newData = [...mappedData];
-    const globalIndex = editingIndex;
-    newData[globalIndex] = {
-      ...newData[globalIndex],
-      ...updatedEntry,
-    };
-    dispatch(updateState({ mappedData: newData }));
-    setIsDialogOpen(false);
-    setEditingIndex(null);
-  }
+  const handleUpdateEntry = useCallback(
+    (updatedEntry) => {
+      const newData = [...mappedData];
+      const globalIndex = editingIndex;
+      newData[globalIndex] = {
+        ...newData[globalIndex],
+        ...updatedEntry,
+      };
+      dispatch(updateState({ mappedData: newData }));
+      setIsDialogOpen(false);
+      setEditingIndex(null);
+    },
+    [mappedData, editingIndex, dispatch]
+  );
 
   return (
     <GenericDataTable

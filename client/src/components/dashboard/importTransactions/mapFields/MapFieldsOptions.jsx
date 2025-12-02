@@ -6,7 +6,7 @@ import {
   setIsLoading,
   selectIsLoading,
 } from "@/redux/slices/importTransactionsSlice";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Select,
@@ -88,11 +88,11 @@ export default function MapFieldsOptions({ onApply }) {
     });
   }, [importedData]);
 
-  function handleChange(key, value) {
+  const handleChange = useCallback((key, value) => {
     setState((prev) => ({ ...prev, [key]: value }));
-  }
+  }, []);
 
-  async function handleApply() {
+  const handleApply = useCallback(async () => {
     dispatch(setIsLoading(true));
     // Allow UI to update
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -119,7 +119,7 @@ export default function MapFieldsOptions({ onApply }) {
     } finally {
       dispatch(setIsLoading(false));
     }
-  }
+  }, [dispatch, importedData, state, onApply]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

@@ -16,13 +16,13 @@ import {
 } from "@/components/ui/Select";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Textarea } from "@/components/ui/textarea";
 
 import { entrySchema } from "@/schemas/transaction.schema";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { memo } from "react";
 
-export default function EditEntryForm({ initialData, onSubmit, onCancel }) {
+function EditEntryForm({ initialData, onSubmit, onCancel }) {
   const {
     control,
     register,
@@ -136,3 +136,5 @@ export default function EditEntryForm({ initialData, onSubmit, onCancel }) {
     </form>
   );
 }
+
+export default memo(EditEntryForm);

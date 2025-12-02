@@ -7,12 +7,12 @@ import {
 } from "@/components/ui/Dialog";
 import Input from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@/components/ui/DatePicker";
 
-export default function GenericEditForm({
+function GenericEditForm({
   initialData,
   onSubmit,
   onCancel,
@@ -105,3 +105,5 @@ export default function GenericEditForm({
     </form>
   );
 }
+
+export default memo(GenericEditForm);

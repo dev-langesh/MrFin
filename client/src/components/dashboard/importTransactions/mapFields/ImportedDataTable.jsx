@@ -39,10 +39,9 @@ function ImportedDataTable() {
     <GenericDataTable
       data={importData}
       columns={columns}
-      isLoading={false} // No loading state needed here usually, or pass if needed
-      title="Imported Data" // Title might be redundant if inside Tabs, but GenericDataTable expects it or we can hide it
+      isLoading={false}
+      title="Imported Data"
       pagination={pagination}
-      // No onDelete for this view as per original code (read-only view in MapFields)
     />
   );
 }

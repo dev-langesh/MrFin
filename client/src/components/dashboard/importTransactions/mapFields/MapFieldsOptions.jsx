@@ -3,6 +3,7 @@ import {
   selectMappedFields,
   updateMappedFields,
   updateState,
+  setMappedData,
   setIsLoading,
   selectIsLoading,
 } from "@/redux/slices/importTransactionsSlice";
@@ -117,17 +118,20 @@ export default function MapFieldsOptions({ onApply }) {
 
     try {
       let hasError = false;
-      const validatedData = importedData.map((data) => {
+      const errorIndices = [];
+      const validatedData = importedData.map((data, index) => {
         const val = validateEntry(data, state, state.dateFormat);
         if (Object.keys(val.errors).length > 0) {
           hasError = true;
+          errorIndices.push(index);
         }
         return val;
       });
       dispatch(updateMappedFields({ ...state, hasError }));
       dispatch(
-        updateState({
+        setMappedData({
           mappedData: validatedData,
+          errorIndices,
         })
       );
       if (onApply) onApply(hasError);

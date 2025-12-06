@@ -6,9 +6,10 @@ import { memo, useEffect, useMemo, useState } from "react";
 import {
   selectMappedFields,
   selectMappedData,
-  updateState,
+  updateMappedRow,
   deleteRows,
   selectIsLoading,
+  selectErrorIndices,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
@@ -21,8 +22,8 @@ import { formatDateSafe } from "@/utils/importUtils";
 import { cn } from "@/lib/utils";
 
 function MappedDataTable({ showErrorsOnly }) {
-  const [filteredData, setFilteredData] = useState([]);
   const mappedData = useSelector(selectMappedData);
+  const errorIndices = useSelector(selectErrorIndices);
   const mappedFields = useSelector(selectMappedFields);
   const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
@@ -30,21 +31,17 @@ function MappedDataTable({ showErrorsOnly }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const pagination = useTable({ data: filteredData });
+  const displayData = useMemo(() => {
+    if (showErrorsOnly) {
+      return errorIndices.map((i) => ({ ...mappedData[i], _realIndex: i }));
+    }
+    return mappedData.map((d, i) => ({ ...d, _realIndex: i }));
+  }, [mappedData, errorIndices, showErrorsOnly]);
+
+  const pagination = useTable({ data: displayData });
   const { selectedRows: hookSelectedRows, resetSelection } = pagination;
 
   const orderedFields = ["txnDate", "description", "credit", "debit"];
-
-  useEffect(() => {
-    if (showErrorsOnly && mappedData?.length) {
-      const filtered = mappedData.filter(
-        (entry) => entry.errors && Object.keys(entry.errors).length > 0
-      );
-      setFilteredData(filtered);
-    } else {
-      setFilteredData(mappedData);
-    }
-  }, [showErrorsOnly, mappedData]);
 
   const dynamicCols = useMemo(
     () =>
@@ -159,26 +156,22 @@ function MappedDataTable({ showErrorsOnly }) {
   }, [dynamicCols, mappedFields, isDialogOpen, editingIndex]);
 
   function handleDeleteRows(rows) {
-    dispatch(deleteRows(rows));
+    const realIndices = rows.map((r) => displayData[r]._realIndex);
+    dispatch(deleteRows(realIndices));
     resetSelection();
-    // If we were using parent state: setSelectedRows([]);
   }
 
   function handleUpdateEntry(updatedEntry) {
-    const newData = [...mappedData];
-    const globalIndex = editingIndex;
-    newData[globalIndex] = {
-      ...newData[globalIndex],
-      ...updatedEntry,
-    };
-    dispatch(updateState({ mappedData: newData }));
+    const realIndex = displayData[editingIndex]._realIndex;
+    const { _realIndex, ...rest } = updatedEntry;
+    dispatch(updateMappedRow({ index: realIndex, row: rest }));
     setIsDialogOpen(false);
     setEditingIndex(null);
   }
 
   return (
     <GenericDataTable
-      data={filteredData}
+      data={displayData}
       columns={columns}
       isLoading={isLoading}
       title="Mapped Data"

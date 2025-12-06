@@ -56,6 +56,7 @@ const initialState = {
     isLoading: false,
     settingsStatus: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
     validationAttempt: 0,
+    errorIndices: [], // Store indices of rows with errors
   },
 };
 
@@ -120,6 +121,38 @@ const importTransactionsSlice = createSlice({
         );
       }
     },
+    setMappedData: (state, action) => {
+      // payload: { mappedData, errorIndices } OR just mappedData
+      if (action.payload.mappedData && action.payload.errorIndices) {
+        state.value.mappedData = action.payload.mappedData;
+        state.value.errorIndices = action.payload.errorIndices;
+      } else {
+        // Fallback
+        state.value.mappedData = action.payload;
+        state.value.errorIndices = [];
+        state.value.mappedData.forEach((row, i) => {
+          if (row.errors && Object.keys(row.errors).length > 0) {
+            state.value.errorIndices.push(i);
+          }
+        });
+      }
+    },
+    updateMappedRow: (state, action) => {
+      const { index, row } = action.payload;
+      if (state.value.mappedData[index]) {
+        state.value.mappedData[index] = row;
+
+        const hasError = row.errors && Object.keys(row.errors).length > 0;
+        const errIdx = state.value.errorIndices.indexOf(index);
+
+        if (hasError && errIdx === -1) {
+          state.value.errorIndices.push(index);
+          state.value.errorIndices.sort((a, b) => a - b);
+        } else if (!hasError && errIdx !== -1) {
+          state.value.errorIndices.splice(errIdx, 1);
+        }
+      }
+    },
     deleteRows: (state, action) => {
       const indices = new Set(action.payload); // Expecting array of indices
       if (state.value.importedData) {
@@ -128,6 +161,23 @@ const importTransactionsSlice = createSlice({
         );
       }
       if (state.value.mappedData) {
+        // Update errorIndices
+        const oldErrorIndices = state.value.errorIndices;
+        const newErrorIndices = [];
+        const sortedDeleted = Array.from(indices).sort((a, b) => a - b);
+
+        oldErrorIndices.forEach((errIdx) => {
+          if (indices.has(errIdx)) return; // deleted
+          let shift = 0;
+          for (let d of sortedDeleted) {
+            if (d < errIdx) shift++;
+            else break;
+          }
+          newErrorIndices.push(errIdx - shift);
+        });
+
+        state.value.errorIndices = newErrorIndices;
+
         state.value.mappedData = state.value.mappedData.filter(
           (_, i) => !indices.has(i)
         );
@@ -190,6 +240,8 @@ export const {
   deleteRow,
   deleteRows,
   incrementValidationAttempt,
+  setMappedData,
+  updateMappedRow,
 } = importTransactionsSlice.actions;
 
 export default importTransactionsSlice.reducer;
@@ -215,3 +267,5 @@ export const selectTransactionSettings = (state) =>
   state.importTransactions.value.transactionSettings;
 export const selectValidationAttempt = (state) =>
   state.importTransactions.value.validationAttempt;
+export const selectErrorIndices = (state) =>
+  state.importTransactions.value.errorIndices;

@@ -16,38 +16,14 @@ export function validateStepData(step, state) {
         toast.error("No valid data to import. Please check the mapped fields.");
         isValid = false;
       } else {
-        // Optimized single-pass validation
-        const errorIds = [];
-        let globalErrors = false;
-
-        for (let i = 0; i < state.mappedData.length; i++) {
-          const entry = state.mappedData[i];
-          if (Object.keys(entry.errors || {}).length > 0) {
-            errorIds.push(i + 1);
-          }
-          if (entry.errors?.amount) {
-            globalErrors = true;
-          }
-        }
-
-        if (errorIds.length > 0) {
+        if (state.errorIndices?.length > 0 || state.mappedFields?.hasError) {
           toast.error(
-            `There are errors in the mapped data at IDs: ${errorIds
-              .slice(0, 10)
-              .join(", ")}. Please fix them before proceeding.`
-          );
-          isValid = false;
-        }
-
-        if (globalErrors) {
-          toast.error(
-            "Some entries are missing both Credit and Debit values. Please check your mapping."
+            `There are errors in the mapped data. Please fix them before proceeding.`
           );
           isValid = false;
         }
       }
       break;
-    case 4:
     default:
       isValid = true;
   }

@@ -8,6 +8,8 @@ import { useSelector } from "react-redux";
 import {
   selectMappedFields,
   selectValidationAttempt,
+  selectMappedData,
+  selectErrorIndices,
 } from "@/redux/slices/importTransactionsSlice";
 import { useEffect } from "react";
 
@@ -16,23 +18,35 @@ export default function MapFields({}) {
   const mappedFields = useSelector(selectMappedFields);
   const validationAttempt = useSelector(selectValidationAttempt);
 
+  const mappedData = useSelector(selectMappedData);
+  const errorIndices = useSelector(selectErrorIndices);
+
   useEffect(() => {
-    if (mappedFields.hasError) {
-      setActiveTab("errors");
+    if (validationAttempt > 0) {
+      if (errorIndices.length > 0 || mappedFields.hasError) {
+        setActiveTab("errors");
+      } else {
+        setActiveTab("mappedData")
+      }
     }
-  }, [mappedFields.hasError, validationAttempt]);
+    
+  }, [validationAttempt, errorIndices.length, mappedFields.hasError]);
+
+  const handleApply = (hasError) => {
+    setActiveTab(hasError ? "errors" : "mappedData");
+  };
 
   return (
     <div className="space-y-6">
-      <MapFieldsOptions onApply={() => setActiveTab("mappedData")} />
+      <MapFieldsOptions onApply={handleApply} />
       <Tabs value={activeTab} className="w-full" onValueChange={setActiveTab}>
-        <Card className="px-0 rounded-sm py-5">
-          <CardHeader>
+        <Card className="rounded-sm py-5">
+          <CardHeader className="px-0 ">
             <CardTitle className="flex items-center justify-between">
               <TabsList>
                 <TabsTrigger value="importedData">Imported Data</TabsTrigger>
                 <TabsTrigger value="mappedData">Mapped Data</TabsTrigger>
-                {mappedFields.hasError && (
+                {errorIndices?.length > 0 && mappedFields.hasError && (
                   <TabsTrigger value="errors" className="text-red-500">
                     Errors
                   </TabsTrigger>

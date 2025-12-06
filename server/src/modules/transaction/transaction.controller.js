@@ -25,7 +25,7 @@ async function getTransactions(req, res) {
     { ...filters, userId: req.user.id },
     {
       page: Number(page) || 1,
-      limit: Number(limit) || 10,
+      limit: limit === "all" ? 0 : Number(limit) || 10,
     }
   );
   res.json(result);

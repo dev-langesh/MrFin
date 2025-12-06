@@ -40,7 +40,7 @@ async function getTransactions(filters) {
   try {
     const params = {};
     Object.keys(filters).forEach((key) => {
-      if (filters[key] !== "all") {
+      if (filters[key] !== "all" || key === "limit") {
         params[key] = filters[key];
       }
     });

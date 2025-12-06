@@ -24,6 +24,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/Tooltip";
+import { ExportTransactionDialog } from "./ExportTransactionDialog";
+import { exportData } from "@/utils/exportUtils";
 import TransactionFilters from "./TransactionFilters";
 
 function TransactionTable({ setFilters, filters, settings }) {
@@ -32,6 +34,7 @@ function TransactionTable({ setFilters, filters, settings }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -87,9 +90,46 @@ function TransactionTable({ setFilters, filters, settings }) {
     [data]
   );
 
-  function handleExport() {
-    // Implement export functionality
-    toast.info("Export functionality coming soon");
+  function handleExportClick() {
+    setIsExportDialogOpen(true);
+  }
+
+  async function handlePerformExport(scope, format, dateFormat) {
+    try {
+      let exportFilters = { ...filters };
+
+      if (scope === "all") {
+        // Reset all filters to default 'all', but exclude pagination
+        exportFilters = {
+          dateRange: "all",
+          source: "all",
+          paymentGateway: "all",
+          sort: "desc",
+          limit: "all", // Fetch all
+          page: 1,
+        };
+      } else {
+        // Filtered scope: keep current filters, but fetch all matching
+        exportFilters = {
+          ...filters,
+          limit: "all", // Fetch all matching results
+          page: 1,
+        };
+      }
+
+      const res = await transactionService.getTransactions(exportFilters);
+
+      if (!res.transactions || res.transactions.length === 0) {
+        toast.warning("No data available to export");
+        return;
+      }
+
+      exportData(res.transactions, format, "transactions_export", dateFormat);
+      toast.success("Export started successfully");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to export data");
+    }
   }
 
   const handleApplyFilters = useCallback(
@@ -293,7 +333,11 @@ function TransactionTable({ setFilters, filters, settings }) {
               {/* Export */}
               <Tooltip delayDuration={500}>
                 <TooltipTrigger asChild>
-                  <Button onClick={handleExport} variant="outline" size="icon">
+                  <Button
+                    onClick={handleExportClick}
+                    variant="outline"
+                    size="icon"
+                  >
                     <Download className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
@@ -314,6 +358,15 @@ function TransactionTable({ setFilters, filters, settings }) {
           />
         </DialogContent>
       </Dialog>
+
+      <ExportTransactionDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        onExport={handlePerformExport}
+        defaultDateFormat={
+          settings?.importTransactionSettings?.mapFields?.dateFormat || "PP"
+        }
+      />
     </>
   );
 }

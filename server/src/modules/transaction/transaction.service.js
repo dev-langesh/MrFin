@@ -43,12 +43,21 @@ async function createTransactions(transactions) {
   }
 }
 
-async function getTransactions(filters = {}, { page = 1, limit = 10 } = {}) {
+async function getTransactions(filters = {}, { page = 1, limit = 10 }) {
   const query = {};
-  if (filters.txnType) query.txnType = filters.txnType;
-  if (filters.source) query.source = filters.source;
-  if (filters.paymentGateway) query.paymentGateway = filters.paymentGateway;
-  if (filters.expenseCategory) query.expenseCategory = filters.expenseCategory;
+
+  if (filters.txnType) {
+    query.txnType = Array.isArray(filters.txnType)
+      ? { $in: filters.txnType }
+      : filters.txnType;
+  }
+
+  if (filters.category) {
+    query.category = Array.isArray(filters.category)
+      ? { $in: filters.category }
+      : filters.category;
+  }
+
   if (filters.startDate && filters.endDate) {
     query.txnDate = {
       $gte: new Date(filters.startDate),
@@ -56,20 +65,27 @@ async function getTransactions(filters = {}, { page = 1, limit = 10 } = {}) {
     };
   }
 
+  if (filters.userId) {
+    query.userId = filters.userId;
+  }
+
+  if (filters.description) {
+    query.description = { $regex: filters.description, $options: "i" };
+  }
+
   const skip = (page - 1) * limit;
+
+  console.log(query);
 
   const totalDocuments = await Transaction.countDocuments(query);
 
-  if (skip >= totalDocuments && totalDocuments > 0) {
-    throw new AppError(TransactionErrors.PAGE_OUT_OF_BOUNDS);
-  }
+  if (totalDocuments === 0) return { transactions: [], total: 0 };
 
-  // Only fetch necessary fields if required
   const txns = await Transaction.find(query)
     .sort({ txnDate: filters.sort === "asc" ? 1 : -1 })
     .skip(skip)
     .limit(limit)
-    .lean(); // lean() returns plain JS objects, lower memory footprint
+    .lean();
 
   return { transactions: txns, total: totalDocuments };
 }

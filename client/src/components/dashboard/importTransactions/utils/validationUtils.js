@@ -16,6 +16,12 @@ export function validateStepData(step, state) {
         toast.error("No valid data to import. Please check the mapped fields.");
         isValid = false;
       }
+      if (state.errorIndices && state.errorIndices.length > 0) {
+        toast.error(
+          `Please fix ${state.errorIndices.length} errors before proceeding.`
+        );
+        isValid = false;
+      }
       break;
     default:
       isValid = true;

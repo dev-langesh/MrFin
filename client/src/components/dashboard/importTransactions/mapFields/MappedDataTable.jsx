@@ -18,7 +18,7 @@ import GenericEditForm from "../GenericEditForm";
 import { createMappedEntrySchema } from "@/schemas/mappedEntry.schema";
 import GenericDataTable from "../GenericDataTable";
 import { useTable } from "@/hooks/useTable";
-import { formatDateSafe } from "@/utils/importUtils";
+import { formatDateSafe } from "@/utils/dateUtils";
 import { cn } from "@/lib/utils";
 
 function MappedDataTable({ showErrorsOnly }) {

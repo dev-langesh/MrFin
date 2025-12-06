@@ -1,4 +1,4 @@
-import { isValid, parse, parseISO } from "date-fns";
+import { isValid, parse, parseISO, format } from "date-fns";
 
 export function toISODateString(str, dateFormat) {
   if (!str) return null;
@@ -58,6 +58,19 @@ export function toISODateString(str, dateFormat) {
   }
 
   return false;
+}
+
+export function formatDateSafe(dateStr, dateFormat = "yyyy-MM-dd") {
+  try {
+    if (!dateStr) return "";
+    const date = parseISO(dateStr);
+    if (isValid(date)) {
+      return format(date, dateFormat);
+    }
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
 }
 
 export function generateFormatPermutations(baseFormat) {

@@ -13,9 +13,10 @@ import {
   selectTransactionSettings,
   saveSettings,
   selectErrorIndices,
+  incrementValidationAttempt,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useState, useCallback } from "react";
-import { validateStepData } from "@/utils/validationUtils";
+import { validateStepData } from "@/components/dashboard/importTransactions/utils/validationUtils";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { protectedApi } from "@/api/axios";
@@ -38,7 +39,10 @@ export default function ChangeStep() {
     async (action) => {
       if (action === "next" && state.step < lastStep) {
         const isValid = validateStepData(state.step, state);
-        if (!isValid) return;
+        if (!isValid) {
+          dispatch(incrementValidationAttempt());
+          return;
+        }
         dispatch(nextStep());
       } else if (action === "back" && state.step > 1) {
         dispatch(previousStep());

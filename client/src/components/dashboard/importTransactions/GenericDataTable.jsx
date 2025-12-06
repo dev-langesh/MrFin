@@ -34,6 +34,8 @@ function GenericDataTable({
   onDelete,
   getRowClassName,
   emptyMessage = "No data available.",
+  totalCount,
+  paginationOptions = PAGINATION_OPTIONS,
 }) {
   const {
     page,
@@ -57,7 +59,7 @@ function GenericDataTable({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <h1>
-            {title} ({data.length})
+            {title} ({totalCount || data.length})
           </h1>
           <div className="flex items-center gap-2">
             {selectedRows.length > 0 && onDelete && (
@@ -95,7 +97,7 @@ function GenericDataTable({
               </TableHeader>
             )}
             <TableBody>
-              {paginatedData.length === 0 ? (
+              {!isLoading && paginatedData.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={columns.length + 2}
@@ -143,18 +145,20 @@ function GenericDataTable({
 
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4 w-full">
-          {data.length > 10 && (
+          {(totalCount || data.length) > 10 && (
             <div className="flex items-center gap-2 flex-shrink-0">
               <Label className="whitespace-nowrap">Rows per page:</Label>
               <Select
-                value={limit === data.length ? "all" : String(limit)}
+                value={
+                  limit === (totalCount || data.length) ? "all" : String(limit)
+                }
                 onValueChange={handleLimitChange}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PAGINATION_OPTIONS.map((option) => (
+                  {paginationOptions.map((option) => (
                     <SelectItem key={option} value={String(option)}>
                       {option === "all" ? "All" : option}
                     </SelectItem>
@@ -164,9 +168,9 @@ function GenericDataTable({
             </div>
           )}
 
-          {Math.ceil((data.length || 0) / limit) > 1 && (
+          {Math.ceil((totalCount || data.length || 0) / limit) > 1 && (
             <Pagination
-              total={data.length || 0}
+              total={totalCount || data.length || 0}
               limit={limit}
               currentPage={page}
               handlePageChange={handlePageChange}

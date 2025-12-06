@@ -23,13 +23,13 @@ export default function MapFields({}) {
 
   useEffect(() => {
     if (validationAttempt > 0) {
-      if (errorIndices.length > 0) {
+      if (errorIndices?.length > 0) {
         setActiveTab("errors");
       } else {
         setActiveTab("mappedData");
       }
     }
-  }, [validationAttempt, errorIndices.length]);
+  }, [validationAttempt, errorIndices?.length]);
 
   const handleApply = (hasError) => {
     setActiveTab(hasError ? "errors" : "mappedData");

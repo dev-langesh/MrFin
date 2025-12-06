@@ -63,7 +63,7 @@ export function AutoSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+          className={cn("w-full justify-between hover:bg-transparent hover", className)}
           disabled={disabled}
         >
           {value ? (

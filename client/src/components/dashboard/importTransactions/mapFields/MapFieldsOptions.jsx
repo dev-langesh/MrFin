@@ -37,7 +37,7 @@ import { isValid, parse, parseISO, formatISO } from "date-fns";
 import Loading from "@/components/ui/Loading";
 
 import { toISODateString } from "@/utils/dateUtils";
-import { validateEntry } from "@/utils/importUtils";
+import { validateEntry } from "@/components/dashboard/importTransactions/utils/importUtils";
 
 // ... existing imports
 
@@ -133,7 +133,7 @@ export default function MapFieldsOptions({ onApply }) {
           errorIndices,
         })
       );
-      if (onApply) onApply();
+      if (onApply) onApply(errorIndices.length > 0);
     } catch (error) {
       console.error("Failed to apply mapping:", error);
       toast.error("Failed to apply mapping.");

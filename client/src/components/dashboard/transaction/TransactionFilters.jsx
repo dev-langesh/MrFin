@@ -1,8 +1,9 @@
 "use client";
 
-import React, { memo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import React, { memo, useEffect, useState } from "react";
 import { Label } from "@/components/ui/Label";
+import Input from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -19,12 +20,10 @@ import {
   startOfYear,
   endOfYear,
 } from "date-fns";
-import {
-  transactionFormExpenseCategoryOptions,
-  transactionFormPaymentGateways,
-  transactionFormSources,
-  transactionFormTxnTypeOptions,
-} from "./constants";
+
+import { MultiSelect } from "@/components/ui/MultiSelect";
+import { toast } from "sonner";
+import { X, Check } from "lucide-react";
 
 // helpers
 function toUtcMidnight(date) {
@@ -47,106 +46,120 @@ function toUtcEndOfDay(date) {
   );
 }
 
-function TransactionFilters({ filters, setFilters }) {
+const defaultFilters = {
+  dateRange: "all",
+  startDate: null,
+  endDate: null,
+  txnType: [],
+  category: [],
+  description: "",
+  sort: "desc",
+  limit: 10,
+  page: 1,
+};
+
+function TransactionFilters({
+  activeFilters,
+  onApply,
+  isOpen,
+  categories = [],
+  txnTypes = [],
+}) {
+  const [localFilters, setLocalFilters] = useState({
+    ...defaultFilters,
+    ...activeFilters,
+  });
+
+  // Sync local state when popover opens or active filters change externally
+  useEffect(() => {
+    if (isOpen) {
+      setLocalFilters({ ...defaultFilters, ...activeFilters });
+    }
+  }, [isOpen, activeFilters]);
+
   function handleSelectChange(name, value) {
-    if (name === "txnType") {
-      if (value === "expense") {
-        setFilters((prev) => ({
-          ...prev,
-          source: "all",
-          paymentGateway: "all",
-        }));
-      } else if (value === "revenue") {
-        setFilters((prev) => ({
-          ...prev,
-          expenseCategory: "all",
-        }));
-      } else {
-        setFilters((prev) => ({
-          ...prev,
-          expenseCategory: "all",
-          source: "all",
-          paymentGateway: "all",
-        }));
+    setLocalFilters((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      if (name === "dateRange") {
+        let startDate = null;
+        let endDate = null;
+        const now = new Date();
+
+        switch (value) {
+          case "current-month":
+            startDate = toUtcMidnight(startOfMonth(now));
+            endDate = toUtcEndOfDay(endOfMonth(now));
+            break;
+          case "current-quarter":
+            startDate = toUtcMidnight(startOfQuarter(now));
+            endDate = toUtcEndOfDay(endOfQuarter(now));
+            break;
+          case "current-year":
+            startDate = toUtcMidnight(startOfYear(now));
+            endDate = toUtcEndOfDay(endOfYear(now));
+            break;
+          case "all":
+            startDate = null;
+            endDate = null;
+            break;
+          case "custom":
+            break;
+        }
+        updated.startDate = startDate;
+        updated.endDate = endDate;
       }
-    }
-
-    setFilters((prev) => ({ ...prev, [name]: value }));
-
-    if (name === "dateRange") {
-      let startDate = null;
-      let endDate = null;
-
-      const now = new Date();
-
-      switch (value) {
-        case "current-month":
-          startDate = toUtcMidnight(startOfMonth(now));
-          endDate = toUtcEndOfDay(endOfMonth(now));
-          break;
-        case "current-quarter":
-          startDate = toUtcMidnight(startOfQuarter(now));
-          endDate = toUtcEndOfDay(endOfQuarter(now));
-          break;
-        case "current-year":
-          startDate = toUtcMidnight(startOfYear(now));
-          endDate = toUtcEndOfDay(endOfYear(now));
-          break;
-        case "all":
-          startDate = null;
-          endDate = null;
-          break;
-        case "custom":
-          // leave null → date picker will set these
-          break;
-      }
-
-      setFilters((prev) => ({
-        ...prev,
-        startDate,
-        endDate,
-      }));
-    }
+      return updated;
+    });
   }
 
-  return (
-    <Card className="px-0 rounded-sm py-4 gap-2">
-      <CardHeader>
-        <CardTitle>Filters</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-11 gap-4">
-          {/* Date Range */}
-          <div className="space-y-2 col-span-1 md:col-span-2">
-            <Label>Date Range</Label>
-            <Select
-              value={filters.dateRange}
-              onValueChange={(val) => handleSelectChange("dateRange", val)}
-            >
-              <SelectTrigger className="w-full rounded-sm">
-                <SelectValue placeholder="Select range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="current-month">Current Month</SelectItem>
-                <SelectItem value="current-quarter">Current Quarter</SelectItem>
-                <SelectItem value="current-year">Current Year</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+  const handleApply = () => {
+    onApply(localFilters);
+  };
 
-          {/* Custom Date Picker */}
-          <div className="space-y-2 col-span-1 md:col-span-3">
+  const handleClear = () => {
+    const cleared = { ...defaultFilters, limit: activeFilters.limit }; // Preserve limit preference if desired, or reset
+    setLocalFilters(cleared);
+    onApply(cleared);
+  };
+
+  const categoryOptions = categories.map((c) => ({ label: c, value: c }));
+  const txnTypeOptions = txnTypes.map((t) => ({ label: t, value: t }));
+
+  return (
+    <div className="space-y-4 p-4 min-w-[320px]">
+      <div className="grid grid-cols-1 gap-4">
+        {/* Date Range Pre-select */}
+        <div className="space-y-2">
+          <Label>Date Range</Label>
+          <Select
+            value={localFilters.dateRange}
+            onValueChange={(val) => handleSelectChange("dateRange", val)}
+          >
+            <SelectTrigger className="w-full h-9">
+              <SelectValue placeholder="Select range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="current-month">Current Month</SelectItem>
+              <SelectItem value="current-quarter">Current Quarter</SelectItem>
+              <SelectItem value="current-year">Current Year</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Custom Date Picker */}
+        {localFilters.dateRange === "custom" && (
+          <div className="space-y-2">
             <Label>Custom Range</Label>
             <DatePickerWithRange
               value={{
-                from: filters.startDate || undefined,
-                to: filters.endDate || undefined,
+                from: localFilters.startDate || undefined,
+                to: localFilters.endDate || undefined,
               }}
               onChange={(range) => {
-                console.log(range);
-                setFilters((prev) => ({
+                setLocalFilters((prev) => ({
                   ...prev,
                   dateRange: "custom",
                   startDate: range?.from || null,
@@ -155,136 +168,75 @@ function TransactionFilters({ filters, setFilters }) {
               }}
             />
           </div>
+        )}
 
-          {/* Transaction type */}
-          <div className="space-y-2 col-span-1 md:col-span-2">
-            <Label>Transaction Type</Label>
-            <Select
-              value={filters.txnType}
-              onValueChange={(val) => handleSelectChange("txnType", val)}
-            >
-              <SelectTrigger className="w-full rounded-sm">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sources</SelectItem>
-                {transactionFormTxnTypeOptions.map((txn) => (
-                  <SelectItem key={txn.label} value={txn.value}>
-                    {txn.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Expense category */}
-          {filters.txnType === "expense" && (
-            <div className="space-y-2 col-span-1 md:col-span-2">
-              <Label>Expense Category</Label>
-              <Select
-                value={filters.expenseCategory}
-                onValueChange={(val) =>
-                  handleSelectChange("expenseCategory", val)
-                }
-              >
-                <SelectTrigger className="w-full rounded-sm">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sources</SelectItem>
-                  {transactionFormExpenseCategoryOptions.map((source) => (
-                    <SelectItem key={source} value={source}>
-                      {source}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {filters.txnType === "revenue" && (
-            <>
-              {/* Source */}
-              <div className="space-y-2 col-span-1 md:col-span-2">
-                <Label>Source</Label>
-                <Select
-                  value={filters.source}
-                  onValueChange={(val) => handleSelectChange("source", val)}
-                >
-                  <SelectTrigger className="w-full rounded-sm">
-                    <SelectValue placeholder="Select source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sources</SelectItem>
-                    {transactionFormSources.map((source) => (
-                      <SelectItem key={source} value={source}>
-                        {source}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Payment Gateway */}
-              <div className="space-y-2 col-span-1 md:col-span-2">
-                <Label>Payment Gateway</Label>
-                <Select
-                  value={filters.paymentGateway}
-                  onValueChange={(val) =>
-                    handleSelectChange("paymentGateway", val)
-                  }
-                >
-                  <SelectTrigger className="w-full rounded-sm">
-                    <SelectValue placeholder="Select processor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Processors</SelectItem>
-                    {transactionFormPaymentGateways.map((gateway) => (
-                      <SelectItem key={gateway} value={gateway}>
-                        {gateway}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Sort Order */}
-              <div className="space-y-2 col-span-1 md:col-span-2">
-                <Label>Sort by Date</Label>
-                <Select
-                  value={filters.sort}
-                  onValueChange={(val) => handleSelectChange("sort", val)}
-                >
-                  <SelectTrigger className="w-full rounded-sm">
-                    <SelectValue placeholder="Select order" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="desc">Newest First</SelectItem>
-                    <SelectItem value="asc">Oldest First</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-
-          <div className="space-y-2 col-span-1 md:col-span-2">
-            <Label>Sort</Label>
-            <Select
-              value={filters.sort}
-              onValueChange={(val) => handleSelectChange("sort", val)}
-            >
-              <SelectTrigger className="w-full rounded-sm">
-                <SelectValue placeholder="Select order" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="desc">Newest First</SelectItem>
-                <SelectItem value="asc">Oldest First</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Transaction Type MultiSelect */}
+        <div className="space-y-2">
+          <Label>Transaction Type</Label>
+          <MultiSelect
+            options={txnTypeOptions}
+            selected={localFilters.txnType || []}
+            onChange={(val) => handleSelectChange("txnType", val)}
+            placeholder="All Types"
+            variant="coloured"
+          />
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Category MultiSelect */}
+        <div className="space-y-2">
+          <Label>Category</Label>
+          <MultiSelect
+            options={categoryOptions}
+            selected={localFilters.category || []}
+            onChange={(val) => handleSelectChange("category", val)}
+            placeholder="All Categories"
+            variant="coloured"
+          />
+        </div>
+
+        {/* Description Search */}
+        <div className="space-y-2">
+          <Label>Description</Label>
+          <Input
+            placeholder="Search description..."
+            value={localFilters.description || ""}
+            onChange={(e) => handleSelectChange("description", e.target.value)}
+            className="w-full h-9"
+          />
+        </div>
+
+        {/* Sort Order */}
+        <div className="space-y-2">
+          <Label>Sort</Label>
+          <Select
+            value={localFilters.sort}
+            onValueChange={(val) => handleSelectChange("sort", val)}
+          >
+            <SelectTrigger className="w-full h-9">
+              <SelectValue placeholder="Select order" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Newest First</SelectItem>
+              <SelectItem value="asc">Oldest First</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t mt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleClear}
+          className="h-8 px-2 text-muted-foreground hover:text-foreground"
+        >
+          Clear
+        </Button>
+        <Button size="sm" onClick={handleApply} className="h-8 px-4">
+          Apply
+        </Button>
+      </div>
+    </div>
   );
 }
 

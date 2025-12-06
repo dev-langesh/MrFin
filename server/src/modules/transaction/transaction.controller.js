@@ -21,10 +21,13 @@ async function createTransactions(req, res) {
 // Get all transactions with filters + pagination
 async function getTransactions(req, res) {
   const { page, limit, ...filters } = req.query;
-  const result = await transactionService.getTransactions(filters, {
-    page: Number(page) || 1,
-    limit: Number(limit) || 10,
-  });
+  const result = await transactionService.getTransactions(
+    { ...filters, userId: req.user.id },
+    {
+      page: Number(page) || 1,
+      limit: Number(limit) || 10,
+    }
+  );
   res.json(result);
 }
 

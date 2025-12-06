@@ -19,7 +19,7 @@ import {
   selectRules,
   setRules,
 } from "@/redux/slices/importTransactionsSlice";
-import { applyRulesToData } from "@/utils/ruleEngine";
+import { applyRulesToData } from "@/components/dashboard/importTransactions/utils/ruleEngine";
 import RuleList from "./RuleList";
 
 function Rules() {

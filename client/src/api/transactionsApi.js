@@ -8,10 +8,11 @@ export const transactionsApi = {
   addTransactions: (data) => protectedApi.post("/transactions/bulk", data),
 
   // Get all transactions with optional filters and pagination
-  getTransactions: (params) => protectedApi.get("/transactions", { params }),
+  getTransactions: (config) => protectedApi.get("/transactions", config),
 
   // Get all transactions for visualization
-  getTransactionsToVisualize: (params) => protectedApi.get("/transactions/visualize", { params }),
+  getTransactionsToVisualize: (config) =>
+    protectedApi.get("/transactions/visualize", config),
 
   // Get a single transaction by ID
   getTransaction: (id) => protectedApi.get(`/transactions/${id}`),

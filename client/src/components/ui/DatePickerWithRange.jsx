@@ -24,7 +24,7 @@ export function DatePickerWithRange({ value, onChange }) {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="w-full justify-start text-left font-normal border-border"
+          className="w-full justify-start text-left font-normal border-border hover:bg-transparent hover:border-border-active px-3 py-2"
         >
           {date?.from ? (
             date.to ? (

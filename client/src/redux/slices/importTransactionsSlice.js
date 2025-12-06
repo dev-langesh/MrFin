@@ -1,15 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import {
-  fetchSettingsService,
-  saveSettingsService,
-} from "@/services/settings.service";
+import { settingsService } from "@/services/settings.service";
 
 // Async Thunks
 export const fetchSettings = createAsyncThunk(
   "importTransactions/fetchSettings",
   async (_, { rejectWithValue }) => {
     try {
-      const data = await fetchSettingsService();
+      const data = await settingsService.fetchSettings();
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);
@@ -21,7 +18,7 @@ export const saveSettings = createAsyncThunk(
   "importTransactions/saveSettings",
   async (settings, { rejectWithValue }) => {
     try {
-      const data = await saveSettingsService(settings);
+      const data = await settingsService.saveSettings(settings);
       return data;
     } catch (error) {
       return rejectWithValue(error.response?.data || error.message);

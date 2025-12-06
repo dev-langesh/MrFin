@@ -33,7 +33,7 @@ import {
   detectQuote,
   readFilePreview,
   processFile,
-} from "@/utils/csvUtils";
+} from "@/components/dashboard/importTransactions/utils/csvUtils";
 
 function PreProcessOptions() {
   const dispatch = useDispatch();

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/Badge";
 import { Trash2, Edit2 } from "lucide-react";
 import { memo, useMemo, useState, useCallback } from "react";
 import {
@@ -16,7 +17,8 @@ import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
 import EditTransformedEntryForm from "./EditTransformedEntryForm";
 import GenericDataTable from "../GenericDataTable";
 import { useTable } from "@/hooks/useTable";
-import { formatDateSafe, getColorForValue } from "@/utils/importUtils";
+import { formatDateSafe } from "@/utils/dateUtils";
+import { getColorForValue } from "@/utils/uiUtils";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -68,14 +70,15 @@ function TransformedDataTable({ ...props }) {
               formatDateSafe(val, dateFormat)
             ) : key === "txnType" || key === "category" ? (
               val ? (
-                <span
+                <Badge
+                  variant="secondary"
                   className={cn(
-                    "px-2 py-1 rounded-full text-xs font-medium capitalize whitespace-nowrap",
+                    "capitalize whitespace-nowrap",
                     getColorForValue(val)
                   )}
                 >
                   {val}
-                </span>
+                </Badge>
               ) : (
                 val
               )

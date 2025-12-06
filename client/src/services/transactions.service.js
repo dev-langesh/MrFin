@@ -22,16 +22,32 @@ async function addTransactions(data) {
   }
 }
 
+// Helper to serialize params for arrays (e.g. category=A&category=B)
+const paramsSerializer = (params) => {
+  const searchParams = new URLSearchParams();
+  Object.keys(params).forEach((key) => {
+    if (Array.isArray(params[key])) {
+      params[key].forEach((val) => searchParams.append(key, val));
+    } else if (params[key] !== undefined && params[key] !== null) {
+      searchParams.append(key, params[key]);
+    }
+  });
+  return searchParams.toString();
+};
+
 // Get all transactions with filters/pagination
 async function getTransactions(filters) {
   try {
-     const payload = {};
-     Object.keys(filters).forEach((key) => {
-       if (filters[key] !== "all") {
-         payload[key] = filters[key];
-       }
-     });
-    const { data: res } = await transactionsApi.getTransactions(payload);
+    const params = {};
+    Object.keys(filters).forEach((key) => {
+      if (filters[key] !== "all") {
+        params[key] = filters[key];
+      }
+    });
+    const { data: res } = await transactionsApi.getTransactions({
+      params,
+      paramsSerializer,
+    });
     return res;
   } catch (err) {
     console.log(err);
@@ -42,16 +58,19 @@ async function getTransactions(filters) {
   }
 }
 
-// Get all transactions for visualization 
+// Get all transactions for visualization
 async function getTransactionsToVisualize(filters) {
   try {
-     const payload = {};
-     Object.keys(filters).forEach((key) => {
-       if (filters[key] !== "all") {
-         payload[key] = filters[key];
-       }
-     });
-    const { data: res } = await transactionsApi.getTransactionsToVisualize(payload);
+    const params = {};
+    Object.keys(filters).forEach((key) => {
+      if (filters[key] !== "all") {
+        params[key] = filters[key];
+      }
+    });
+    const { data: res } = await transactionsApi.getTransactionsToVisualize({
+      params,
+      paramsSerializer,
+    });
     return res;
   } catch (err) {
     console.log(err);

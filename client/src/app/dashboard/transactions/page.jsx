@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
+import { settingsService } from "@/services/settings.service";
+import { toast } from "sonner";
 
-import TransactionFilters from "@/components/dashboard/transaction/TransactionFilters";
 import TransactionTable from "@/components/dashboard/transaction/TransactionTable";
 
 export default function TransactionPage() {
+  const router = useRouter();
   const [filters, setFilters] = useState({
     dateRange: "all",
     source: "all",
@@ -13,23 +18,56 @@ export default function TransactionPage() {
     sort: "desc",
     limit: 10,
     page: 1,
+    page: 1,
   });
+
+  const [settings, setSettings] = useState({
+    transactionSettings: {
+      txnTypes: [],
+      categories: [],
+    },
+    importTransactionSettings: {
+      mapFields: {
+        dateFormat: "yyyy-MM-dd",
+      },
+    },
+  });
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await settingsService.fetchSettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        toast.error("Failed to load settings");
+      }
+    }
+    loadSettings();
+  }, []);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-        <p className="text-gray-600">Track and manage your transactions</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+          <p className="text-gray-600">
+            Manage and track your financial transactions
+          </p>
+        </div>
+        <Button onClick={() => router.push("/dashboard/import-transactions")}>
+          Import
+          <Upload className="ml-1" />
+        </Button>
       </div>
 
-      {/* Summary Cards */}
-      {/* <Summary /> */}
-
-      {/* Filters */}
-      <TransactionFilters filters={filters} setFilters={setFilters} />
-
       {/* Data Table */}
-      <TransactionTable filters={filters} setFilters={setFilters} />
+      <TransactionTable
+        filters={filters}
+        setFilters={setFilters}
+        settings={settings}
+      />
     </div>
   );
 }

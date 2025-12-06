@@ -1,247 +1,321 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/Table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
+import { Badge } from "@/components/ui/Badge";
+import { Download, Plus, Edit2, Trash2, Edit, ListFilter } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
-import { Plus, Download } from "lucide-react";
-import { Edit, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import { memo, useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import { Label } from "@/components/ui/Label";
-import Pagination from "../common/Pagination";
 import TransactionEntryForm from "./TransactionEntryForm";
 import { transactionService } from "@/services/transactions.service";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
-import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
+import GenericDataTable from "../importTransactions/GenericDataTable";
+import { formatDateSafe } from "@/utils/dateUtils";
+import { getColorForValue } from "@/utils/uiUtils";
+import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/Popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/Tooltip";
+import TransactionFilters from "./TransactionFilters";
 
-function TransactionTable({ setFilters, filters }) {
+function TransactionTable({ setFilters, filters, settings }) {
   const [data, setData] = useState([]);
   const [totalData, setTotalData] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   async function fetchData() {
-    const res = await transactionService.getTransactions(filters);
-    setData(res.transactions);
-    setTotalData(res.total);
+    setIsLoading(true);
+    try {
+      const res = await transactionService.getTransactions(filters);
+      setData(res.transactions);
+      setTotalData(res.total);
+    } catch (error) {
+      toast.error("Failed to fetch transactions");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   useEffect(() => {
     fetchData();
   }, [filters]);
 
-  function handleEdit(entry) {
+  const handleEdit = useCallback((entry) => {
     setEditingEntry(entry);
     setIsEditDialogOpen(true);
+  }, []);
+
+  const handleDelete = useCallback(
+    async (ids) => {
+      try {
+        let idsToDelete = [];
+        if (Array.isArray(ids)) {
+          idsToDelete = ids.map((idx) => data[idx]?._id).filter(Boolean);
+        } else {
+          idsToDelete = [ids];
+        }
+
+        if (idsToDelete.length === 0) return;
+
+        await Promise.all(
+          idsToDelete.map((id) => transactionService.deleteTransaction(id))
+        );
+
+        setData((prev) =>
+          prev.filter((entry) => !idsToDelete.includes(entry._id))
+        );
+        setTotalData((total) => total - idsToDelete.length);
+        setSelectedRows([]);
+        toast.success("Transaction(s) deleted");
+      } catch (error) {
+        toast.error(error.message);
+      }
+    },
+    [data]
+  );
+
+  function handleExport() {
+    // Implement export functionality
+    toast.info("Export functionality coming soon");
   }
 
-  async function handleDelete(id) {
-    try {
-      await transactionService.deleteTransaction(id);
-      setData((prev) => prev.filter((entry) => entry._id !== id));
-      setTotalData((total) => total - 1);
-      toast.success("Entry deleted");
-    } catch (error) {
-      toast.error(error.message);
-    }
-  }
+  const handleApplyFilters = useCallback(
+    (newFilters) => {
+      setFilters(newFilters);
+      setIsFilterOpen(false);
+    },
+    [setFilters]
+  );
 
-  function handleExport() {}
+  const activeFilterCount = [
+    filters.txnType?.length > 0,
+    filters.category?.length > 0,
+    filters.dateRange !== "all",
+    !!filters.description,
+  ].filter(Boolean).length;
+
+  // Construct pagination object compatible with GenericDataTable
+  const pagination = {
+    page: filters.page,
+    limit: filters.limit,
+    selectedRows,
+    selectAll: data.length > 0 && selectedRows.length === data.length,
+    paginatedData: data, // Server-side paginated, so just use data
+    handlePageChange: (page) => setFilters((prev) => ({ ...prev, page })),
+    handleLimitChange: (val) =>
+      setFilters((prev) => ({
+        ...prev,
+        limit: val === "all" ? totalData : Number(val),
+        page: 1,
+      })),
+    toggleSelectAll: (checked) => {
+      if (checked) {
+        setSelectedRows(data.map((_, i) => i));
+      } else {
+        setSelectedRows([]);
+      }
+    },
+    toggleSelectRow: (index, checked) => {
+      if (checked) {
+        setSelectedRows((prev) => [...prev, index]);
+      } else {
+        setSelectedRows((prev) => prev.filter((i) => i !== index));
+      }
+    },
+  };
+
+  const columns = useMemo(
+    () => [
+      {
+        header: "Date",
+        accessor: "txnDate",
+        render: (entry) => (
+          <span className="whitespace-nowrap">
+            {formatDateSafe(
+              entry.txnDate,
+              settings?.importTransactionSettings?.mapFields?.dateFormat || "PP"
+            )}
+          </span>
+        ),
+      },
+      {
+        header: "Type",
+        accessor: "txnType",
+        render: (entry) => (
+          <Badge
+            variant="secondary"
+            className={cn("capitalize", getColorForValue(entry.txnType))}
+          >
+            {entry.txnType}
+          </Badge>
+        ),
+      },
+      {
+        header: "Category",
+        accessor: "category",
+        render: (entry) =>
+          entry.category ? (
+            <Badge
+              variant="secondary"
+              className={cn("capitalize", getColorForValue(entry.category))}
+            >
+              {entry.category}
+            </Badge>
+          ) : (
+            "-"
+          ),
+      },
+      {
+        header: "Description",
+        accessor: "description",
+        className: "min-w-[200px]",
+      },
+      {
+        header: "Amount",
+        accessor: "amount",
+        className: "text-right",
+        cellClassName: "text-right font-medium",
+        render: (entry) => `₹${entry.amount.toLocaleString()}`,
+      },
+      {
+        header: "Actions",
+        className: "text-right",
+        cellClassName: "text-right",
+        render: (entry, index) => (
+          <div className="flex items-center justify-end gap-1">
+            <Button variant="ghost" size="sm" onClick={() => handleEdit(entry)}>
+              <Edit2 className="w-4 h-4" />
+            </Button>
+            <ConfirmationDialog
+              trigger={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              }
+              title="Delete Transaction"
+              description="Are you sure you want to delete this transaction?"
+              onConfirm={() => handleDelete(entry._id)}
+              confirmText="Delete"
+            />
+          </div>
+        ),
+      },
+    ],
+    [handleEdit, handleDelete]
+  );
 
   return (
-    <Card className="px-0 rounded-sm py-4">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <h1>Transactions ({data.length})</h1>
-          <div className="flex items-center gap-2">
-            <Button onClick={handleExport} variant="outline" size="sm">
-              <Download className="w-4 h-4" />
-            </Button>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="w-4 h-4 " />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="lg:max-w-2xl">
-                <TransactionEntryForm
-                  setData={setData}
-                  filters={{
-                    startDate: new Date(filters.startDate),
-                    endDate: new Date(filters.endDate),
-                    txnType: filters.txnType,
-                    sort: filters.sort,
-                  }}
-                  setTotalData={setTotalData}
-                  close={() => setIsAddDialogOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent className="lg:max-w-2xl">
-                <TransactionEntryForm
-                  editingEntry={editingEntry}
-                  setData={setData}
-                  close={() => setIsEditDialogOpen(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardTitle>
-        <CardDescription>
-          Showing {data.length} of {totalData} entries
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border grid grid-cols-1">
-          <Table className="overflow-x-auto">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[120px]">Txn Date</TableHead>
-                <TableHead className="min-w-[100px]">Txn Type</TableHead>
-                <TableHead className="min-w-[100px]">Source</TableHead>
-                <TableHead className="min-w-[120px]">Payment Gateway</TableHead>
-                <TableHead className="min-w-[200px]">Description</TableHead>
-                <TableHead className="min-w-[120px]">
-                  Expense Category
-                </TableHead>
-                <TableHead className="min-w-[100px] text-right">
-                  Amount
-                </TableHead>
-                <TableHead className="min-w-[100px] text-right">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-8 text-muted-foreground"
-                  >
-                    No transactions found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.map((entry) => (
-                  <TableRow key={entry._id}>
-                    <TableCell>
-                      {format(new Date(entry.txnDate), "MMM dd, yyyy")}
-                    </TableCell>
-                    <TableCell>{entry.txnType}</TableCell>
-                    <TableCell>{entry.source || "-"}</TableCell>
-                    <TableCell>{entry.paymentGateway || "-"}</TableCell>
-                    <TableCell>{entry.description}</TableCell>
-                    <TableCell>{entry.expenseCategory || "-"}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₹{entry.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end">
-                        <Button
-                          onClick={() => handleEdit(entry)}
-                          variant="ghost"
-                          size="sm"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-
-                        <ConfirmationDialog
-                          trigger={
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          }
-                          title="Delete Transaction"
-                          description="Are you sure you want to delete this transaction? This action cannot be undone."
-                          onConfirm={() => handleDelete(entry._id)}
-                          confirmText="Delete"
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination + Limit Controls */}
-        <div className="flex items-center justify-between mt-4">
-          {/* Rows per page */}
-          {/* Rows per page */}
-          {totalData > 10 && (
+    <>
+      <GenericDataTable
+        data={data}
+        columns={columns}
+        isLoading={isLoading}
+        title="Transactions"
+        pagination={pagination}
+        paginationOptions={[10, 50, 100, 150]}
+        onDelete={handleDelete}
+        totalCount={totalData}
+        actions={
+          <TooltipProvider>
             <div className="flex items-center gap-2">
-              <Label>Rows per page:</Label>
-              <Select
-                value={
-                  filters.limit === totalData ? "all" : String(filters.limit)
-                }
-                onValueChange={(val) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    limit: val === "all" ? totalData : Number(val),
-                    page: 1,
-                  }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PAGINATION_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option === "all" ? "All" : option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+              {/* Filter Popover */}
+              <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <Tooltip delayDuration={500}>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="relative"
+                      >
+                        <ListFilter className="w-4 h-4" />
+                        {activeFilterCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground pointer-events-none">
+                            {activeFilterCount}
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Filter Transactions</TooltipContent>
+                </Tooltip>
+                <PopoverContent className="w-[340px] p-0" align="end">
+                  <TransactionFilters
+                    activeFilters={filters}
+                    onApply={handleApplyFilters}
+                    isOpen={isFilterOpen}
+                    categories={settings?.transactionSettings?.categories || []}
+                    txnTypes={settings?.transactionSettings?.txnTypes || []}
+                  />
+                </PopoverContent>
+              </Popover>
 
-          {/* Pagination buttons */}
-          <Pagination
-            total={totalData}
-            limit={filters.limit}
-            currentPage={filters.page}
-            handlePageChange={(page) =>
-              setFilters((prev) => ({ ...prev, page }))
-            }
+              {/* Add */}
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <Tooltip delayDuration={500}>
+                  <TooltipTrigger asChild>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </DialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Add Transaction</TooltipContent>
+                </Tooltip>
+                <DialogContent className="lg:max-w-2xl">
+                  <TransactionEntryForm
+                    setData={setData}
+                    filters={filters}
+                    setTotalData={setTotalData}
+                    close={() => setIsAddDialogOpen(false)}
+                    settings={settings}
+                  />
+                </DialogContent>
+              </Dialog>
+
+              {/* Export */}
+              <Tooltip delayDuration={500}>
+                <TooltipTrigger asChild>
+                  <Button onClick={handleExport} variant="outline" size="icon">
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Export Transactions</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        }
+      />
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="lg:max-w-2xl">
+          <TransactionEntryForm
+            editingEntry={editingEntry}
+            setData={setData}
+            close={() => setIsEditDialogOpen(false)}
+            settings={settings}
           />
-        </div>
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
-export default memo(TransactionTable);
+export default TransactionTable;

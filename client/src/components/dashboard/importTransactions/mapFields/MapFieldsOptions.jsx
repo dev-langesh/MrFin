@@ -117,24 +117,23 @@ export default function MapFieldsOptions({ onApply }) {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     try {
-      let hasError = false;
       const errorIndices = [];
       const validatedData = importedData.map((data, index) => {
         const val = validateEntry(data, state, state.dateFormat);
         if (Object.keys(val.errors).length > 0) {
-          hasError = true;
           errorIndices.push(index);
         }
         return val;
       });
-      dispatch(updateMappedFields({ ...state, hasError }));
+      // Update mapped fields without hasError
+      dispatch(updateMappedFields({ ...state }));
       dispatch(
         setMappedData({
           mappedData: validatedData,
           errorIndices,
         })
       );
-      if (onApply) onApply(hasError);
+      if (onApply) onApply();
     } catch (error) {
       console.error("Failed to apply mapping:", error);
       toast.error("Failed to apply mapping.");

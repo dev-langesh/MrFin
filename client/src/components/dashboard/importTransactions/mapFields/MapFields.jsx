@@ -23,14 +23,13 @@ export default function MapFields({}) {
 
   useEffect(() => {
     if (validationAttempt > 0) {
-      if (errorIndices.length > 0 || mappedFields.hasError) {
+      if (errorIndices.length > 0) {
         setActiveTab("errors");
       } else {
-        setActiveTab("mappedData")
+        setActiveTab("mappedData");
       }
     }
-    
-  }, [validationAttempt, errorIndices.length, mappedFields.hasError]);
+  }, [validationAttempt, errorIndices.length]);
 
   const handleApply = (hasError) => {
     setActiveTab(hasError ? "errors" : "mappedData");
@@ -46,7 +45,7 @@ export default function MapFields({}) {
               <TabsList>
                 <TabsTrigger value="importedData">Imported Data</TabsTrigger>
                 <TabsTrigger value="mappedData">Mapped Data</TabsTrigger>
-                {errorIndices?.length > 0 && mappedFields.hasError && (
+                {errorIndices?.length > 0 && (
                   <TabsTrigger value="errors" className="text-red-500">
                     Errors
                   </TabsTrigger>

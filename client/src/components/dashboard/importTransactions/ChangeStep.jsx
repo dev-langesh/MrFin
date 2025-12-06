@@ -7,6 +7,11 @@ import {
   selectImportTransactions,
   reset,
   updateState,
+  selectOptions,
+  selectMappedFields,
+  selectRules,
+  selectTransactionSettings,
+  saveSettings,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useState, useCallback } from "react";
 import { validateStepData } from "@/utils/validationUtils";
@@ -18,6 +23,10 @@ import { useRouter } from "next/navigation";
 
 export default function ChangeStep() {
   const state = useSelector(selectImportTransactions);
+  const options = useSelector(selectOptions);
+  const mappedFields = useSelector(selectMappedFields);
+  const rules = useSelector(selectRules);
+  const transactionSettings = useSelector(selectTransactionSettings);
   const dispatch = useDispatch();
   const router = useRouter();
   const lastStep = 4;
@@ -81,7 +90,31 @@ export default function ChangeStep() {
         }
       }
 
-      // 2. Call API
+      // 2. Save Settings
+      const uniqueTxnTypes = new Set([
+        ...transactionSettings.txnTypes,
+        ...state.transformedData.map((t) => t.txnType).filter(Boolean),
+      ]);
+      const uniqueCategories = new Set([
+        ...transactionSettings.categories,
+        ...state.transformedData.map((t) => t.category).filter(Boolean),
+      ]);
+
+      const settingsToSave = {
+        importTransactionSettings: {
+          preProcess: options,
+          mapFields: mappedFields,
+          rules: rules,
+        },
+        transactionSettings: {
+          txnTypes: Array.from(uniqueTxnTypes),
+          categories: Array.from(uniqueCategories),
+        },
+      };
+
+      dispatch(saveSettings(settingsToSave));
+
+      // 3. Call API
       await protectedApi.post("/transactions/bulk", state.transformedData);
 
       toast.success("Transactions imported successfully!");
@@ -93,7 +126,15 @@ export default function ChangeStep() {
     } finally {
       setIsImporting(false);
     }
-  }, [state.transformedData, dispatch, router]);
+  }, [
+    state.transformedData,
+    dispatch,
+    router,
+    options,
+    mappedFields,
+    rules,
+    transactionSettings,
+  ]);
 
   return (
     <div className="flex items-center justify-end gap-3 pr-4 self-stretch">

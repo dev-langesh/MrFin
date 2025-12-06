@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Trash2, Edit2 } from "lucide-react";
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
   selectMappedFields,
   selectMappedData,
@@ -20,7 +20,8 @@ import { useTable } from "@/hooks/useTable";
 import { formatDateSafe } from "@/utils/importUtils";
 import { cn } from "@/lib/utils";
 
-function MappedDataTable({ selectedRows, setSelectedRows }) {
+function MappedDataTable({ showErrorsOnly }) {
+  const [filteredData, setFilteredData] = useState([]);
   const mappedData = useSelector(selectMappedData);
   const mappedFields = useSelector(selectMappedFields);
   const isLoading = useSelector(selectIsLoading);
@@ -29,10 +30,22 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const pagination = useTable({ data: mappedData });
+  const pagination = useTable({ data: filteredData });
   const { selectedRows: hookSelectedRows, resetSelection } = pagination;
 
   const orderedFields = ["txnDate", "description", "credit", "debit"];
+
+  useEffect(() => {
+    if (showErrorsOnly && mappedData?.length) {
+      const filtered = mappedData.filter(
+        (entry) => entry.errors && Object.keys(entry.errors).length > 0
+      );
+      setFilteredData(filtered);
+    } else {
+      setFilteredData(mappedData);
+    }
+  }, [showErrorsOnly, mappedData]);
+
   const dynamicCols = useMemo(
     () =>
       mappedFields
@@ -47,7 +60,8 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
       accessor: key,
       className: "capitalize",
       cellClassName: cn(
-        "min-w-[120px] whitespace-break-spaces break-all"
+        "min-w-[150px] whitespace-normal break-words"
+        // We can't easily access entry value here for length check unless we use render
       ),
       render: (entry) => {
         const val = entry[key];
@@ -57,9 +71,9 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
         return (
           <div
             className={cn(
-              val?.length >= 10 && "min-w-[170px]",
               val?.length >= 20 && "min-w-[200px]",
-              val?.length >= 100 && "min-w-[300px]"
+              val?.length >= 50 && "min-w-[300px]",
+              val?.length >= 100 && "min-w-[400px]"
             )}
           >
             {error ? (
@@ -144,43 +158,33 @@ function MappedDataTable({ selectedRows, setSelectedRows }) {
     return cols;
   }, [dynamicCols, mappedFields, isDialogOpen, editingIndex]);
 
-  const handleDeleteRows = useCallback(
-    (rows) => {
-      dispatch(deleteRows(rows));
-      resetSelection();
-    },
-    [dispatch, resetSelection]
-  );
+  function handleDeleteRows(rows) {
+    dispatch(deleteRows(rows));
+    resetSelection();
+    // If we were using parent state: setSelectedRows([]);
+  }
 
-  const handleUpdateEntry = useCallback(
-    (updatedEntry) => {
-      const newData = [...mappedData];
-      const globalIndex = editingIndex;
-      newData[globalIndex] = {
-        ...newData[globalIndex],
-        ...updatedEntry,
-      };
-      dispatch(updateState({ mappedData: newData }));
-      setIsDialogOpen(false);
-      setEditingIndex(null);
-    },
-    [mappedData, editingIndex, dispatch]
-  );
+  function handleUpdateEntry(updatedEntry) {
+    const newData = [...mappedData];
+    const globalIndex = editingIndex;
+    newData[globalIndex] = {
+      ...newData[globalIndex],
+      ...updatedEntry,
+    };
+    dispatch(updateState({ mappedData: newData }));
+    setIsDialogOpen(false);
+    setEditingIndex(null);
+  }
 
   return (
     <GenericDataTable
-      data={mappedData}
+      data={filteredData}
       columns={columns}
       isLoading={isLoading}
       title="Mapped Data"
       pagination={pagination}
       onDelete={handleDeleteRows}
       emptyMessage="No data available. Please map the fields."
-      getRowClassName={(entry) =>
-        Object.keys(entry.errors || {}).length > 0
-          ? "bg-red-100 hover:bg-red-200"
-          : ""
-      }
     />
   );
 }

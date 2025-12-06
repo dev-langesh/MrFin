@@ -1,19 +1,30 @@
 import { z } from "zod";
 
 export const transformedEntrySchema = z.object({
-  txnDate: z.string().min(1, "Transaction Date is required"),
+  txnDate: z
+    .string({ required_error: "Date is required" })
+    .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" }),
+  txnType: z
+    .string({
+      required_error: "Transaction Type is required",
+    })
+    .max(25, "Transaction Type must be 25 characters or less")
+    .min(2, "Transaction Type must be at least 2 characters long"),
   description: z
     .string()
-    .min(1, "Description is required")
-    .max(100, "Description must be 100 characters or less"),
+    .max(100, "Description must be 100 characters or less")
+    .optional(),
+  category: z
+    .string()
+    .max(25, "Category must be 25 characters or less")
+    .min(2, "Category must be at least 2 characters long")
+    .optional(),
   amount: z
     .union([z.string(), z.number()])
     .refine((val) => !isNaN(Number(val)), {
       message: "Amount must be a number",
+    })
+    .refine((val) => val > 0, {
+      message: "Amount must be positive greater than 0",
     }),
-  txnType: z.string().optional(),
-  category: z
-    .string()
-    .max(50, "Category must be 50 characters or less")
-    .optional(),
 });

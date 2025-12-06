@@ -1,8 +1,11 @@
 const { analyticsRouter } = require("./modules/analytics/analytics.routes");
 const { authRouter } = require("./modules/auth/auth.routes");
 const { fileRouter } = require("./modules/file/file.routes");
-const { transactionRouter } = require("./modules/transaction/transaction.routes");
+const {
+  transactionRouter,
+} = require("./modules/transaction/transaction.routes");
 const { userRouter } = require("./modules/user/user.routes");
+const { settingsRouter } = require("./modules/settings/settings.routes");
 
 const router = require("express").Router();
 
@@ -11,5 +14,6 @@ router.use("/user", userRouter);
 router.use("/files", fileRouter);
 router.use("/transactions", transactionRouter);
 router.use("/analytics", analyticsRouter);
+router.use("/settings", settingsRouter);
 
 module.exports = { apiRouter: router };

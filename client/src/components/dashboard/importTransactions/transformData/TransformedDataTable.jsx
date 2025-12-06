@@ -52,10 +52,10 @@ function TransformedDataTable({ ...props }) {
         return (
           <div
             className={cn(
-              "whitespace-break-spaces break-all",
-              val?.length > 10 && "min-w-[150px]",
-              val?.length > 20 && "min-w-[190px]",
-              val?.length > 100 && "min-w-[300px]"
+              "whitespace-normal break-words min-w-[120px]",
+              val?.length > 20 && "min-w-[200px]",
+              val?.length > 50 && "min-w-[300px]",
+              val?.length > 100 && "min-w-[400px]"
             )}
           >
             {error ? (

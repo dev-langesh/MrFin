@@ -8,7 +8,10 @@ import {
 import Input from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
-import { selectImportData } from "@/redux/slices/importTransactionsSlice";
+import {
+  selectImportData,
+  selectTransactionSettings,
+} from "@/redux/slices/importTransactionsSlice";
 import {
   SelectContent,
   SelectItem,
@@ -16,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { useSelector } from "react-redux";
+import { AutoSelect } from "@/components/ui/AutoSelect";
 import { actionsOptions, operationsOptions } from "./constants";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,6 +40,7 @@ const defaultValues = {
 
 function AddRuleForm(props) {
   const importedData = useSelector(selectImportData);
+  const transactionSettings = useSelector(selectTransactionSettings);
   const sourceOptions = Object.keys(importedData[0] || {});
 
   const {
@@ -225,20 +230,28 @@ function AddRuleForm(props) {
                     name="targetValue"
                     control={control}
                     render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
+                      <AutoSelect
                         value={field.value}
-                        error={!!errors.targetValue}
-                        helperText={errors.targetValue?.message}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="expense">Expense</SelectItem>
-                          <SelectItem value="revenue">Revenue</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        onChange={field.onChange}
+                        options={transactionSettings.txnTypes}
+                        placeholder="Select Type"
+                      />
+                    )}
+                  />
+                </>
+              ) : watch("target") === "category" ? (
+                <>
+                  <Label>Set Value To</Label>
+                  <Controller
+                    name="targetValue"
+                    control={control}
+                    render={({ field }) => (
+                      <AutoSelect
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={transactionSettings.categories}
+                        placeholder="Select Category"
+                      />
                     )}
                   />
                 </>

@@ -11,18 +11,15 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DatePicker } from "@/components/ui/DatePicker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
 import { TextArea } from "@/components/ui/text-area";
 import { transformedEntrySchema } from "@/schemas/transformedEntry.schema";
 import React, { memo } from "react";
+import { AutoSelect } from "@/components/ui/AutoSelect";
+import { selectTransactionSettings } from "@/redux/slices/importTransactionsSlice";
+import { useSelector } from "react-redux";
 
 function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
+  const transactionSettings = useSelector(selectTransactionSettings);
   const {
     register,
     handleSubmit,
@@ -74,20 +71,17 @@ function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
         <div className="grid grid-cols-2 gap-4">
           {/* Transaction Type */}
           <div className="space-y-2">
-            <Label>Transaction Type</Label>
+            <Label htmlFor="txnType">Transaction Type</Label>
             <Controller
               control={control}
               name="txnType"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Expense</SelectItem>
-                    <SelectItem value="revenue">Revenue</SelectItem>
-                  </SelectContent>
-                </Select>
+                <AutoSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={transactionSettings.txnTypes}
+                  placeholder="Select type"
+                />
               )}
             />
             {errors.txnType && (
@@ -96,13 +90,24 @@ function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
           </div>
 
           {/* Category */}
-          <Input
-            label="Category"
-            {...register("category")}
-            placeholder="Enter Category"
-            error={!!errors.category}
-            helperText={errors.category?.message}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="category">Category</Label>
+            <Controller
+              control={control}
+              name="category"
+              render={({ field }) => (
+                <AutoSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={transactionSettings.categories}
+                  placeholder="Select category"
+                />
+              )}
+            />
+            {errors.category && (
+              <p className="text-sm text-red-500">{errors.category.message}</p>
+            )}
+          </div>
         </div>
 
         {/* Amount */}

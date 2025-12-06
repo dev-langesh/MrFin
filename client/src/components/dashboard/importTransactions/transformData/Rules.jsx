@@ -16,6 +16,8 @@ import {
   selectMappedFields,
   updateState,
   setIsLoading,
+  selectRules,
+  setRules,
 } from "@/redux/slices/importTransactionsSlice";
 import { applyRulesToData } from "@/utils/ruleEngine";
 import RuleList from "./RuleList";
@@ -24,38 +26,39 @@ function Rules() {
   const [open, setOpen] = useState(true);
   const [editingRuleIndex, setEditingRuleIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [rules, setRules] = useState([]);
-
   const mappedData = useSelector(selectMappedData);
   const importedData = useSelector(selectImportData);
   const mappedFields = useSelector(selectMappedFields);
+  const rules = useSelector(selectRules);
 
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (rules.length === 0 && mappedFields) {
-      setRules([
-        {
-          name: "Set Expense Type",
-          source: mappedFields.debit,
-          operation: "exists",
-          operationValue: "",
-          action: "update",
-          target: "txnType",
-          targetValue: "expense",
-        },
-        {
-          name: "Set Revenue Type",
-          source: mappedFields.credit,
-          operation: "exists",
-          operationValue: "",
-          action: "update",
-          target: "txnType",
-          targetValue: "revenue",
-        },
-      ]);
+      dispatch(
+        setRules([
+          {
+            name: "Set Expense Type",
+            source: mappedFields.debit,
+            operation: "exists",
+            operationValue: "",
+            action: "update",
+            target: "txnType",
+            targetValue: "expense",
+          },
+          {
+            name: "Set Revenue Type",
+            source: mappedFields.credit,
+            operation: "exists",
+            operationValue: "",
+            action: "update",
+            target: "txnType",
+            targetValue: "revenue",
+          },
+        ])
+      );
     }
-  }, [mappedFields, rules.length]);
+  }, [mappedFields, rules.length, dispatch]);
 
   useEffect(() => {
     const applyRules = async () => {
@@ -82,24 +85,28 @@ function Rules() {
     applyRules();
   }, [mappedData, rules, mappedFields, importedData, dispatch]);
 
-  const handleAddRule = useCallback((rule) => {
-    setRules((prev) => [...prev, rule]);
-  }, []);
+  const handleAddRule = useCallback(
+    (rule) => {
+      dispatch(setRules([...rules, rule]));
+    },
+    [dispatch, rules]
+  );
 
   const handleUpdateRule = useCallback(
     (rule) => {
-      setRules((prev) => {
-        const newRules = [...prev];
-        newRules[editingRuleIndex] = rule;
-        return newRules;
-      });
+      const newRules = [...rules];
+      newRules[editingRuleIndex] = rule;
+      dispatch(setRules(newRules));
     },
-    [editingRuleIndex]
+    [dispatch, rules, editingRuleIndex]
   );
 
-  const handleDelete = useCallback((index) => {
-    setRules((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+  const handleDelete = useCallback(
+    (index) => {
+      dispatch(setRules(rules.filter((_, i) => i !== index)));
+    },
+    [dispatch, rules]
+  );
 
   const handleEdit = useCallback((index) => {
     setEditingRuleIndex(index);

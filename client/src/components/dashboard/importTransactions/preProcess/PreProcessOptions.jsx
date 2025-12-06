@@ -7,6 +7,7 @@ import {
   updateState,
   setIsLoading,
   selectIsLoading,
+  fetchSettings,
 } from "@/redux/slices/importTransactionsSlice";
 import {
   Collapsible,
@@ -35,24 +36,24 @@ import {
 } from "@/utils/csvUtils";
 
 function PreProcessOptions() {
-  const [options, setOptions] = useState({
-    delimiter: ",",
-    removeCharacters: "",
-    quote: '"',
-  });
-  const [isOpen, setIsOpen] = useState(true);
+  const dispatch = useDispatch();
   const files = useSelector(selectImportFiles);
   const reduxOptions = useSelector(selectOptions);
   const isLoading = useSelector(selectIsLoading);
 
-  const dispatch = useDispatch();
+  const [options, setOptions] = useState(reduxOptions);
+  const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
-    if (reduxOptions) setOptions(reduxOptions);
+    dispatch(fetchSettings());
+  }, [dispatch]);
+
+  useEffect(() => {
+    setOptions(reduxOptions);
   }, [reduxOptions]);
 
   useEffect(() => {
-    if (files && files.length > 0) {
+    if (files.length > 0) {
       detectAndProcess(files[0]);
     }
   }, [files]);

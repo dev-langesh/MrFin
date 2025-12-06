@@ -46,10 +46,10 @@ export default function MapFieldsOptions({ onApply }) {
   const [state, setState] = useState({});
 
   const importedData = useSelector(selectImportData);
+  const reduxMappedFields = useSelector(selectMappedFields);
   const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
 
-  console.log(toISODateString("01-09-2025 08:33:36", "dd-MM-yyyy"));
   useEffect(() => {
     // detect local date format
     const parts = new Intl.DateTimeFormat().formatToParts(
@@ -75,22 +75,40 @@ export default function MapFieldsOptions({ onApply }) {
     setState((p) => ({ ...p, dateFormat: localDateFormat }));
   }, []);
 
+  const handleChange = useCallback((key, value) => {
+    setState((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
   useEffect(() => {
     if (!importedData?.length) return;
     const keys = Object.keys(importedData[0]);
     setKeys(keys);
 
+    // 1. Regex Guesses
+    const guesses = {};
     keys.forEach((key) => {
-      if (/date/i.test(key)) handleChange("txnDate", key);
-      if (/description/i.test(key)) handleChange("description", key);
-      if (/credit/i.test(key)) handleChange("credit", key);
-      if (/debit/i.test(key)) handleChange("debit", key);
+      if (/date/i.test(key)) guesses.txnDate = key;
+      if (/description/i.test(key)) guesses.description = key;
+      if (/credit/i.test(key)) guesses.credit = key;
+      if (/debit/i.test(key)) guesses.debit = key;
     });
-  }, [importedData]);
 
-  const handleChange = useCallback((key, value) => {
-    setState((prev) => ({ ...prev, [key]: value }));
-  }, []);
+    // 2. Apply Saved Settings (if valid for current file)
+    const savedSettings = {};
+    if (reduxMappedFields) {
+      Object.entries(reduxMappedFields).forEach(([key, value]) => {
+        if (value && keys.includes(value)) {
+          savedSettings[key] = value;
+        }
+      });
+    }
+
+    setState((prev) => ({
+      ...prev,
+      ...guesses,
+      ...savedSettings,
+    }));
+  }, [importedData, reduxMappedFields]);
 
   const handleApply = useCallback(async () => {
     dispatch(setIsLoading(true));
@@ -112,7 +130,7 @@ export default function MapFieldsOptions({ onApply }) {
           mappedData: validatedData,
         })
       );
-      if (onApply) onApply();
+      if (onApply) onApply(hasError);
     } catch (error) {
       console.error("Failed to apply mapping:", error);
       toast.error("Failed to apply mapping.");

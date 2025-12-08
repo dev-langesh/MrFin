@@ -33,7 +33,10 @@ async function getTransactions(req, res) {
 
 // Get all transactions for visualization
 async function getTransactionsToVisualize(req, res) {
-  const result = await transactionService.getTransactionsToVisualize(req.query);
+  const result = await transactionService.getTransactionsToVisualize({
+    ...req.query,
+    userId: req.user.id,
+  });
   res.json(result);
 }
 

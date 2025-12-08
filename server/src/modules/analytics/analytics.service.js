@@ -1,3 +1,5 @@
+const { AnalyticsErrors } = require("../../errors/analyticsErrors");
+const { AppError } = require("../../utils/error");
 const { Analytics } = require("./analytics.model");
 
 // Helper to compute % change
@@ -6,11 +8,16 @@ function calcChange(newVal, oldVal) {
   return ((newVal - oldVal) / oldVal) * 100;
 }
 
-// Get or create analytics document
-async function getAnalytics() {
-  let analytics = await Analytics.findOne();
+// Create new analytics for a user
+async function createAnalytics(userId) {
+  return await Analytics.create({ userId });
+}
+
+// Get analytics document by userId
+async function getAnalytics(userId) {
+  const analytics = await Analytics.findOne({ userId });
   if (!analytics) {
-    analytics = await Analytics.create({});
+    throw new AppError(AnalyticsErrors.NOT_FOUND);
   }
   return analytics;
 }
@@ -77,9 +84,10 @@ function rolloverPeriods(analytics, date) {
  */
 async function updateAnalyticsOnAdd(
   { earnings = 0, expenses = 0 },
+  userId,
   date = new Date()
 ) {
-  const analytics = await getAnalytics();
+  const analytics = await getAnalytics(userId);
 
   const txDate = new Date(date);
   const txMonth = txDate.getMonth();
@@ -188,10 +196,12 @@ async function updateAnalyticsOnAdd(
  */
 async function updateAnalyticsOnDelete(
   { earnings = 0, expenses = 0 },
+  userId,
   date = new Date()
 ) {
   return updateAnalyticsOnAdd(
     { earnings: -earnings, expenses: -expenses },
+    userId,
     date
   );
 }
@@ -199,14 +209,17 @@ async function updateAnalyticsOnDelete(
 /**
  * Update analytics on edit
  */
-async function updateAnalyticsOnEdit({
-  oldEarnings = 0,
-  newEarnings = 0,
-  oldExpenses = 0,
-  newExpenses = 0,
-  oldDate,
-  newDate,
-}) {
+async function updateAnalyticsOnEdit(
+  {
+    oldEarnings = 0,
+    newEarnings = 0,
+    oldExpenses = 0,
+    newExpenses = 0,
+    oldDate,
+    newDate,
+  },
+  userId
+) {
   const oldTx = new Date(oldDate);
   const newTx = new Date(newDate);
 
@@ -219,12 +232,14 @@ async function updateAnalyticsOnEdit({
     // Remove old values from old period
     await updateAnalyticsOnAdd(
       { earnings: -oldEarnings, expenses: -oldExpenses },
+      userId,
       oldDate
     );
 
     // Add new values to new period
     return await updateAnalyticsOnAdd(
       { earnings: newEarnings, expenses: newExpenses },
+      userId,
       newDate
     );
   }
@@ -234,10 +249,7 @@ async function updateAnalyticsOnEdit({
   const diffExpenses = newExpenses - oldExpenses;
   return await updateAnalyticsOnAdd(
     { earnings: diffEarnings, expenses: diffExpenses },
-    newDate
-  );
-  return await updateAnalyticsOnAdd(
-    { earnings: diffEarnings, expenses: diffExpenses },
+    userId,
     newDate
   );
 }
@@ -246,10 +258,10 @@ async function updateAnalyticsOnEdit({
  * Batch update analytics for multiple transactions
  * Optimized to minimize database reads/writes
  */
-async function updateAnalyticsBatch(transactions) {
+async function updateAnalyticsBatch(transactions, userId) {
   if (!transactions || transactions.length === 0) return;
 
-  const analytics = await getAnalytics();
+  const analytics = await getAnalytics(userId);
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentQuarter = Math.floor(currentMonth / 3);
@@ -408,6 +420,7 @@ async function updateAnalyticsBatch(transactions) {
 }
 
 const analyticsService = {
+  createAnalytics,
   getAnalytics,
   updateAnalyticsOnAdd,
   updateAnalyticsOnDelete,

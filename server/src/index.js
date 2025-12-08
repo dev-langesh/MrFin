@@ -10,11 +10,9 @@ const { connectDb } = require("./lib/db/connectDb");
 const cookieParser = require("cookie-parser");
 const { errorHandler } = require("./middleware/errorHandler.middleware");
 const { init } = require("./config/init");
-const { migrateDb } = require("./lib/db/migrate");
 
 connectDb();
 init();
-migrateDb();
 
 const app = express();
 const server = createServer(app);

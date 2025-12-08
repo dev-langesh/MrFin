@@ -2,6 +2,12 @@ const mongoose = require("mongoose");
 
 const analyticsSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+    },
     // Earnings
     earnings: {
       month: { type: Number, default: 0 },

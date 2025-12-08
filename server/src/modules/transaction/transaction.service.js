@@ -16,11 +16,13 @@ async function createTransaction(data) {
     if (txn.txnType === "revenue") {
       await analyticsService.updateAnalyticsOnAdd(
         { earnings: txn.amount },
+        txn.userId,
         txn.txnDate
       );
     } else {
       await analyticsService.updateAnalyticsOnAdd(
         { expenses: txn.amount },
+        txn.userId,
         txn.txnDate
       );
     }
@@ -35,7 +37,10 @@ async function createTransactions(transactions) {
     const savedTxns = await Transaction.insertMany(transactions, {
       ordered: false,
     });
-    await analyticsService.updateAnalyticsBatch(savedTxns);
+    await analyticsService.updateAnalyticsBatch(
+      savedTxns,
+      transactions[0].userId
+    );
 
     return savedTxns;
   } catch (err) {
@@ -99,6 +104,8 @@ async function getTransactionsToVisualize(filters = {}) {
   if (filters.source) query.source = filters.source;
   if (filters.paymentGateway) query.paymentGateway = filters.paymentGateway;
   if (filters.expenseCategory) query.expenseCategory = filters.expenseCategory;
+  if (filters.userId)
+    query.userId = new mongoose.Types.ObjectId(filters.userId); // aggregation matches need objectId often if usually stored as such, but mongoose handles it if schema is defined. But in aggregation $match, auto-casting might not happen if not going through model find? Transaction.aggregate... usually requires correct type. userId is ObjectId.
   if (filters.startDate && filters.endDate) {
     filters.startDate = new Date(filters.startDate);
     filters.endDate = new Date(filters.endDate);
@@ -169,23 +176,29 @@ async function updateTransaction(id, data) {
 
     // Update analytics
     if (oldType === "revenue") {
-      await analyticsService.updateAnalyticsOnEdit({
-        oldEarnings: oldAmount,
-        newEarnings: savedTxn.amount,
-        oldExpenses: 0,
-        newExpenses: 0,
-        oldDate,
-        newDate: savedTxn.txnDate,
-      });
+      await analyticsService.updateAnalyticsOnEdit(
+        {
+          oldEarnings: oldAmount,
+          newEarnings: savedTxn.amount,
+          oldExpenses: 0,
+          newExpenses: 0,
+          oldDate,
+          newDate: savedTxn.txnDate,
+        },
+        savedTxn.userId
+      );
     } else {
-      await analyticsService.updateAnalyticsOnEdit({
-        oldEarnings: 0,
-        newEarnings: 0,
-        oldExpenses: oldAmount,
-        newExpenses: savedTxn.amount,
-        oldDate,
-        newDate: savedTxn.txnDate,
-      });
+      await analyticsService.updateAnalyticsOnEdit(
+        {
+          oldEarnings: 0,
+          newEarnings: 0,
+          oldExpenses: oldAmount,
+          newExpenses: savedTxn.amount,
+          oldDate,
+          newDate: savedTxn.txnDate,
+        },
+        savedTxn.userId
+      );
     }
 
     return savedTxn;
@@ -204,11 +217,13 @@ async function deleteTransaction(id) {
     if (txn.txnType === "revenue") {
       await analyticsService.updateAnalyticsOnDelete(
         { earnings: txn.amount },
+        txn.userId,
         txn.txnDate
       );
     } else {
       await analyticsService.updateAnalyticsOnDelete(
         { expenses: txn.amount },
+        txn.userId,
         txn.txnDate
       );
     }

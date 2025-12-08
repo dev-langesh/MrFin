@@ -7,6 +7,7 @@ const bcrypt = require("bcrypt");
 const { OAuth2Client } = require("google-auth-library");
 const { otpService } = require("../otp/otp.service");
 const { generateHash } = require("../../utils/auth/hash");
+const { analyticsService } = require("../analytics/analytics.service");
 
 async function registerUser(data) {
   const payload = { ...data };
@@ -20,6 +21,8 @@ async function registerUser(data) {
   //   to: user.email,
   //   templateName: "auth/otp",
   // });
+
+  await analyticsService.createAnalytics(user._id);
 
   return { user };
 }
@@ -126,6 +129,7 @@ async function loginWithGoogle(idToken) {
       to: user.email,
       templateName: "auth/otp",
     });
+    await analyticsService.createAnalytics(user._id);
   }
 
   const tokens = tokenService.generateTokens(user);

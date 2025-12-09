@@ -160,8 +160,8 @@ export default function MapFieldsOptions({ onApply }) {
                 </CardDescription>
               </div>
             </CollapsibleTrigger>
-            <Button size="sm" onClick={handleApply} disabled={isLoading}>
-              {isLoading ? <Loading size="sm" text="Applying..." /> : "Apply"}
+            <Button size="sm" onClick={handleApply} loading={isLoading}>
+              Apply
             </Button>
           </div>
         </CardHeader>

@@ -140,8 +140,8 @@ function PreProcessOptions() {
               <CardTitle>Options</CardTitle>
             </CollapsibleTrigger>
 
-            <Button size="sm" onClick={applyOptions} disabled={isLoading}>
-              {isLoading ? <Loading size="sm" text="Applying..." /> : "Apply"}
+            <Button size="sm" onClick={applyOptions} loading={isLoading} className="min-w-[80px]">
+              Apply
             </Button>
           </div>
         </CardHeader>

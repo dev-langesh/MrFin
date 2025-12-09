@@ -113,14 +113,11 @@ export default function OtpVerification() {
             type="button"
             onClick={() => sendOtp(true)}
             disabled={timer > 0 || isResending || loading || limitReached}
+            loading={isResending}
             variant="ghost"
             className="w-full text-xs"
           >
-            {isResending
-              ? "Resending..."
-              : timer > 0
-              ? `Resend code in ${timer}s`
-              : "Resend code"}
+            {timer > 0 ? `Resend code in ${timer}s` : "Resend code"}
           </Button>
         </form>
       </Card>

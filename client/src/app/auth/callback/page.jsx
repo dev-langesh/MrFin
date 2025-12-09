@@ -51,7 +51,7 @@ export default function AuthCallback() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Loading size="lg" text="Authenticating..." className="flex-col gap-2" />
+      <Loading text="Authenticating..." className="flex-col gap-2" />
     </div>
   );
 }

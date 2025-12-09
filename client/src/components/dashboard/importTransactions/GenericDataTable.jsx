@@ -53,7 +53,7 @@ function GenericDataTable({
     <Card className="px-0 rounded-sm py-5 relative">
       {isLoading && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
-          <Loading variant="spinner" size="lg" text="Processing..." />
+          <Loading variant="spinner"  text="Processing..." />
         </div>
       )}
       <CardHeader>

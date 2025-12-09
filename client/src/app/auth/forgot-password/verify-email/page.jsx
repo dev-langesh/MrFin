@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
-import { authApi } from "../../api/authApi";
+import { authApi } from "../../../../api/authApi";
 import OtpInput from "@/components/ui/OtpInput";
 import { Card } from "@/components/ui/Card";
 

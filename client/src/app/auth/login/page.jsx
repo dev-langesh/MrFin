@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/button";
-import { authApi } from "../api/authApi";
+import { authApi } from "../../../api/authApi";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import { authInputSchema } from "@/schemas/auth.schema";
 import { Card } from "@/components/ui/Card";
+import GoogleButton from "@/components/ui/GoogleButton";
 
 export default function Login() {
   const router = useRouter();
@@ -24,41 +25,6 @@ export default function Login() {
   } = useForm({
     resolver: zodResolver(authInputSchema.loginSchema),
   });
-
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.onload = () => {
-      window.google.accounts.id.initialize({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse,
-        use_fedcm_for_button: true,
-      });
-
-      window.google.accounts.id.renderButton(
-        document.getElementById("google-button"),
-        {
-          theme: "outline",
-          size: "large",
-          text: "signin_with",
-          width: window.innerWidth < 640 ? "290px" : "350px",
-        }
-      );
-    };
-    document.body.appendChild(script);
-  }, []);
-
-  const handleCredentialResponse = async (response) => {
-    const idToken = response.credential;
-    try {
-      await authApi.googleLogin({ idToken });
-      toast.success("Logged in with Google");
-      window.location.href = "/";
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Google login failed");
-    }
-  };
 
   const onSubmit = async (data) => {
     try {
@@ -74,15 +40,19 @@ export default function Login() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="py-12 px-8">
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4 flex items-center flex-col justify-center"
-        >
-          <h1 className="text-2xl font-bold ">Login</h1>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <Card className="w-full max-w-sm p-8">
+        <div className="flex flex-col space-y-1 text-center mb-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Welcome back
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Enter your credentials to access your account
+          </p>
+        </div>
 
-          <div className="max-md:w-[290px] w-full">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
             <Input
               placeholder="Email"
               {...register("email")}
@@ -91,7 +61,7 @@ export default function Login() {
             />
           </div>
 
-          <div className="max-md:w-[290px] w-full">
+          <div className="space-y-2">
             <Input
               type="password"
               placeholder="Password"
@@ -99,33 +69,42 @@ export default function Login() {
               error={errors.password}
               helperText={errors.password?.message}
             />
+            <div className="flex justify-end">
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs text-primary hover:underline font-medium"
+              >
+                Forgot Password?
+              </Link>
+            </div>
           </div>
 
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="max-md:w-[290px] w-full"
-          >
-            {isSubmitting ? "Logging in..." : "Login"}
+          <Button type="submit" loading={isSubmitting} className="w-full">
+            Sign In
           </Button>
 
-          <div id="google-button" className="h-[50px]"></div>
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
 
-          <div className="text-sm text-center space-x-2 pt-2">
-            <Link
-              href="/auth/forgot-password"
-              className="text-blue-600 hover:underline"
-            >
-              Forgot Password?
-            </Link>
-            <span>|</span>
+          <GoogleButton text="Sign in with Google" />
+
+          <p className="px-8 text-center text-sm text-muted-foreground mt-4">
+            Don&apos;t have an account?{" "}
             <Link
               href="/auth/register"
-              className="text-blue-600 hover:underline"
+              className="underline underline-offset-4 hover:text-primary"
             >
-              Register
+              Sign up
             </Link>
-          </div>
+          </p>
         </form>
       </Card>
     </div>

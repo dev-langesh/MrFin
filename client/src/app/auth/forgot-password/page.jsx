@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
+import Link from "next/link";
+import { toast } from "sonner";
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/button";
-import { authApi } from "../api/authApi";
+import { authApi } from "../../../api/authApi";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
@@ -41,32 +42,45 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white text-black p-4">
-      <Card className="py-10">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <Card className="w-full max-w-sm p-8">
+        <div className="flex flex-col space-y-2 text-center mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Forgot Password
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Enter your email to receive a verification code
+          </p>
+        </div>
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
             sendOtp(false);
           }}
-          className="space-y-4 flex items-center flex-col justify-center"
+          className="space-y-4"
         >
-          <h1 className="text-2xl font-bold text-zinc-800 text-center">
-            Forgot Password
-          </h1>
-          <p className="text-sm text-gray-500 text-center mb-4">
-            Enter your registered email to receive a verification code.
-          </p>
+          <div className="space-y-2">
+            <Input
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-          <Input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <Button type="submit" disabled={loading}>
-            {loading ? "Sending..." : "Send OTP"}
+          <Button type="submit" loading={loading} className="w-full">
+            Send Code
           </Button>
+
+          <div className="text-center pt-2">
+            <Link
+              href="/auth/login"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-2"
+            >
+              Back to Sign In
+            </Link>
+          </div>
         </form>
       </Card>
     </div>

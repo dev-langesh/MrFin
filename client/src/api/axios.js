@@ -1,7 +1,9 @@
 "use client";
 
 import axios from "axios";
-import { authApi } from "../app/auth/api/authApi"; // should export rotateTokens and logout
+import { authApi } from "./authApi"; // should export rotateTokens and logout
+
+const publicRoutes = ["/auth/*", "/"];
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,

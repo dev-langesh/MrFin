@@ -44,7 +44,7 @@ const loginSchema = z.object({
 
 const googleLoginSchema = z.object({
   body: z.object({
-    idToken: z.string({ required_error: "ID token is required" }),
+    code: z.string({ required_error: "Authorization code is required" }),
   }),
 });
 

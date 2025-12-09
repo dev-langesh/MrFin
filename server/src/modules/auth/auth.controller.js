@@ -80,9 +80,8 @@ async function rotateTokens(req, res) {
 }
 
 async function loginUserWithGoogle(req, res) {
-  const { idToken } = req.body;
-
-  const sres = await authService.loginWithGoogle(idToken);
+  const { code } = req.body;
+  const sres = await authService.loginWithGoogle(code);
 
   res.cookie("accessToken", sres.tokens.accessToken, cookieOptions);
   res.cookie("refreshToken", sres.tokens.refreshToken, cookieOptions);

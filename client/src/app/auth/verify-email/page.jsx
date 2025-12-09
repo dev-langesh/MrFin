@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { authApi } from "../api/authApi";
+import { authApi } from "../../../api/authApi";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import OtpInput from "@/components/ui/OtpInput";
 import { Card } from "@/components/ui/Card";
@@ -83,36 +83,44 @@ export default function OtpVerification() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Card className="py-12 px-8">
-        <form
-          onSubmit={handleVerify}
-          className="space-y-4 flex items-center flex-col justify-center"
-        >
-          <h1 className="text-2xl font-bold  text-center">Verify Your Email</h1>
-          <p className="text-sm text-gray-500 text-center mb-4">
-            Enter the 6-digit OTP sent to{" "}
-            <span className="font-medium">{email}</span>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <Card className="w-full max-w-sm p-8">
+        <div className="flex flex-col space-y-1 text-center ">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Verify your email
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Enter the 6-digit code sent to
           </p>
+          <p className="text-sm font-medium text-primary">{email}</p>
+        </div>
 
-          <OtpInput digits={6} value={otp} onChange={setOtp} />
+        <form onSubmit={handleVerify} className="space-y-4">
+          <div className="flex justify-center py-4">
+            <OtpInput digits={6} value={otp} onChange={setOtp} />
+          </div>
 
-          <Button disabled={loading} type="submit" className="w-full">
-            {loading ? "Verifying..." : "Verify OTP"}
+          <Button
+            disabled={loading}
+            loading={loading}
+            type="submit"
+            className="w-full"
+          >
+            Verify Code
           </Button>
 
           <Button
             type="button"
             onClick={() => sendOtp(true)}
             disabled={timer > 0 || isResending || loading || limitReached}
-            variant="outline"
-            className="w-full"
+            variant="ghost"
+            className="w-full text-xs"
           >
             {isResending
               ? "Resending..."
               : timer > 0
-              ? `Resend OTP in ${timer}s`
-              : "Resend OTP"}
+              ? `Resend code in ${timer}s`
+              : "Resend code"}
           </Button>
         </form>
       </Card>

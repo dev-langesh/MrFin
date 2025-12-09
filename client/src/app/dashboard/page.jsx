@@ -20,7 +20,7 @@ import {
   startOfYear,
   endOfYear,
 } from "date-fns";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 function toUtcMidnight(date) {
   return new Date(

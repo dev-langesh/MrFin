@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/button";
-import { authApi } from "../api/authApi";
+import { authApi } from "../../../api/authApi";
 import { authInputSchema } from "@/schemas/auth.schema";
 import { Card } from "@/components/ui/Card";
 
@@ -39,37 +39,40 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen  p-4">
-      <Card className="py-12 px-8">
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4 flex items-center flex-col justify-center w-full"
-        >
-          <h1 className="text-2xl font-bold text-center">
-            Reset Your Password
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <Card className="w-full max-w-sm p-8">
+        <div className="flex flex-col space-y-1 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Reset password
           </h1>
-          <p className="text-sm text-gray-500 text-center mb-4">
+          <p className="text-sm text-muted-foreground">
             Enter your new password below
           </p>
+        </div>
 
-          <Input
-            type="password"
-            placeholder="New Password"
-            {...register("password")}
-            error={errors.password}
-            helperText={errors.password?.message}
-          />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <Input
+              type="password"
+              placeholder="New Password"
+              {...register("password")}
+              error={errors.password}
+              helperText={errors.password?.message}
+            />
+          </div>
 
-          <Input
-            type="password"
-            placeholder="Confirm Password"
-            {...register("confirmPassword")}
-            error={errors.confirmPassword}
-            helperText={errors.confirmPassword?.message}
-          />
+          <div className="space-y-2">
+            <Input
+              type="password"
+              placeholder="Confirm Password"
+              {...register("confirmPassword")}
+              error={errors.confirmPassword}
+              helperText={errors.confirmPassword?.message}
+            />
+          </div>
 
-          <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Resetting..." : "Reset Password"}
+          <Button type="submit" loading={isSubmitting} className="w-full">
+            Reset Password
           </Button>
         </form>
       </Card>

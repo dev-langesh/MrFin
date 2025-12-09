@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+const privateRoutes = ["/dashboard"];
+
 export async function middleware(req) {
   const accessToken = req.cookies.get("accessToken")?.value;
   const refreshToken = req.cookies.get("refreshToken")?.value;
@@ -10,13 +12,16 @@ export async function middleware(req) {
     );
   }
 
-  const isPrivateRoute = req.nextUrl.pathname.startsWith("/project");
+  const isPrivateRoute = privateRoutes.some((route) =>
+    req.nextUrl.pathname.startsWith(route)
+  );
 
-  if (isPrivateRoute && !accessToken) return redirectToLoginPage();
+  if (isPrivateRoute && (!accessToken || !refreshToken))
+    return redirectToLoginPage();
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/project/:path*"],
+  matcher: privateRoutes.map((route) => route + "/:path*"),
 };

@@ -1,8 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
-  TrendingUp,
-  TrendingDown,
   FileText,
   LogOut,
   User,
@@ -11,6 +9,7 @@ import {
 import { useAuth } from "@/context/AuthProvider";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { authApi } from "@/api/authApi";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },

@@ -19,6 +19,12 @@ async function createTransaction(data) {
         txn.userId,
         txn.txnDate
       );
+    } else if (txn.txnType === "investment") {
+      await analyticsService.updateAnalyticsOnAdd(
+        { investments: txn.amount },
+        txn.userId,
+        txn.txnDate
+      );
     } else {
       await analyticsService.updateAnalyticsOnAdd(
         { expenses: txn.amount },
@@ -175,31 +181,30 @@ async function updateTransaction(id, data) {
     const savedTxn = await txn.save();
 
     // Update analytics
-    if (oldType === "revenue") {
-      await analyticsService.updateAnalyticsOnEdit(
-        {
-          oldEarnings: oldAmount,
-          newEarnings: savedTxn.amount,
-          oldExpenses: 0,
-          newExpenses: 0,
-          oldDate,
-          newDate: savedTxn.txnDate,
-        },
-        savedTxn.userId
-      );
-    } else {
-      await analyticsService.updateAnalyticsOnEdit(
-        {
-          oldEarnings: 0,
-          newEarnings: 0,
-          oldExpenses: oldAmount,
-          newExpenses: savedTxn.amount,
-          oldDate,
-          newDate: savedTxn.txnDate,
-        },
-        savedTxn.userId
-      );
-    }
+    // Prepare analytics update params
+    const updateParams = {
+      oldEarnings: 0,
+      newEarnings: 0,
+      oldExpenses: 0,
+      newExpenses: 0,
+      oldInvestments: 0,
+      newInvestments: 0,
+      oldDate,
+      newDate: savedTxn.txnDate,
+    };
+
+    if (oldType === "revenue") updateParams.oldEarnings = oldAmount;
+    else if (oldType === "expense") updateParams.oldExpenses = oldAmount;
+    else if (oldType === "investment") updateParams.oldInvestments = oldAmount;
+
+    if (savedTxn.txnType === "revenue")
+      updateParams.newEarnings = savedTxn.amount;
+    else if (savedTxn.txnType === "expense")
+      updateParams.newExpenses = savedTxn.amount;
+    else if (savedTxn.txnType === "investment")
+      updateParams.newInvestments = savedTxn.amount;
+
+    await analyticsService.updateAnalyticsOnEdit(updateParams, savedTxn.userId);
 
     return savedTxn;
   } catch (err) {
@@ -217,6 +222,12 @@ async function deleteTransaction(id) {
     if (txn.txnType === "revenue") {
       await analyticsService.updateAnalyticsOnDelete(
         { earnings: txn.amount },
+        txn.userId,
+        txn.txnDate
+      );
+    } else if (txn.txnType === "investment") {
+      await analyticsService.updateAnalyticsOnDelete(
+        { investments: txn.amount },
         txn.userId,
         txn.txnDate
       );

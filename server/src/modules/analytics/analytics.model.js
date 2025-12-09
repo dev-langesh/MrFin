@@ -62,6 +62,24 @@ const analyticsSchema = new mongoose.Schema(
       annual: { type: Number, default: 0 },
     },
 
+    // Investments
+    investments: {
+      month: { type: Number, default: 0 },
+      quarter: { type: Number, default: 0 },
+      annual: { type: Number, default: 0 },
+      total: { type: Number, default: 0 },
+    },
+    previousInvestments: {
+      month: { type: Number, default: 0 },
+      quarter: { type: Number, default: 0 },
+      annual: { type: Number, default: 0 },
+    },
+    investmentsChange: {
+      month: { type: Number, default: 0 },
+      quarter: { type: Number, default: 0 },
+      annual: { type: Number, default: 0 },
+    },
+
     // Track last updated period for rollover
     lastUpdated: {
       month: { type: Date },

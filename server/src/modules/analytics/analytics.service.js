@@ -41,10 +41,12 @@ function rolloverPeriods(analytics, date) {
     analytics.previousEarnings.month = analytics.earnings.month;
     analytics.previousExpenses.month = analytics.expenses.month;
     analytics.previousCashFlow.month = analytics.cashFlow.month;
+    analytics.previousInvestments.month = analytics.investments.month;
 
     analytics.earnings.month = 0;
     analytics.expenses.month = 0;
     analytics.cashFlow.month = 0;
+    analytics.investments.month = 0;
 
     analytics.lastUpdated.month = now;
   }
@@ -57,10 +59,12 @@ function rolloverPeriods(analytics, date) {
     analytics.previousEarnings.quarter = analytics.earnings.quarter;
     analytics.previousExpenses.quarter = analytics.expenses.quarter;
     analytics.previousCashFlow.quarter = analytics.cashFlow.quarter;
+    analytics.previousInvestments.quarter = analytics.investments.quarter;
 
     analytics.earnings.quarter = 0;
     analytics.expenses.quarter = 0;
     analytics.cashFlow.quarter = 0;
+    analytics.investments.quarter = 0;
 
     analytics.lastUpdated.quarter = now;
   }
@@ -70,10 +74,12 @@ function rolloverPeriods(analytics, date) {
     analytics.previousEarnings.annual = analytics.earnings.annual;
     analytics.previousExpenses.annual = analytics.expenses.annual;
     analytics.previousCashFlow.annual = analytics.cashFlow.annual;
+    analytics.previousInvestments.annual = analytics.investments.annual;
 
     analytics.earnings.annual = 0;
     analytics.expenses.annual = 0;
     analytics.cashFlow.annual = 0;
+    analytics.investments.annual = 0;
 
     analytics.lastUpdated.year = now;
   }
@@ -83,7 +89,7 @@ function rolloverPeriods(analytics, date) {
  * Incrementally update analytics when revenue or expense is added
  */
 async function updateAnalyticsOnAdd(
-  { earnings = 0, expenses = 0 },
+  { earnings = 0, expenses = 0, investments = 0 },
   userId,
   date = new Date()
 ) {
@@ -105,24 +111,28 @@ async function updateAnalyticsOnAdd(
   // Update total earnings/expenses regardless of date
   analytics.earnings.total += earnings;
   analytics.expenses.total += expenses;
+  analytics.investments.total += investments;
 
   // Update correct month/quarter/annual if transaction is in previous period
   if (txMonth === currentMonth - 1) {
     analytics.previousEarnings.month += earnings;
     analytics.previousExpenses.month += expenses;
     analytics.previousCashFlow.month += earnings - expenses;
+    analytics.previousInvestments.month += investments;
   }
 
   if (txQuarter === currentQuarter - 1) {
     analytics.previousEarnings.quarter += earnings;
     analytics.previousExpenses.quarter += expenses;
     analytics.previousCashFlow.quarter += earnings - expenses;
+    analytics.previousInvestments.quarter += investments;
   }
 
   if (txYear === currentYear - 1) {
     analytics.previousEarnings.annual += earnings;
     analytics.previousExpenses.annual += expenses;
     analytics.previousCashFlow.annual += earnings - expenses;
+    analytics.previousInvestments.annual += investments;
   }
 
   // Update correct month/quarter/annual if transaction is in current period
@@ -136,6 +146,12 @@ async function updateAnalyticsOnAdd(
     analytics.expenses.annual += expenses;
 
     if (txQuarter === currentQuarter) analytics.expenses.quarter += expenses;
+
+    if (txMonth === currentMonth) analytics.investments.month += investments;
+    analytics.investments.annual += investments;
+
+    if (txQuarter === currentQuarter)
+      analytics.investments.quarter += investments;
   }
 
   // Update cash flow for the affected periods
@@ -188,6 +204,19 @@ async function updateAnalyticsOnAdd(
     analytics.previousCashFlow.annual
   );
 
+  analytics.investmentsChange.month = calcChange(
+    analytics.investments.month,
+    analytics.previousInvestments.month
+  );
+  analytics.investmentsChange.quarter = calcChange(
+    analytics.investments.quarter,
+    analytics.previousInvestments.quarter
+  );
+  analytics.investmentsChange.annual = calcChange(
+    analytics.investments.annual,
+    analytics.previousInvestments.annual
+  );
+
   return await analytics.save();
 }
 
@@ -195,12 +224,12 @@ async function updateAnalyticsOnAdd(
  * Update analytics on deletion (subtract amounts)
  */
 async function updateAnalyticsOnDelete(
-  { earnings = 0, expenses = 0 },
+  { earnings = 0, expenses = 0, investments = 0 },
   userId,
   date = new Date()
 ) {
   return updateAnalyticsOnAdd(
-    { earnings: -earnings, expenses: -expenses },
+    { earnings: -earnings, expenses: -expenses, investments: -investments },
     userId,
     date
   );
@@ -213,8 +242,11 @@ async function updateAnalyticsOnEdit(
   {
     oldEarnings = 0,
     newEarnings = 0,
+
     oldExpenses = 0,
     newExpenses = 0,
+    oldInvestments = 0,
+    newInvestments = 0,
     oldDate,
     newDate,
   },
@@ -231,14 +263,22 @@ async function updateAnalyticsOnEdit(
   ) {
     // Remove old values from old period
     await updateAnalyticsOnAdd(
-      { earnings: -oldEarnings, expenses: -oldExpenses },
+      {
+        earnings: -oldEarnings,
+        expenses: -oldExpenses,
+        investments: -oldInvestments,
+      },
       userId,
       oldDate
     );
 
     // Add new values to new period
     return await updateAnalyticsOnAdd(
-      { earnings: newEarnings, expenses: newExpenses },
+      {
+        earnings: newEarnings,
+        expenses: newExpenses,
+        investments: newInvestments,
+      },
       userId,
       newDate
     );
@@ -247,8 +287,13 @@ async function updateAnalyticsOnEdit(
   // If period didn't change, just update the difference
   const diffEarnings = newEarnings - oldEarnings;
   const diffExpenses = newExpenses - oldExpenses;
+  const diffInvestments = newInvestments - oldInvestments;
   return await updateAnalyticsOnAdd(
-    { earnings: diffEarnings, expenses: diffExpenses },
+    {
+      earnings: diffEarnings,
+      expenses: diffExpenses,
+      investments: diffInvestments,
+    },
     userId,
     newDate
   );
@@ -270,6 +315,7 @@ async function updateAnalyticsBatch(transactions, userId) {
   // Aggregate totals by period
   let totalEarnings = 0;
   let totalExpenses = 0;
+  let totalInvestments = 0;
 
   // Track changes for current periods
   let monthEarnings = 0;
@@ -278,6 +324,9 @@ async function updateAnalyticsBatch(transactions, userId) {
   let quarterExpenses = 0;
   let annualEarnings = 0;
   let annualExpenses = 0;
+  let annualInvestments = 0;
+  let monthInvestments = 0;
+  let quarterInvestments = 0;
 
   // Track changes for previous periods (if transactions are backdated)
   let prevMonthEarnings = 0;
@@ -286,6 +335,9 @@ async function updateAnalyticsBatch(transactions, userId) {
   let prevQuarterExpenses = 0;
   let prevAnnualEarnings = 0;
   let prevAnnualExpenses = 0;
+  let prevAnnualInvestments = 0;
+  let prevMonthInvestments = 0;
+  let prevQuarterInvestments = 0;
 
   // Check if we need to rollover based on the latest transaction date
   // (Assuming transactions are relatively recent, but we should check the latest one)
@@ -338,12 +390,25 @@ async function updateAnalyticsBatch(transactions, userId) {
       if (year === currentYear - 1) prevAnnualExpenses += amount;
       if (month === currentMonth - 1) prevMonthExpenses += amount;
       if (quarter === currentQuarter - 1) prevQuarterExpenses += amount;
+    } else if (txn.txnType === "investment") {
+      totalInvestments += amount;
+
+      if (year === currentYear) {
+        annualInvestments += amount;
+        if (month === currentMonth) monthInvestments += amount;
+        if (quarter === currentQuarter) quarterInvestments += amount;
+      }
+
+      if (year === currentYear - 1) prevAnnualInvestments += amount;
+      if (month === currentMonth - 1) prevMonthInvestments += amount;
+      if (quarter === currentQuarter - 1) prevQuarterInvestments += amount;
     }
   }
 
   // Apply updates
   analytics.earnings.total += totalEarnings;
   analytics.expenses.total += totalExpenses;
+  analytics.investments.total += totalInvestments;
 
   analytics.earnings.month += monthEarnings;
   analytics.expenses.month += monthExpenses;
@@ -351,6 +416,9 @@ async function updateAnalyticsBatch(transactions, userId) {
   analytics.expenses.quarter += quarterExpenses;
   analytics.earnings.annual += annualEarnings;
   analytics.expenses.annual += annualExpenses;
+  analytics.investments.month += monthInvestments;
+  analytics.investments.quarter += quarterInvestments;
+  analytics.investments.annual += annualInvestments;
 
   analytics.previousEarnings.month += prevMonthEarnings;
   analytics.previousExpenses.month += prevMonthExpenses;
@@ -358,6 +426,9 @@ async function updateAnalyticsBatch(transactions, userId) {
   analytics.previousExpenses.quarter += prevQuarterExpenses;
   analytics.previousEarnings.annual += prevAnnualEarnings;
   analytics.previousExpenses.annual += prevAnnualExpenses;
+  analytics.previousInvestments.month += prevMonthInvestments;
+  analytics.previousInvestments.quarter += prevQuarterInvestments;
+  analytics.previousInvestments.annual += prevAnnualInvestments;
 
   // Recalculate Cash Flows
   analytics.cashFlow.total =
@@ -414,6 +485,19 @@ async function updateAnalyticsBatch(transactions, userId) {
   analytics.cashFlowChange.annual = calcChange(
     analytics.cashFlow.annual,
     analytics.previousCashFlow.annual
+  );
+
+  analytics.investmentsChange.month = calcChange(
+    analytics.investments.month,
+    analytics.previousInvestments.month
+  );
+  analytics.investmentsChange.quarter = calcChange(
+    analytics.investments.quarter,
+    analytics.previousInvestments.quarter
+  );
+  analytics.investmentsChange.annual = calcChange(
+    analytics.investments.annual,
+    analytics.previousInvestments.annual
   );
 
   return await analytics.save();

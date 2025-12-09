@@ -16,7 +16,6 @@ async function getSettings(userId) {
           rules: [],
         },
         transactionSettings: {
-          txnTypes: ["expense", "revenue"],
           categories: [],
         },
       });

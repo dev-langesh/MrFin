@@ -14,7 +14,6 @@ const settingsSchema = new mongoose.Schema(
       rules: { type: Array, default: [] },
     },
     transactionSettings: {
-      txnTypes: { type: [String], default: ["expense", "revenue"] },
       categories: { type: [String], default: [] },
     },
   },

@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
+const { config } = require("../../config/constants");
 
 const transactionSchema = new mongoose.Schema(
   {
     txnDate: { type: Date, required: true },
-    txnType: { type: String, required: true },
+    txnType: { type: String, enum: config.txnTypes, required: true },
     description: { type: String },
     category: { type: String },
     amount: { type: Number, required: true },

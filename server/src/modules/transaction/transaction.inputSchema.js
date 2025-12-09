@@ -1,4 +1,5 @@
 const { z } = require("zod");
+const { config } = require("../../config/constants");
 
 // Single transaction schema (body)
 const createTransactionSchema = z.object({
@@ -6,7 +7,7 @@ const createTransactionSchema = z.object({
     txnDate: z
       .string({ required_error: "Transaction date is required" })
       .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" }),
-    txnType: z.string({
+    txnType: z.enum(config.txnTypes, {
       required_error: "Transaction type is required",
     }),
     description: z.string().optional(),
@@ -24,7 +25,7 @@ const createTransactionsSchema = z.object({
       txnDate: z
         .string({ required_error: "Transaction date is required" })
         .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" }),
-      txnType: z.string({
+      txnType: z.enum(config.txnTypes, {
         required_error: "Transaction type is required",
       }),
       description: z.string().optional(),
@@ -43,7 +44,7 @@ const updateTransactionSchema = z.object({
       .string()
       .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" })
       .optional(),
-    txnType: z.string(),
+    txnType: z.enum(config.txnTypes),
     description: z.string().optional(),
     category: z.string().optional(),
     amount: z

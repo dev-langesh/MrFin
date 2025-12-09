@@ -17,6 +17,14 @@ import React, { memo } from "react";
 import { AutoSelect } from "@/components/ui/AutoSelect";
 import { selectTransactionSettings } from "@/redux/slices/importTransactionsSlice";
 import { useSelector } from "react-redux";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { TXN_TYPES } from "../../config";
 
 function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
   const transactionSettings = useSelector(selectTransactionSettings);
@@ -76,12 +84,18 @@ function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
               control={control}
               name="txnType"
               render={({ field }) => (
-                <AutoSelect
-                  value={field.value}
-                  onChange={field.onChange}
-                  options={transactionSettings.txnTypes}
-                  placeholder="Select type"
-                />
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TXN_TYPES.map((type, i) => (
+                      <SelectItem key={`type-${i}`} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
             {errors.txnType && (

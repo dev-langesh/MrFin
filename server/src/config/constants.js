@@ -6,6 +6,8 @@ const roles = {
   GUEST: "guest",
 };
 
+const txnTypes = ["revenue", "expense", "investment"];
+
 const otp = {
   expirationTime: 5 * 60 * 1000, // 5 minutes
   maxAttempts: 3,
@@ -22,10 +24,8 @@ const config = {
   roles,
   otp,
   hashing,
-  deployGroundPath: path.join(process.cwd(), "deployGround"),
   fileUploadPath: path.join(process.cwd(), "uploads"),
-  ansiblePath: path.join(process.cwd(), "ansible"),
-  GITHUB_APP_PRIVATE_KEY_PATH: path.join(process.cwd(), "secrets", "github_app_private_key.pem"),
+  txnTypes,
 };
 
 module.exports = {

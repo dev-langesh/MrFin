@@ -26,6 +26,14 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 import { transactionSchema } from "@/schemas/transaction.schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { TXN_TYPES } from "../config";
 
 function TransactionEntryForm({
   editingEntry = null,
@@ -188,17 +196,18 @@ function TransactionEntryForm({
               control={control}
               name="txnType"
               render={({ field }) => (
-                <AutoSelect
-                  value={field.value}
-                  onChange={(val) => {
-                    field.onChange(val);
-                    if (val !== editingEntry?.txnType) {
-                      // Optional logic
-                    }
-                  }}
-                  options={settings?.transactionSettings?.txnTypes || []}
-                  placeholder="Select or create type"
-                />
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger onChange={field.onChange} className="w-full">
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TXN_TYPES.map((type, i) => (
+                      <SelectItem key={`type-${i}`} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             />
             {errors.txnType && (

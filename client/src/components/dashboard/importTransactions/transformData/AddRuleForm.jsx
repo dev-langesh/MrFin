@@ -23,10 +23,10 @@ import { AutoSelect } from "@/components/ui/AutoSelect";
 import { actionsOptions, operationsOptions } from "./constants";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import React, { memo } from "react";
 
 import { ruleSchema } from "@/schemas/rules.schema";
+import { TXN_TYPES } from "../../config";
 
 const defaultValues = {
   name: "",
@@ -230,12 +230,21 @@ function AddRuleForm(props) {
                     name="targetValue"
                     control={control}
                     render={({ field }) => (
-                      <AutoSelect
+                      <Select
                         value={field.value}
-                        onChange={field.onChange}
-                        options={transactionSettings.txnTypes}
-                        placeholder="Select Type"
-                      />
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TXN_TYPES.map((type, i) => (
+                            <SelectItem key={`type-${i}`} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   />
                 </>

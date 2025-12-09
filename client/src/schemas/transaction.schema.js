@@ -1,3 +1,4 @@
+import { TXN_TYPES } from "@/components/dashboard/config";
 import { z } from "zod";
 
 export const transactionSchema = z.object({
@@ -5,21 +6,14 @@ export const transactionSchema = z.object({
     required_error: "Date is required",
     invalid_type_error: "Invalid date format",
   }),
-  txnType: z
-    .string({
-      required_error: "Transaction Type is required",
-    })
-    .max(25, "Transaction Type must be 25 characters or less")
-    .min(2, "Transaction Type must be at least 2 characters long")
-    .regex(
-      /^[a-zA-Z0-9\s\-_]+$/,
-      "Only alphanumeric characters, spaces, hyphens and underscores are allowed"
-    ),
+  txnType: z.enum(TXN_TYPES.map((type) => type.value), {
+    required_error: "Transaction Type is required",
+  }),
   description: z
     .string()
     .max(100, "Description must be 100 characters or less")
     .regex(
-      /^[a-zA-Z0-9\s\-_]+$/,
+      /^$|^[a-zA-Z0-9\s\-_]+$/, // Allows empty string or the specified characters
       "Only alphanumeric characters, spaces, hyphens and underscores are allowed"
     )
     .optional(),
@@ -27,7 +21,7 @@ export const transactionSchema = z.object({
     .string()
     .max(25, "Category must be 25 characters or less")
     .regex(
-      /^[a-zA-Z0-9\s\-_]+$/,
+      /^$|^[a-zA-Z0-9\s\-_]+$/, // Allows empty string or the specified characters
       "Only alphanumeric characters, spaces, hyphens and underscores are allowed"
     )
     .optional(),

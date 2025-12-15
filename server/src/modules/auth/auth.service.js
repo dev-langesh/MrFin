@@ -4,10 +4,10 @@ const { tokenService } = require("../../lib/jwt/token.service");
 const { AppError } = require("../../utils/error");
 const { userService } = require("../user/user.service");
 const bcrypt = require("bcrypt");
-const { OAuth2Client } = require("google-auth-library");
 const { otpService } = require("../otp/otp.service");
-const { generateHash } = require("../../utils/auth/hash");
+const { generateHash } = require("./utils/hash");
 const { analyticsService } = require("../analytics/analytics.service");
+const { getGoogleUser } = require("./utils/googleAuth");
 
 async function registerUser(data) {
   const payload = { ...data };
@@ -15,12 +15,6 @@ async function registerUser(data) {
   payload.password = await bcrypt.hash(payload.password, 10);
 
   const user = await userService.createUser(payload);
-
-  // await otpService.sendOTP({
-  //   notificationType: "email",
-  //   to: user.email,
-  //   templateName: "auth/otp",
-  // });
 
   await analyticsService.createAnalytics(user._id);
 
@@ -76,32 +70,11 @@ async function rotateTokens(refreshToken) {
   }
 }
 
-const client = new OAuth2Client(
-  env.GOOGLE_CLIENT_ID,
-  env.GOOGLE_CLIENT_SECRET,
-  env.GOOGLE_REDIRECT_URI
-);
-
-async function getGoogleUser(code) {
-  const { tokens } = await client.getToken(code);
-  const ticket = await client.verifyIdToken({
-    idToken: tokens.id_token,
-    audience: env.GOOGLE_CLIENT_ID,
-  });
-  const payload = ticket.getPayload();
-  const { sub: googleId, email, name, picture, email_verified } = payload;
-
-  if (!email_verified) {
-    throw new AppError(AuthErrors.GOOGLE_EMAIL_NOT_VERIFIED);
-  }
-
-  return { googleId, email, name, picture };
-}
-
 async function loginWithGoogle(code) {
   const { googleId, email, name, picture } = await getGoogleUser(code);
 
   let user = await userService.findUserByEmail(email, false, false);
+  //...
 
   // If user does not exist, create a new one
   if (!user) {

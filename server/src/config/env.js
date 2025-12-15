@@ -3,7 +3,9 @@ const { z } = require("zod");
 
 const envSchema = z.object({
   PORT: z.string().default("8000"),
-  NODE_ENV: z.enum(["development", "production"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   MONGODB_URI: z.string().url(),
   ACCESS_TOKEN_SECRET: z.string(),
   REFRESH_TOKEN_SECRET: z.string(),

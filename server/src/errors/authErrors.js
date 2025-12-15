@@ -61,32 +61,32 @@ const AuthErrors = {
 
   //  Token Errors
   REFRESH_TOKEN_EXPIRED: {
-    errorCode: 2000,
+    errorCode: 1200,
     message: "Session expired, please login again",
     statusCode: 401,
   },
   ACCESS_TOKEN_EXPIRED: {
-    errorCode: 2001,
+    errorCode: 1201,
     message: "Access token expired",
     statusCode: 401,
   },
   MISSING_TOKEN: {
-    errorCode: 2002,
+    errorCode: 1202,
     message: "Missing token. Please provide a valid token.",
     statusCode: 401,
   },
   INVALID_TOKEN: {
-    errorCode: 2003,
+    errorCode: 1203,
     message: "Invalid token. Please log in again.",
     statusCode: 401,
   },
   INVALID_TOKEN_TYPE: {
-    errorCode: 2004,
+    errorCode: 1204,
     message: "Invalid token type. Please provide a valid token type.",
     statusCode: 400,
   },
   TOKEN_EXPIRED: {
-    errorCode: 2005,
+    errorCode: 1205,
     message: "Token has expired",
     statusCode: 401,
   },

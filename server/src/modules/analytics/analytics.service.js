@@ -40,7 +40,6 @@ function rolloverPeriods(analytics, date) {
   ) {
     analytics.previousEarnings.month = analytics.earnings.month;
     analytics.previousExpenses.month = analytics.expenses.month;
-    analytics.previousCashFlow.month = analytics.cashFlow.month;
     analytics.previousInvestments.month = analytics.investments.month;
 
     analytics.earnings.month = 0;
@@ -106,7 +105,7 @@ async function updateAnalyticsOnAdd(
   const currentYear = now.getFullYear();
 
   // Roll over periods if the transaction is in a new month/quarter/year
-  rolloverPeriods(analytics, txDate);
+  rolloverPeriods(analytics, new Date());
 
   // Update total earnings/expenses regardless of date
   analytics.earnings.total += earnings;
@@ -339,16 +338,8 @@ async function updateAnalyticsBatch(transactions, userId) {
   let prevMonthInvestments = 0;
   let prevQuarterInvestments = 0;
 
-  // Check if we need to rollover based on the latest transaction date
-  // (Assuming transactions are relatively recent, but we should check the latest one)
-  const latestTxnDate = transactions.reduce((latest, txn) => {
-    const d = new Date(txn.txnDate);
-    return d > latest ? d : latest;
-  }, new Date(0));
-
-  if (latestTxnDate > new Date(0)) {
-    rolloverPeriods(analytics, latestTxnDate);
-  }
+  // Ensure periods are rolled over to current time
+  rolloverPeriods(analytics, new Date());
 
   for (const txn of transactions) {
     const amount = Number(txn.amount);

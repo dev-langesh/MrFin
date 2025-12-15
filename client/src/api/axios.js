@@ -62,9 +62,9 @@ async function responseErrorInterceptor(error, client = api, protectedApi) {
   if (originalRequest._retry) return Promise.reject(error);
 
   // Refresh token expired, logout
-  if (errorCode === 2000) return await logout(protectedApi);
+  if (errorCode === 1200) return await logout(protectedApi);
   // Access token expired, try rotating
-  else if (errorCode === 2001) {
+  else if (errorCode === 1201) {
     if (isRefreshing) {
       if (!refreshPromise) {
         refreshPromise = new Promise((resolve, reject) => {
@@ -90,7 +90,7 @@ async function responseErrorInterceptor(error, client = api, protectedApi) {
       refreshPromise = null;
     }
   }
-  // else if (status === 401 && protectedApi && errorCode !== 2001)
+  // else if (status === 401 && protectedApi && errorCode !== 1201)
   //   await logout(protectedApi);
 
   return Promise.reject(error);

@@ -1,4 +1,4 @@
-const { config } = require("../../config/constants");
+const { config } = require("../../../config/constants");
 
 function generateOtp() {
   const length = config.otp.length;

@@ -1,0 +1,21 @@
+module.exports = {
+  testEnvironment: "node",
+  testMatch: ["**/*.test.js"],
+  collectCoverageFrom: [
+    "src/modules/auth/**/*.js",
+    "src/modules/otp/**/*.js",
+    "src/utils/auth/**/*.js",
+    "src/lib/jwt/token.service.js",
+    "src/errors/authErrors.js",
+    "!src/routes.js",
+    "!src/files/**/*",
+    "!src/modules/user/**/*",
+  ],
+  coverageDirectory: "coverage",
+  setupFilesAfterEnv: ["./jest.setup.js"],
+  verbose: true,
+  forceExit: true,
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true,
+};

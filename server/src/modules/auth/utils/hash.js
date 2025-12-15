@@ -1,5 +1,5 @@
 const bcrypt = require("bcrypt");
-const { config } = require("../../config/constants");
+const { config } = require("../../../config/constants");
 
 async function generateHash(data) {
   return await bcrypt.hash(data, config.hashing.saltRounds);

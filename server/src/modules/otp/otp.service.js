@@ -1,8 +1,8 @@
 const { config } = require("../../config/constants");
 const { AuthErrors } = require("../../errors/authErrors");
 const { emailService } = require("../../lib/notification/email/email.service");
-const { generateOtp } = require("../../utils/auth/generateOtp");
-const { generateHash, compareHash } = require("../../utils/auth/hash");
+const { generateOtp } = require("../auth/utils/generateOtp");
+const { generateHash, compareHash } = require("../auth/utils/hash");
 const { AppError } = require("../../utils/error");
 const { userService } = require("../user/user.service");
 const { Otp } = require("./otp.model");

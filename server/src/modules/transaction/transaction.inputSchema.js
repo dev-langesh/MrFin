@@ -44,7 +44,7 @@ const updateTransactionSchema = z.object({
       .string()
       .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" })
       .optional(),
-    txnType: z.enum(config.txnTypes),
+    txnType: z.enum(config.txnTypes).optional(),
     description: z.string().optional(),
     category: z.string().optional(),
     amount: z

@@ -13,11 +13,9 @@ export default function TransactionPage() {
   const router = useRouter();
   const [filters, setFilters] = useState({
     dateRange: "all",
-    source: "all",
-    paymentGateway: "all",
+    category: "all",
     sort: "desc",
     limit: 10,
-    page: 1,
     page: 1,
   });
 

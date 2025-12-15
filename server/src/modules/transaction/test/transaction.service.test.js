@@ -18,7 +18,7 @@ describe("Transaction Service", () => {
     txnType: "revenue",
     category: "Salary",
     txnDate: new Date(),
-    paymentGateway: "Bank",
+
     description: "Test",
   };
 

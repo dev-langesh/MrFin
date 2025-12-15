@@ -58,7 +58,7 @@ describe("Transaction Integration", () => {
         amount: 1000,
         txnType: "revenue",
         category: "Salary",
-        paymentGateway: "Bank",
+
         txnDate: new Date().toISOString(),
         description: "Monthly Salary",
       };
@@ -85,7 +85,7 @@ describe("Transaction Integration", () => {
         amount: 50,
         txnType: "expense",
         category: "Food",
-        paymentGateway: "Cash",
+
         txnDate: new Date().toISOString(),
         description: "Lunch",
       };
@@ -104,7 +104,7 @@ describe("Transaction Integration", () => {
         amount: 500,
         txnType: "investment",
         category: "Stocks",
-        paymentGateway: "Zerodha",
+
         txnDate: new Date().toISOString(),
         description: "Stock Purchase",
       };
@@ -134,8 +134,6 @@ describe("Transaction Integration", () => {
           txnType: "revenue",
           category: "Salary",
           txnDate: new Date("2023-01-01"),
-          source: "Work",
-          paymentGateway: "Bank",
         },
         {
           userId: "507f1f77bcf86cd799439011",
@@ -143,8 +141,6 @@ describe("Transaction Integration", () => {
           txnType: "expense",
           category: "Food",
           txnDate: new Date("2023-01-02"),
-          source: "Store",
-          paymentGateway: "Cash",
         },
         {
           userId: "507f1f77bcf86cd799439011",
@@ -152,8 +148,6 @@ describe("Transaction Integration", () => {
           txnType: "revenue",
           category: "Bonus",
           txnDate: new Date("2023-01-03"),
-          source: "Work",
-          paymentGateway: "Bank",
         },
         {
           userId: "507f1f77bcf86cd799439099",
@@ -161,8 +155,6 @@ describe("Transaction Integration", () => {
           txnType: "revenue",
           category: "Salary",
           txnDate: new Date("2023-01-01"),
-          source: "Work",
-          paymentGateway: "Bank",
         },
       ]);
     });
@@ -208,8 +200,6 @@ describe("Transaction Integration", () => {
         txnType: "revenue",
         category: "Salary",
         txnDate: new Date(),
-        source: "Work",
-        paymentGateway: "Bank",
       });
 
       const res = await request(app).get(`/api/transactions/${txn._id}`);
@@ -241,16 +231,12 @@ describe("Transaction Integration", () => {
           amount: 100,
           txnType: "revenue",
           category: "A",
-          source: "S",
-          paymentGateway: "P",
           txnDate: new Date().toISOString(),
         },
         {
           amount: 200,
           txnType: "expense",
           category: "B",
-          source: "S",
-          paymentGateway: "P",
           txnDate: new Date().toISOString(),
         },
       ];
@@ -277,8 +263,6 @@ describe("Transaction Integration", () => {
         txnType: "revenue",
         category: "Salary",
         txnDate: new Date(),
-        source: "Work",
-        paymentGateway: "Bank",
       });
 
       await analyticsService.updateAnalyticsOnAdd(
@@ -309,7 +293,7 @@ describe("Transaction Integration", () => {
         amount: 100,
         txnType: "revenue",
         category: "Salary",
-        paymentGateway: "Bank",
+
         txnDate: new Date().toISOString(),
         description: "To Delete",
       });
@@ -334,7 +318,7 @@ describe("Transaction Integration", () => {
         amount: 1000,
         txnType: "revenue",
         category: "Salary",
-        paymentGateway: "Bank",
+
         txnDate: new Date().toISOString(),
         description: "Lifecycle Test",
       });
@@ -401,7 +385,7 @@ describe("Transaction Integration", () => {
         amount: 500,
         txnType: "revenue",
         category: "Old Salary",
-        paymentGateway: "Bank",
+
         txnDate: lastMonthDate.toISOString(),
       });
       const txnId = createRes.body._id;
@@ -442,21 +426,19 @@ describe("Transaction Integration", () => {
           amount: 1000,
           txnType: "revenue",
           category: "Salary",
-          paymentGateway: "Bank",
+
           txnDate: new Date().toISOString(),
         },
         {
           amount: 500,
           txnType: "expense",
           category: "Food",
-          paymentGateway: "Card",
           txnDate: new Date().toISOString(),
         },
         {
           amount: 200,
           txnType: "investment",
           category: "Stocks",
-          paymentGateway: "Broker",
           txnDate: new Date().toISOString(),
         },
       ];

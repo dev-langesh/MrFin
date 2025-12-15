@@ -102,8 +102,7 @@ function TransactionTable({ setFilters, filters, settings }) {
         // Reset all filters to default 'all', but exclude pagination
         exportFilters = {
           dateRange: "all",
-          source: "all",
-          paymentGateway: "all",
+          category: "all",
           sort: "desc",
           limit: "all", // Fetch all
           page: 1,

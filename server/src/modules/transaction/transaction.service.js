@@ -107,9 +107,7 @@ async function getTransactionsToVisualize(filters = {}) {
   let unit = "day";
 
   if (filters.txnType) query.txnType = filters.txnType;
-  if (filters.source) query.source = filters.source;
-  if (filters.paymentGateway) query.paymentGateway = filters.paymentGateway;
-  if (filters.expenseCategory) query.expenseCategory = filters.expenseCategory;
+  if (filters.category) query.category = filters.category;
   if (filters.userId)
     query.userId = new mongoose.Types.ObjectId(filters.userId); // aggregation matches need objectId often if usually stored as such, but mongoose handles it if schema is defined. But in aggregation $match, auto-casting might not happen if not going through model find? Transaction.aggregate... usually requires correct type. userId is ObjectId.
   if (filters.startDate && filters.endDate) {
@@ -157,6 +155,51 @@ async function getTransactionsToVisualize(filters = {}) {
   ]);
 
   return { transactions: txns };
+}
+
+async function getTransactionsDistribution(filters = {}) {
+  const query = {};
+
+  if (filters.txnType) query.txnType = filters.txnType;
+  if (filters.category) query.category = filters.category;
+  if (filters.userId)
+    query.userId = new mongoose.Types.ObjectId(filters.userId);
+
+  if (filters.startDate && filters.endDate) {
+    const startDate = new Date(filters.startDate);
+    const endDate = new Date(filters.endDate);
+
+    query.txnDate = {
+      $gte: startDate,
+      $lte: endDate,
+    };
+  }
+
+  const distribution = await Transaction.aggregate([
+    {
+      $match: query,
+    },
+    {
+      $group: {
+        _id: "$category",
+        value: { $sum: "$amount" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        name: "$_id",
+        value: 1,
+      },
+    },
+    {
+      $sort: {
+        value: -1,
+      },
+    },
+  ]);
+
+  return { distribution };
 }
 
 async function getTransaction(id) {
@@ -253,6 +296,7 @@ const transactionService = {
   updateTransaction,
   deleteTransaction,
   getTransactionsToVisualize,
+  getTransactionsDistribution,
 };
 
 module.exports = { transactionService };

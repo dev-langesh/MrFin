@@ -6,7 +6,7 @@ const roles = {
   GUEST: "guest",
 };
 
-const txnTypes = ["income", "expense", "investment"];
+const txnTypes = ["income", "expense", "investment", "transfer"];
 
 const otp = {
   expirationTime: 5 * 60 * 1000, // 5 minutes

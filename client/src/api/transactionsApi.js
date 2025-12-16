@@ -10,14 +10,6 @@ export const transactionsApi = {
   // Get all transactions with optional filters and pagination
   getTransactions: (config) => protectedApi.get("/transactions", config),
 
-  // Get all transactions for visualization
-  getTransactionsToVisualize: (config) =>
-    protectedApi.get("/transactions/visualize", config),
-
-  // Get transaction distribution
-  getTransactionsDistribution: (config) =>
-    protectedApi.get("/transactions/distribution", config),
-
   // Get a single transaction by ID
   getTransaction: (id) => protectedApi.get(`/transactions/${id}`),
 

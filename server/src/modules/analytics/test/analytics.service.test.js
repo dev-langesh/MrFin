@@ -3,6 +3,22 @@ const { Analytics } = require("../analytics.model");
 const { AnalyticsErrors } = require("../../../errors/analyticsErrors");
 
 jest.mock("../analytics.model");
+jest.mock("../dailyAnalytics.model", () => ({
+  DailyAnalytics: {
+    findOneAndUpdate: jest.fn().mockResolvedValue(true),
+    find: jest.fn(),
+    aggregate: jest.fn(),
+    bulkWrite: jest.fn(),
+  },
+}));
+jest.mock("../monthlyAnalytics.model", () => ({
+  MonthlyAnalytics: {
+    findOneAndUpdate: jest.fn().mockResolvedValue(true),
+    find: jest.fn(),
+    aggregate: jest.fn(),
+    bulkWrite: jest.fn(),
+  },
+}));
 
 describe("Analytics Service", () => {
   afterEach(() => {
@@ -10,7 +26,7 @@ describe("Analytics Service", () => {
   });
 
   const createMockAnalytics = () => ({
-    userId: "user123",
+    userId: "507f1f77bcf86cd799439011",
     income: { total: 1000, month: 100, quarter: 300, annual: 1000 },
     expenses: { total: 500, month: 50, quarter: 150, annual: 500 },
     investments: { total: 200, month: 20, quarter: 60, annual: 200 },
@@ -29,33 +45,54 @@ describe("Analytics Service", () => {
       year: new Date(),
     },
     save: jest.fn().mockResolvedValue(true),
+    isModified: jest.fn().mockReturnValue(false),
   });
+
+  const setupAnalyticsMock = (mock) => {
+    Analytics.findOne.mockResolvedValue(mock);
+    Analytics.findOneAndUpdate.mockImplementation((query, update) => {
+      if (update.$inc) {
+        for (const [key, val] of Object.entries(update.$inc)) {
+          const parts = key.split(".");
+          if (parts.length === 1) mock[parts[0]] += val;
+          else if (parts.length === 2) mock[parts[0]][parts[1]] += val;
+        }
+      }
+      return Promise.resolve(mock);
+    });
+  };
 
   describe("getAnalytics", () => {
     it("should return analytics if found", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
-      const res = await analyticsService.getAnalytics("user123");
+      setupAnalyticsMock(mock);
+      const res = await analyticsService.getAnalytics(
+        "507f1f77bcf86cd799439011"
+      );
       expect(res).toBe(mock);
     });
 
     it("should throw NOT_FOUND", async () => {
       Analytics.findOne.mockResolvedValue(null);
-      await expect(analyticsService.getAnalytics("user123")).rejects.toThrow(
-        AnalyticsErrors.NOT_FOUND.message
-      );
+      await expect(
+        analyticsService.getAnalytics("507f1f77bcf86cd799439011")
+      ).rejects.toThrow(AnalyticsErrors.NOT_FOUND.message);
     });
   });
 
   describe("updateAnalyticsOnAdd", () => {
     it("should update totals and current period values", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       const incomeToAdd = 100;
       await analyticsService.updateAnalyticsOnAdd(
-        { income: incomeToAdd },
-        "user123"
+        {
+          amount: incomeToAdd,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+        },
+        "507f1f77bcf86cd799439011"
       );
 
       expect(mock.income.total).toBe(1100);
@@ -63,41 +100,21 @@ describe("Analytics Service", () => {
       expect(mock.save).toHaveBeenCalled();
     });
 
-    it("should handle rollover if new transaction is in next month", async () => {
-      const mock = createMockAnalytics();
-      // Set lastUpdated to previous month
-      const lastMonth = new Date();
-      lastMonth.setMonth(lastMonth.getMonth() - 1);
-      mock.lastUpdated.month = lastMonth; // Force rollover
-
-      Analytics.findOne.mockResolvedValue(mock);
-
-      await analyticsService.updateAnalyticsOnAdd(
-        { income: 100 },
-        "user123",
-        new Date()
-      ); // Today
-
-      // Rollover should happen first: current -> previous, current = 0
-      // Then add 100 to current
-
-      // Verify previous moved
-      expect(mock.previousIncome.month).toBe(100); // Was 100 initially
-
-      // Verify current updated
-      expect(mock.income.month).toBe(100); // 0 (reset) + 100 (new)
-    });
-
     it("should update previous period directly if transaction is backdated to last month", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       const lastMonth = new Date();
       lastMonth.setMonth(lastMonth.getMonth() - 1);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { income: 50 },
-        "user123",
+        {
+          amount: 50,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          txnDate: lastMonth,
+        },
+        "507f1f77bcf86cd799439011",
         lastMonth
       );
 
@@ -110,17 +127,22 @@ describe("Analytics Service", () => {
   describe("updateAnalyticsOnEdit", () => {
     it("should update difference if period is same", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
-      await analyticsService.updateAnalyticsOnEdit(
-        {
-          oldIncome: 100,
-          newIncome: 150,
-          oldDate: new Date(),
-          newDate: new Date(),
-        },
-        "user123"
-      );
+      const oldTxn = {
+        amount: 100,
+        txnType: "income",
+        userId: "507f1f77bcf86cd799439011",
+        txnDate: new Date(),
+      };
+      const newTxn = {
+        amount: 150,
+        txnType: "income",
+        userId: "507f1f77bcf86cd799439011",
+        txnDate: new Date(),
+      };
+
+      await analyticsService.updateAnalyticsOnEdit(oldTxn, newTxn);
 
       // Should add 50 to income
       expect(mock.income.total).toBe(1050);
@@ -129,7 +151,7 @@ describe("Analytics Service", () => {
 
     it("should move values if date changed period", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       const oldDate = new Date();
       oldDate.setMonth(oldDate.getMonth() - 1); // Last month
@@ -139,15 +161,20 @@ describe("Analytics Service", () => {
       // Actually updateAnalyticsOnAdd handles the logic.
       // We expect: subtract from old period, add to new period.
 
-      await analyticsService.updateAnalyticsOnEdit(
-        {
-          oldIncome: 100,
-          newIncome: 100, // Amount same, just moved date
-          oldDate: oldDate,
-          newDate: newDate,
-        },
-        "user123"
-      );
+      const oldTxn = {
+        amount: 100,
+        txnType: "income",
+        userId: "507f1f77bcf86cd799439011",
+        txnDate: oldDate,
+      };
+      const newTxn = {
+        amount: 100,
+        txnType: "income",
+        userId: "507f1f77bcf86cd799439011",
+        txnDate: newDate,
+      };
+
+      await analyticsService.updateAnalyticsOnEdit(oldTxn, newTxn);
 
       // subtract 100 from old period (which is previous month relative to now)
       // add 100 to new period (current month)
@@ -169,26 +196,33 @@ describe("Analytics Service", () => {
       mock.lastUpdated.quarter = lastYearDec;
       mock.lastUpdated.year = lastYearDec;
 
-      Analytics.findOne.mockResolvedValue(mock);
+      // Setup mock values to verify move
+      mock.income.annual = 1000;
+      mock.income.quarter = 300;
+      mock.income.month = 100;
 
-      // Add transaction for Now (Jan)
-      await analyticsService.updateAnalyticsOnAdd(
-        { income: 100 },
-        "user123",
-        new Date()
-      );
+      // Mock Mongoose document methods
+      mock.isModified = jest.fn().mockReturnValue(true); // Simulate change
+      mock.save = jest.fn().mockResolvedValue(true);
+
+      setupAnalyticsMock(mock);
+
+      // Trigger Read-Time Rollover
+      await analyticsService.getAnalytics("507f1f77bcf86cd799439011");
 
       // Check Year Rollover
       expect(mock.previousIncome.annual).toBe(1000); // Moved from income.annual
-      expect(mock.income.annual).toBe(100); // 0 (reset) + 100 (new)
+      expect(mock.income.annual).toBe(0); // Reset
 
       // Check Quarter Rollover
       expect(mock.previousIncome.quarter).toBe(300); // Moved from income.quarter
-      expect(mock.income.quarter).toBe(100); // 0 + 100
+      expect(mock.income.quarter).toBe(0); // Reset
 
       // Check Month Rollover
       expect(mock.previousIncome.month).toBe(100); // Moved from income.month
-      expect(mock.income.month).toBe(100); // 0 + 100
+      expect(mock.income.month).toBe(0); // Reset
+
+      expect(mock.save).toHaveBeenCalled();
     });
 
     it("should handle Quarter Rollover correctly (Mar -> Apr)", async () => {
@@ -204,25 +238,30 @@ describe("Analytics Service", () => {
       mock.lastUpdated.quarter = marchDate;
       mock.lastUpdated.year = marchDate; // Same year
 
-      Analytics.findOne.mockResolvedValue(mock);
+      // Setup initial values
+      mock.expenses.annual = 500;
+      mock.expenses.quarter = 150;
+      mock.expenses.month = 50;
 
-      await analyticsService.updateAnalyticsOnAdd(
-        { expenses: 50 },
-        "user123",
-        aprilDate
-      );
+      mock.isModified = jest.fn().mockReturnValue(true);
+      mock.save = jest.fn().mockResolvedValue(true);
+
+      setupAnalyticsMock(mock);
+
+      // Trigger Read-Time Rollover
+      await analyticsService.getAnalytics("507f1f77bcf86cd799439011");
 
       // Year should NOT rollover
       expect(mock.previousExpenses.annual).toBe(0); // Assuming 0 init
-      expect(mock.expenses.annual).toBe(550); // 500 (existing) + 50 (new)
+      expect(mock.expenses.annual).toBe(500); // Unchanged
 
       // Quarter SHOULD rollover
       expect(mock.previousExpenses.quarter).toBe(150); // Moved
-      expect(mock.expenses.quarter).toBe(50); // 0 + 50
+      expect(mock.expenses.quarter).toBe(0); // Reset
 
       // Month SHOULD rollover
       expect(mock.previousExpenses.month).toBe(50); // Moved
-      expect(mock.expenses.month).toBe(50); // 0 + 50
+      expect(mock.expenses.month).toBe(0); // Reset
 
       jest.useRealTimers();
     });
@@ -231,15 +270,19 @@ describe("Analytics Service", () => {
   describe("Edge Case Dates", () => {
     it("should update ONLY totals for Deep Backdated transactions (2 years ago)", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       const twoYearsAgo = new Date();
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { income: 5000 },
-        "user123",
-        twoYearsAgo
+        {
+          amount: 5000,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          txnDate: twoYearsAgo,
+        },
+        "507f1f77bcf86cd799439011"
       );
 
       expect(mock.income.total).toBe(6000); // 1000 + 5000
@@ -252,15 +295,19 @@ describe("Analytics Service", () => {
 
     it("should update ONLY totals for Future transactions (Next Month)", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       const nextMonth = new Date();
       nextMonth.setMonth(nextMonth.getMonth() + 1);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { income: 500 },
-        "user123",
-        nextMonth
+        {
+          amount: 500,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          txnDate: nextMonth,
+        },
+        "507f1f77bcf86cd799439011"
       );
 
       expect(mock.income.total).toBe(1500);
@@ -272,7 +319,7 @@ describe("Analytics Service", () => {
   describe("Batch Operations", () => {
     it("should correctly aggregate mixed transactions", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       const txns = [
         {
@@ -299,7 +346,10 @@ describe("Analytics Service", () => {
         },
       ];
 
-      await analyticsService.updateAnalyticsBatch(txns, "user123");
+      await analyticsService.updateAnalyticsBatch(
+        txns,
+        "507f1f77bcf86cd799439011"
+      );
 
       // Check Totals
       expect(mock.income.total).toBe(2100); // 1000 + 100 + 1000
@@ -315,12 +365,16 @@ describe("Analytics Service", () => {
   describe("Calculations & Deletes", () => {
     it("should handle updateAnalyticsOnDelete correctly", async () => {
       const mock = createMockAnalytics();
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       await analyticsService.updateAnalyticsOnDelete(
-        { income: 100 },
-        "user123",
-        new Date()
+        {
+          amount: 100,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          txnDate: new Date(),
+        },
+        "507f1f77bcf86cd799439011"
       );
 
       expect(mock.income.total).toBe(900); // 1000 - 100
@@ -332,12 +386,16 @@ describe("Analytics Service", () => {
     it("should handle zero denominator in % change calculation", async () => {
       const mock = createMockAnalytics();
       mock.previousIncome.month = 0; // Force zero denom
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { income: 100 }, // Current becomes 200
-        "user123",
-        new Date()
+        {
+          amount: 100,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          txnDate: new Date(),
+        }, // Current becomes 200
+        "507f1f77bcf86cd799439011"
       );
 
       expect(mock.incomeChange.month).toBe(0); // Should be 0 if prev is 0
@@ -347,13 +405,17 @@ describe("Analytics Service", () => {
       const mock = createMockAnalytics();
       mock.previousIncome.month = 50;
       mock.income.month = 0; // Reset from default 100
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       // Add 100. Current becomes 100.
       await analyticsService.updateAnalyticsOnAdd(
-        { income: 100 },
-        "user123",
-        new Date()
+        {
+          amount: 100,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          txnDate: new Date(),
+        },
+        "507f1f77bcf86cd799439011"
       );
 
       // Current: 100, Prev: 50
@@ -365,18 +427,144 @@ describe("Analytics Service", () => {
       const mock = createMockAnalytics();
       mock.previousIncome.month = 200;
       mock.income.month = 0; // Reset from default 100
-      Analytics.findOne.mockResolvedValue(mock);
+      setupAnalyticsMock(mock);
 
       // Add 100. Current becomes 100.
       await analyticsService.updateAnalyticsOnAdd(
-        { income: 100 },
-        "user123",
-        new Date()
+        {
+          amount: 100,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          txnDate: new Date(),
+        },
+        "507f1f77bcf86cd799439011"
       );
 
       // Current: 100, Prev: 200
       // Change: (100 - 200) / 200 * 100 = -50%
       expect(mock.incomeChange.month).toBe(-50);
+    });
+  });
+
+  describe("Schema Verification", () => {
+    it("should write to daily analytics with split category fields", async () => {
+      const mock = createMockAnalytics();
+      setupAnalyticsMock(mock);
+      const { DailyAnalytics } = require("../dailyAnalytics.model");
+
+      await analyticsService.updateAnalyticsOnAdd(
+        {
+          amount: 100,
+          txnType: "income",
+          userId: "507f1f77bcf86cd799439011",
+          category: "Salary",
+          txnDate: new Date(),
+        },
+        "507f1f77bcf86cd799439011"
+      );
+
+      // Verify bulkWrite or findOneAndUpdate called with correct fields
+      // updateTimeSeries uses bulkWrite for efficiency now in updateAnalyticsBatch?
+      // No, updateAnalyticsOnAdd uses `updateTimeSeries` helper which calls `DailyAnalytics.findOneAndUpdate`.
+
+      expect(DailyAnalytics.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          $inc: expect.objectContaining({
+            "totals.income": 100,
+            "incomeCategories.Salary": 100,
+          }),
+        }),
+        expect.anything()
+      );
+    });
+  });
+
+  describe("Query Methods", () => {
+    describe("getTimeSeries", () => {
+      it("should call DailyAnalytics.find with correct default date range", async () => {
+        const { DailyAnalytics } = require("../dailyAnalytics.model");
+        DailyAnalytics.find.mockReturnValue({
+          sort: jest.fn().mockResolvedValue([]),
+        });
+
+        await analyticsService.getTimeSeries("507f1f77bcf86cd799439011");
+
+        // Defaults: End = Now, Start = Now - 30 days
+        expect(DailyAnalytics.find).toHaveBeenCalledWith({
+          userId: "507f1f77bcf86cd799439011",
+          date: { $gte: expect.any(Date), $lte: expect.any(Date) },
+        });
+      });
+
+      it("should Switch to MonthlyAnalytics if range > 1 year", async () => {
+        const { DailyAnalytics } = require("../dailyAnalytics.model");
+        const { MonthlyAnalytics } = require("../monthlyAnalytics.model");
+
+        MonthlyAnalytics.aggregate.mockResolvedValue([]);
+
+        const start = new Date("2020-01-01");
+        const end = new Date("2023-01-01"); // 3 years
+
+        await analyticsService.getTimeSeries(
+          "507f1f77bcf86cd799439011",
+          start,
+          end
+        );
+
+        expect(MonthlyAnalytics.aggregate).toHaveBeenCalled();
+        expect(DailyAnalytics.find).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("getCategoryDistribution", () => {
+      it("should aggregate from DailyAnalytics with default date range", async () => {
+        const { DailyAnalytics } = require("../dailyAnalytics.model");
+        DailyAnalytics.aggregate.mockResolvedValue([]);
+
+        await analyticsService.getCategoryDistribution(
+          "507f1f77bcf86cd799439011",
+          undefined,
+          undefined,
+          "income"
+        );
+
+        expect(DailyAnalytics.aggregate).toHaveBeenCalled();
+        // Check if $project uses incomeCategories
+        const pipeline = DailyAnalytics.aggregate.mock.calls[0][0];
+        const projectStage = pipeline.find((s) => s.$project);
+        expect(projectStage.$project.byCategory.$objectToArray).toBe(
+          "$incomeCategories"
+        );
+      });
+
+      it("should use correct field for expense type", async () => {
+        const { DailyAnalytics } = require("../dailyAnalytics.model");
+        DailyAnalytics.aggregate.mockResolvedValue([]);
+
+        await analyticsService.getCategoryDistribution(
+          "507f1f77bcf86cd799439011",
+          undefined,
+          undefined,
+          "expense"
+        );
+
+        const pipeline = DailyAnalytics.aggregate.mock.calls[0][0];
+        const projectStage = pipeline.find((s) => s.$project);
+        expect(projectStage.$project.byCategory.$objectToArray).toBe(
+          "$expenseCategories"
+        );
+      });
+
+      it("should return empty array for transfer type", async () => {
+        const result = await analyticsService.getCategoryDistribution(
+          "507f1f77bcf86cd799439011",
+          undefined,
+          undefined,
+          "transfer"
+        );
+        expect(result).toEqual([]);
+      });
     });
   });
 });

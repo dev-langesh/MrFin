@@ -10,8 +10,29 @@ async function getAnalytics(req, res) {
   }
 }
 
+async function getTimeSeries(req, res) {
+  const result = await analyticsService.getTimeSeries(
+    req.user.id,
+    req.query.startDate,
+    req.query.endDate
+  );
+  res.json(result);
+}
+
+async function getCategoryDistribution(req, res) {
+  const result = await analyticsService.getCategoryDistribution(
+    req.user.id,
+    req.query.startDate,
+    req.query.endDate,
+    req.query.txnType
+  );
+  res.json(result);
+}
+
 const analyticsController = {
   getAnalytics: asyncHandler(getAnalytics),
+  getTimeSeries: asyncHandler(getTimeSeries),
+  getCategoryDistribution: asyncHandler(getCategoryDistribution),
 };
 
 module.exports = { analyticsController };

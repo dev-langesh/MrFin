@@ -31,9 +31,11 @@ describe("Transaction Service", () => {
 
       expect(Transaction.create).toHaveBeenCalledWith(mockTxnData);
       expect(analyticsService.updateAnalyticsOnAdd).toHaveBeenCalledWith(
-        { income: 100 },
-        "user123",
-        mockTxnData.txnDate
+        expect.objectContaining({
+          userId: mockTxnData.userId,
+          amount: mockTxnData.amount,
+          txnType: mockTxnData.txnType,
+        })
       );
       expect(result).toHaveProperty("_id", "txn1");
     });
@@ -45,9 +47,11 @@ describe("Transaction Service", () => {
       await transactionService.createTransaction(expenseData);
 
       expect(analyticsService.updateAnalyticsOnAdd).toHaveBeenCalledWith(
-        { expenses: 50 },
-        "user123",
-        expenseData.txnDate
+        expect.objectContaining({
+          userId: expenseData.userId,
+          amount: expenseData.amount,
+          txnType: expenseData.txnType,
+        })
       );
     });
 
@@ -112,10 +116,13 @@ describe("Transaction Service", () => {
       expect(oldTxn.save).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
         expect.objectContaining({
-          oldIncome: 100,
-          newIncome: 200,
+          amount: 100,
+          txnType: "income",
         }),
-        "user123"
+        expect.objectContaining({
+          amount: 200,
+          txnType: "income",
+        })
       );
     });
 
@@ -138,12 +145,13 @@ describe("Transaction Service", () => {
 
       expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
         expect.objectContaining({
-          oldIncome: 100,
-          newIncome: 0,
-          oldExpenses: 0,
-          newExpenses: 100,
+          amount: 100,
+          txnType: "income",
         }),
-        "user123"
+        expect.objectContaining({
+          amount: 100,
+          txnType: "expense",
+        })
       );
     });
   });
@@ -158,9 +166,7 @@ describe("Transaction Service", () => {
 
       expect(txn.deleteOne).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsOnDelete).toHaveBeenCalledWith(
-        { income: 100 },
-        "user123",
-        mockTxnData.txnDate
+        txn
       );
     });
   });

@@ -8,6 +8,7 @@ const { errorHandler } = require("../../../middleware/errorHandler.middleware");
 const { User } = require("../../user/user.model");
 const { Transaction } = require("../transaction.model");
 const { Analytics } = require("../../analytics/analytics.model"); // Needed as transactions update analytics
+const { DailyAnalytics } = require("../../analytics/dailyAnalytics.model");
 const { analyticsService } = require("../../analytics/analytics.service"); // Real service
 const { tokenService } = require("../../../lib/jwt/token.service");
 
@@ -48,6 +49,7 @@ describe("Transaction Integration", () => {
   beforeEach(async () => {
     await Transaction.deleteMany({});
     await Analytics.deleteMany({});
+    await DailyAnalytics.deleteMany({});
     // Setup initial analytics for the test user
     await Analytics.create({ userId: "507f1f77bcf86cd799439011" });
   });
@@ -78,6 +80,14 @@ describe("Transaction Integration", () => {
         userId: "507f1f77bcf86cd799439011",
       });
       expect(analytics.income.total).toBe(1000);
+
+      // Verify Time Series Side effect
+      const daily = await DailyAnalytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      expect(daily).toBeDefined();
+      expect(daily.totals.income).toBe(1000);
+      expect(daily.incomeCategories.get("Salary")).toBe(1000); // Access map via get if Schema uses Map, or dot access if POJO. Mongoose Map uses .get()
     });
 
     it("should create an expense transaction", async () => {
@@ -265,11 +275,7 @@ describe("Transaction Integration", () => {
         txnDate: new Date(),
       });
 
-      await analyticsService.updateAnalyticsOnAdd(
-        { income: 100 },
-        "507f1f77bcf86cd799439011",
-        txn.txnDate
-      );
+      await analyticsService.updateAnalyticsOnAdd(txn);
 
       const res = await request(app).put(`/api/transactions/${txn._id}`).send({
         amount: 200,

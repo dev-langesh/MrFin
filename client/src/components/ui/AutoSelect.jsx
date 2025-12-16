@@ -63,7 +63,10 @@ export function AutoSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between hover:bg-transparent hover", className)}
+          className={cn(
+            "w-full justify-between hover:bg-transparent hover",
+            className
+          )}
           disabled={disabled}
         >
           {value ? (
@@ -80,6 +83,12 @@ export function AutoSelect({
             placeholder={`Search ${placeholder.toLowerCase()}...`}
             value={inputValue}
             onValueChange={setInputValue}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && showCreate) {
+                e.preventDefault();
+                handleCreate();
+              }
+            }}
           />
           <CommandList>
             <CommandEmpty>

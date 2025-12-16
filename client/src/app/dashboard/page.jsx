@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import DashboardSummary from "@/components/dashboard/dashboard/DashboardSummary";
 import { AreaChart } from "@/components/dashboard/dashboard/AreaChart";
 import CategoryDistribution from "@/components/dashboard/dashboard/CategoryDistribution";
-import { transactionService } from "@/services/transactions.service";
+import { analyticsService } from "@/services/analytics.service";
 import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 import {
   startOfMonth,
@@ -70,52 +70,63 @@ export default function TransactionPage() {
       };
 
       const req = Promise.all([
-        transactionService.getTransactionsToVisualize({
+        analyticsService.getTimeSeries(payload),
+        analyticsService.getCategoryDistribution({
           ...payload,
           txnType: "income",
         }),
-        transactionService.getTransactionsToVisualize({
+        analyticsService.getCategoryDistribution({
           ...payload,
           txnType: "expense",
         }),
-        transactionService.getTransactionsToVisualize({
-          ...payload,
-          txnType: "investment",
-        }),
-        transactionService.getTransactionsDistribution({
-          ...payload,
-          txnType: "income",
-        }),
-        transactionService.getTransactionsDistribution({
-          ...payload,
-          txnType: "expense",
-        }),
-        transactionService.getTransactionsDistribution({
+        analyticsService.getCategoryDistribution({
           ...payload,
           txnType: "investment",
         }),
       ]);
 
-      const res = await req;
-      setIncome(res[0].transactions || []);
-      setExpense(res[1].transactions || []);
-      setInvestment(res[2].transactions || []);
-      setIncomeDistribution(res[3].distribution || []);
-      setExpenseDistribution(res[4].distribution || []);
-      setInvestmentDistribution(res[5].distribution || []);
+      const [seriesData, incomeDist, expenseDist, investmentDist] = await req;
 
-      const checkDir = (txns, setDir) => {
-        if (!txns || txns.length === 0) return;
-        if (txns[0]?.amount > txns[txns.length - 1]?.amount) {
+      const processSeries = (data, key) => {
+        return data.map((item) => ({
+          _id: item.date,
+          amount: item.totals?.[key] || 0,
+        }));
+      };
+
+      const incomeData = processSeries(seriesData, "income");
+      const expenseData = processSeries(seriesData, "expense");
+      const investmentData = processSeries(seriesData, "investment");
+
+      const hasData = (data) => data.some((item) => item.amount > 0);
+
+      setIncome(hasData(incomeData) ? incomeData : []);
+      setExpense(hasData(expenseData) ? expenseData : []);
+      setInvestment(hasData(investmentData) ? investmentData : []);
+
+      console.log(investmentData);
+
+      const filterZero = (data) => {
+        if (!data) return [];
+        return data.filter((item) => item.value > 0);
+      };
+
+      setIncomeDistribution(filterZero(incomeDist));
+      setExpenseDistribution(filterZero(expenseDist));
+      setInvestmentDistribution(filterZero(investmentDist));
+
+      const checkDir = (data, setDir) => {
+        if (!data || data.length === 0) return;
+        if (data[0].amount > data[data.length - 1].amount) {
           setDir("down");
         } else {
           setDir("up");
         }
       };
 
-      checkDir(res[0].transactions, setIncomeDir);
-      checkDir(res[1].transactions, setExpenseDir);
-      checkDir(res[2].transactions, setInvestmentDir);
+      checkDir(incomeData, setIncomeDir);
+      checkDir(expenseData, setExpenseDir);
+      checkDir(investmentData, setInvestmentDir);
     } catch (e) {
       toast.error("Error fetching Income Data");
     } finally {

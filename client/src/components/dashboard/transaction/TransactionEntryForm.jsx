@@ -268,7 +268,7 @@ function TransactionEntryForm({
                   value={field.value}
                   onChange={field.onChange}
                   options={settings?.transactionSettings?.categories || []}
-                  placeholder="Select or create category"
+                  placeholder="Enter category"
                 />
               )}
             />

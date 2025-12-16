@@ -43,14 +43,14 @@ describe("Analytics Integration", () => {
     it("should return analytics for the user", async () => {
       await Analytics.create({
         userId: "507f1f77bcf86cd799439011",
-        earnings: { total: 500, month: 100 },
+        income: { total: 500, month: 100 },
         expenses: { total: 200, month: 50 },
       });
 
       const res = await request(app).get("/api/analytics");
       expect(res.status).toBe(200);
       expect(res.body.userId).toBe("507f1f77bcf86cd799439011");
-      expect(res.body.earnings.total).toBe(500);
+      expect(res.body.income.total).toBe(500);
     });
 
     it("should return 404/500 if analytics not found", async () => {

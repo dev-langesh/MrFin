@@ -11,15 +11,15 @@ describe("Analytics Service", () => {
 
   const createMockAnalytics = () => ({
     userId: "user123",
-    earnings: { total: 1000, month: 100, quarter: 300, annual: 1000 },
+    income: { total: 1000, month: 100, quarter: 300, annual: 1000 },
     expenses: { total: 500, month: 50, quarter: 150, annual: 500 },
     investments: { total: 200, month: 20, quarter: 60, annual: 200 },
     cashFlow: { total: 500, month: 50, quarter: 150, annual: 500 },
-    previousEarnings: { month: 0, quarter: 0, annual: 0 },
+    previousIncome: { month: 0, quarter: 0, annual: 0 },
     previousExpenses: { month: 0, quarter: 0, annual: 0 },
     previousInvestments: { month: 0, quarter: 0, annual: 0 },
     previousCashFlow: { month: 0, quarter: 0, annual: 0 },
-    earningsChange: { month: 0, quarter: 0, annual: 0 },
+    incomeChange: { month: 0, quarter: 0, annual: 0 },
     expensesChange: { month: 0, quarter: 0, annual: 0 },
     cashFlowChange: { month: 0, quarter: 0, annual: 0 },
     investmentsChange: { month: 0, quarter: 0, annual: 0 },
@@ -52,14 +52,14 @@ describe("Analytics Service", () => {
       const mock = createMockAnalytics();
       Analytics.findOne.mockResolvedValue(mock);
 
-      const earningsToAdd = 100;
+      const incomeToAdd = 100;
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: earningsToAdd },
+        { income: incomeToAdd },
         "user123"
       );
 
-      expect(mock.earnings.total).toBe(1100);
-      expect(mock.earnings.month).toBe(200); // 100 + 100
+      expect(mock.income.total).toBe(1100);
+      expect(mock.income.month).toBe(200); // 100 + 100
       expect(mock.save).toHaveBeenCalled();
     });
 
@@ -73,7 +73,7 @@ describe("Analytics Service", () => {
       Analytics.findOne.mockResolvedValue(mock);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 100 },
+        { income: 100 },
         "user123",
         new Date()
       ); // Today
@@ -82,10 +82,10 @@ describe("Analytics Service", () => {
       // Then add 100 to current
 
       // Verify previous moved
-      expect(mock.previousEarnings.month).toBe(100); // Was 100 initially
+      expect(mock.previousIncome.month).toBe(100); // Was 100 initially
 
       // Verify current updated
-      expect(mock.earnings.month).toBe(100); // 0 (reset) + 100 (new)
+      expect(mock.income.month).toBe(100); // 0 (reset) + 100 (new)
     });
 
     it("should update previous period directly if transaction is backdated to last month", async () => {
@@ -96,14 +96,14 @@ describe("Analytics Service", () => {
       lastMonth.setMonth(lastMonth.getMonth() - 1);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 50 },
+        { income: 50 },
         "user123",
         lastMonth
       );
 
-      // Should update previousEarnings.month, NOT earnings.month
-      expect(mock.previousEarnings.month).toBe(50); // 0 + 50
-      expect(mock.earnings.month).toBe(100); // Unchanged
+      // Should update previousIncome.month, NOT income.month
+      expect(mock.previousIncome.month).toBe(50); // 0 + 50
+      expect(mock.income.month).toBe(100); // Unchanged
     });
   });
 
@@ -114,17 +114,17 @@ describe("Analytics Service", () => {
 
       await analyticsService.updateAnalyticsOnEdit(
         {
-          oldEarnings: 100,
-          newEarnings: 150,
+          oldIncome: 100,
+          newIncome: 150,
           oldDate: new Date(),
           newDate: new Date(),
         },
         "user123"
       );
 
-      // Should add 50 to earnings
-      expect(mock.earnings.total).toBe(1050);
-      expect(mock.earnings.month).toBe(150);
+      // Should add 50 to income
+      expect(mock.income.total).toBe(1050);
+      expect(mock.income.month).toBe(150);
     });
 
     it("should move values if date changed period", async () => {
@@ -141,8 +141,8 @@ describe("Analytics Service", () => {
 
       await analyticsService.updateAnalyticsOnEdit(
         {
-          oldEarnings: 100,
-          newEarnings: 100, // Amount same, just moved date
+          oldIncome: 100,
+          newIncome: 100, // Amount same, just moved date
           oldDate: oldDate,
           newDate: newDate,
         },
@@ -152,8 +152,8 @@ describe("Analytics Service", () => {
       // subtract 100 from old period (which is previous month relative to now)
       // add 100 to new period (current month)
 
-      expect(mock.previousEarnings.month).toBe(-100); // 0 - 100
-      expect(mock.earnings.month).toBe(200); // 100 + 100
+      expect(mock.previousIncome.month).toBe(-100); // 0 - 100
+      expect(mock.income.month).toBe(200); // 100 + 100
     });
   });
   describe("Rollover Logic", () => {
@@ -173,22 +173,22 @@ describe("Analytics Service", () => {
 
       // Add transaction for Now (Jan)
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 100 },
+        { income: 100 },
         "user123",
         new Date()
       );
 
       // Check Year Rollover
-      expect(mock.previousEarnings.annual).toBe(1000); // Moved from earnings.annual
-      expect(mock.earnings.annual).toBe(100); // 0 (reset) + 100 (new)
+      expect(mock.previousIncome.annual).toBe(1000); // Moved from income.annual
+      expect(mock.income.annual).toBe(100); // 0 (reset) + 100 (new)
 
       // Check Quarter Rollover
-      expect(mock.previousEarnings.quarter).toBe(300); // Moved from earnings.quarter
-      expect(mock.earnings.quarter).toBe(100); // 0 + 100
+      expect(mock.previousIncome.quarter).toBe(300); // Moved from income.quarter
+      expect(mock.income.quarter).toBe(100); // 0 + 100
 
       // Check Month Rollover
-      expect(mock.previousEarnings.month).toBe(100); // Moved from earnings.month
-      expect(mock.earnings.month).toBe(100); // 0 + 100
+      expect(mock.previousIncome.month).toBe(100); // Moved from income.month
+      expect(mock.income.month).toBe(100); // 0 + 100
     });
 
     it("should handle Quarter Rollover correctly (Mar -> Apr)", async () => {
@@ -237,17 +237,17 @@ describe("Analytics Service", () => {
       twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 5000 },
+        { income: 5000 },
         "user123",
         twoYearsAgo
       );
 
-      expect(mock.earnings.total).toBe(6000); // 1000 + 5000
+      expect(mock.income.total).toBe(6000); // 1000 + 5000
       // Current buckets untouched
-      expect(mock.earnings.annual).toBe(1000);
-      expect(mock.earnings.month).toBe(100);
+      expect(mock.income.annual).toBe(1000);
+      expect(mock.income.month).toBe(100);
       // Previous buckets untouched (only track n-1)
-      expect(mock.previousEarnings.annual).toBe(0);
+      expect(mock.previousIncome.annual).toBe(0);
     });
 
     it("should update ONLY totals for Future transactions (Next Month)", async () => {
@@ -258,14 +258,14 @@ describe("Analytics Service", () => {
       nextMonth.setMonth(nextMonth.getMonth() + 1);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 500 },
+        { income: 500 },
         "user123",
         nextMonth
       );
 
-      expect(mock.earnings.total).toBe(1500);
+      expect(mock.income.total).toBe(1500);
       // Should NOT affect current month bucket
-      expect(mock.earnings.month).toBe(100);
+      expect(mock.income.month).toBe(100);
     });
   });
 
@@ -302,12 +302,12 @@ describe("Analytics Service", () => {
       await analyticsService.updateAnalyticsBatch(txns, "user123");
 
       // Check Totals
-      expect(mock.earnings.total).toBe(2100); // 1000 + 100 + 1000
+      expect(mock.income.total).toBe(2100); // 1000 + 100 + 1000
       expect(mock.expenses.total).toBe(550); // 500 + 50
       expect(mock.investments.total).toBe(400); // 200 + 200
 
       // Check Current Month (Only current txns)
-      expect(mock.earnings.month).toBe(200); // 100 (existing) + 100 (new)
+      expect(mock.income.month).toBe(200); // 100 (existing) + 100 (new)
       expect(mock.expenses.month).toBe(100); // 50 + 50
     });
   });
@@ -318,65 +318,65 @@ describe("Analytics Service", () => {
       Analytics.findOne.mockResolvedValue(mock);
 
       await analyticsService.updateAnalyticsOnDelete(
-        { earnings: 100 },
+        { income: 100 },
         "user123",
         new Date()
       );
 
-      expect(mock.earnings.total).toBe(900); // 1000 - 100
-      expect(mock.earnings.month).toBe(0); // 100 - 100
+      expect(mock.income.total).toBe(900); // 1000 - 100
+      expect(mock.income.month).toBe(0); // 100 - 100
     });
 
     // Calc logic is internal but verified via output effects in % changes
     // We can indirectly verify division by zero safely handling if we mock previous to 0
     it("should handle zero denominator in % change calculation", async () => {
       const mock = createMockAnalytics();
-      mock.previousEarnings.month = 0; // Force zero denom
+      mock.previousIncome.month = 0; // Force zero denom
       Analytics.findOne.mockResolvedValue(mock);
 
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 100 }, // Current becomes 200
+        { income: 100 }, // Current becomes 200
         "user123",
         new Date()
       );
 
-      expect(mock.earningsChange.month).toBe(0); // Should be 0 if prev is 0
+      expect(mock.incomeChange.month).toBe(0); // Should be 0 if prev is 0
     });
 
     it("should calculate valid percentage change (Growth)", async () => {
       const mock = createMockAnalytics();
-      mock.previousEarnings.month = 50;
-      mock.earnings.month = 0; // Reset from default 100
+      mock.previousIncome.month = 50;
+      mock.income.month = 0; // Reset from default 100
       Analytics.findOne.mockResolvedValue(mock);
 
       // Add 100. Current becomes 100.
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 100 },
+        { income: 100 },
         "user123",
         new Date()
       );
 
       // Current: 100, Prev: 50
       // Change: (100 - 50) / 50 * 100 = 100%
-      expect(mock.earningsChange.month).toBe(100);
+      expect(mock.incomeChange.month).toBe(100);
     });
 
     it("should calculate valid percentage change (Decline)", async () => {
       const mock = createMockAnalytics();
-      mock.previousEarnings.month = 200;
-      mock.earnings.month = 0; // Reset from default 100
+      mock.previousIncome.month = 200;
+      mock.income.month = 0; // Reset from default 100
       Analytics.findOne.mockResolvedValue(mock);
 
       // Add 100. Current becomes 100.
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 100 },
+        { income: 100 },
         "user123",
         new Date()
       );
 
       // Current: 100, Prev: 200
       // Change: (100 - 200) / 200 * 100 = -50%
-      expect(mock.earningsChange.month).toBe(-50);
+      expect(mock.incomeChange.month).toBe(-50);
     });
   });
 });

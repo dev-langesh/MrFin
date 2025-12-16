@@ -34,12 +34,12 @@ function DashboardSummary({ period }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
       <SummaryCard
-        title="Earnings"
-        value={data.earnings?.[period] || 0}
-        up={data.earningsChange?.[period] || 0}
+        title="Income"
+        value={data.income?.[period] || 0}
+        up={data.incomeChange?.[period] || 0}
         secondaryTitle={
           period === "total"
-            ? "All time earnings"
+            ? "All time income"
             : period === "annual"
             ? "Current year"
             : `Current ${period}`

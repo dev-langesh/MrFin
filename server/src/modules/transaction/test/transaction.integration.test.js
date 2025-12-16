@@ -77,7 +77,7 @@ describe("Transaction Integration", () => {
       const analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(1000);
+      expect(analytics.income.total).toBe(1000);
     });
 
     it("should create an expense transaction", async () => {
@@ -250,7 +250,7 @@ describe("Transaction Integration", () => {
       const analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(100);
+      expect(analytics.income.total).toBe(100);
       expect(analytics.expenses.total).toBe(200);
     });
   });
@@ -266,7 +266,7 @@ describe("Transaction Integration", () => {
       });
 
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: 100 },
+        { income: 100 },
         "507f1f77bcf86cd799439011",
         txn.txnDate
       );
@@ -282,7 +282,7 @@ describe("Transaction Integration", () => {
         userId: "507f1f77bcf86cd799439011",
       });
       // Old 100 removed, New 200 added -> Total 200
-      expect(analytics.earnings.total).toBe(200);
+      expect(analytics.income.total).toBe(200);
     });
   });
 
@@ -308,7 +308,7 @@ describe("Transaction Integration", () => {
       const analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(0);
+      expect(analytics.income.total).toBe(0);
     });
   });
   describe("Complex Scenarios", () => {
@@ -326,9 +326,9 @@ describe("Transaction Integration", () => {
       let analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(1000);
-      expect(analytics.earnings.month).toBe(1000);
-      expect(analytics.earnings.annual).toBe(1000);
+      expect(analytics.income.total).toBe(1000);
+      expect(analytics.income.month).toBe(1000);
+      expect(analytics.income.annual).toBe(1000);
       expect(analytics.cashFlow.total).toBe(1000);
 
       // 2. Update Amount (1000 -> 2000)
@@ -338,7 +338,7 @@ describe("Transaction Integration", () => {
       analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(2000);
+      expect(analytics.income.total).toBe(2000);
 
       // 3. Change Type (Income -> Expense)
       await request(app).put(`/api/transactions/${txnId}`).send({
@@ -348,7 +348,7 @@ describe("Transaction Integration", () => {
       analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(0);
+      expect(analytics.income.total).toBe(0);
       expect(analytics.expenses.total).toBe(2000);
 
       // 4. Change Type (Expense -> Investment)
@@ -395,8 +395,8 @@ describe("Transaction Integration", () => {
       });
       // Should affect TOTAL but NOT current month
 
-      expect(analytics.earnings.total).toBe(500);
-      expect(analytics.earnings.month).toBe(0);
+      expect(analytics.income.total).toBe(500);
+      expect(analytics.income.month).toBe(0);
 
       // 2. Move to Current Month
       await request(app).put(`/api/transactions/${txnId}`).send({
@@ -406,10 +406,10 @@ describe("Transaction Integration", () => {
       analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(500); // Total unchanged
-      expect(analytics.earnings.month).toBe(500); // Now in current month
-      expect(analytics.earnings.quarter).toBeGreaterThan(0); // Should be in quarter
-      expect(analytics.earnings.annual).toBe(500); // Should be in annual
+      expect(analytics.income.total).toBe(500); // Total unchanged
+      expect(analytics.income.month).toBe(500); // Now in current month
+      expect(analytics.income.quarter).toBeGreaterThan(0); // Should be in quarter
+      expect(analytics.income.annual).toBe(500); // Should be in annual
 
       // Verify Cash Flow logic
       expect(analytics.cashFlow.month).toBe(500);
@@ -455,7 +455,7 @@ describe("Transaction Integration", () => {
       });
 
       // Verify Initial State
-      expect(analytics.earnings.total).toBe(1000);
+      expect(analytics.income.total).toBe(1000);
       expect(analytics.expenses.total).toBe(500);
       expect(analytics.investments.total).toBe(200);
       expect(analytics.cashFlow.total).toBe(500); // 1000 - 500
@@ -468,11 +468,11 @@ describe("Transaction Integration", () => {
       analytics = await Analytics.findOne({
         userId: "507f1f77bcf86cd799439011",
       });
-      expect(analytics.earnings.total).toBe(2000);
+      expect(analytics.income.total).toBe(2000);
       expect(analytics.cashFlow.total).toBe(1500); // 2000 - 500
 
       // B. Change Date (Current -> Last Month)
-      // This should Move 2000 from current earnings to previous earnings
+      // This should Move 2000 from current income to previous income
       const lastMonth = new Date();
       lastMonth.setDate(1);
       lastMonth.setMonth(lastMonth.getMonth() - 1);
@@ -484,11 +484,11 @@ describe("Transaction Integration", () => {
         userId: "507f1f77bcf86cd799439011",
       });
       // Totals remain same
-      expect(analytics.earnings.total).toBe(2000);
+      expect(analytics.income.total).toBe(2000);
       // Current Month Buckets should NOT have the 2000 anymore
-      expect(analytics.earnings.month).toBe(0);
+      expect(analytics.income.month).toBe(0);
       // Previous Month Buckets SHOULD have the 2000
-      expect(analytics.previousEarnings.month).toBe(2000); // Assuming clean state initially
+      expect(analytics.previousIncome.month).toBe(2000); // Assuming clean state initially
 
       // C. Change Type (Income -> Expense) WHILE in Last Month
       await request(app).put(`/api/transactions/${revId}`).send({
@@ -498,10 +498,10 @@ describe("Transaction Integration", () => {
         userId: "507f1f77bcf86cd799439011",
       });
 
-      // Earnings should be gone completely
-      expect(analytics.earnings.total).toBe(0);
-      expect(analytics.previousEarnings.month).toBe(0);
-      expect(analytics.earnings.month).toBe(0);
+      // income should be gone completely
+      expect(analytics.income.total).toBe(0);
+      expect(analytics.previousIncome.month).toBe(0);
+      expect(analytics.income.month).toBe(0);
 
       // Expenses should increase by 2000 (total 2500)
       // The 2000 is in Last Month, 500 is in Current Month
@@ -510,7 +510,7 @@ describe("Transaction Integration", () => {
       expect(analytics.previousExpenses.month).toBe(2000);
 
       // Cash Flow should plummet
-      // Earnings (0) - Expenses (2500) = -2500
+      // income (0) - Expenses (2500) = -2500
       expect(analytics.cashFlow.total).toBe(-2500);
 
       // 3. Partial Delete
@@ -528,10 +528,10 @@ describe("Transaction Integration", () => {
       expect(analytics.previousExpenses.month).toBe(2000);
 
       // Final Check of ALL fields
-      expect(analytics.earnings.total).toBe(0);
-      expect(analytics.previousEarnings.total).toBeUndefined(); // Field doesn't exist on schema
-      expect(analytics.earnings.month).toBe(0);
-      expect(analytics.earnings.annual).toBe(0);
+      expect(analytics.income.total).toBe(0);
+      expect(analytics.previousIncome.total).toBeUndefined(); // Field doesn't exist on schema
+      expect(analytics.income.month).toBe(0);
+      expect(analytics.income.annual).toBe(0);
 
       expect(analytics.expenses.total).toBe(2000);
       expect(analytics.expenses.month).toBe(0);
@@ -568,7 +568,7 @@ describe("Transaction Integration", () => {
       });
 
       // 3. Verify Zero Sum
-      expect(analytics.earnings.total).toBe(1000);
+      expect(analytics.income.total).toBe(1000);
       expect(analytics.expenses.total).toBe(1000);
 
       expect(analytics.cashFlow.total).toBe(0);
@@ -577,7 +577,7 @@ describe("Transaction Integration", () => {
 
       // 4. Verify % Calculation (Change)
       // Since previous period is 0 (fresh db), change from 0 is handled as 0 in our logic
-      expect(analytics.earningsChange.month).toBe(0);
+      expect(analytics.incomeChange.month).toBe(0);
       expect(analytics.expensesChange.month).toBe(0);
       expect(analytics.cashFlowChange.month).toBe(0);
     });

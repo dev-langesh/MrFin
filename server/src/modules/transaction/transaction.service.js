@@ -15,7 +15,7 @@ async function createTransaction(data) {
     const txn = await Transaction.create(data);
     if (txn.txnType === "income") {
       await analyticsService.updateAnalyticsOnAdd(
-        { earnings: txn.amount },
+        { income: txn.amount },
         txn.userId,
         txn.txnDate
       );
@@ -226,8 +226,8 @@ async function updateTransaction(id, data) {
     // Update analytics
     // Prepare analytics update params
     const updateParams = {
-      oldEarnings: 0,
-      newEarnings: 0,
+      oldIncome: 0,
+      newIncome: 0,
       oldExpenses: 0,
       newExpenses: 0,
       oldInvestments: 0,
@@ -236,12 +236,11 @@ async function updateTransaction(id, data) {
       newDate: savedTxn.txnDate,
     };
 
-    if (oldType === "income") updateParams.oldEarnings = oldAmount;
+    if (oldType === "income") updateParams.oldIncome = oldAmount;
     else if (oldType === "expense") updateParams.oldExpenses = oldAmount;
     else if (oldType === "investment") updateParams.oldInvestments = oldAmount;
 
-    if (savedTxn.txnType === "income")
-      updateParams.newEarnings = savedTxn.amount;
+    if (savedTxn.txnType === "income") updateParams.newIncome = savedTxn.amount;
     else if (savedTxn.txnType === "expense")
       updateParams.newExpenses = savedTxn.amount;
     else if (savedTxn.txnType === "investment")
@@ -264,7 +263,7 @@ async function deleteTransaction(id) {
     await txn.deleteOne();
     if (txn.txnType === "income") {
       await analyticsService.updateAnalyticsOnDelete(
-        { earnings: txn.amount },
+        { income: txn.amount },
         txn.userId,
         txn.txnDate
       );

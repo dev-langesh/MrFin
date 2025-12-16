@@ -38,11 +38,11 @@ function rolloverPeriods(analytics, date) {
     !analytics.lastUpdated.month ||
     analytics.lastUpdated.month < monthStart
   ) {
-    analytics.previousEarnings.month = analytics.earnings.month;
+    analytics.previousIncome.month = analytics.income.month;
     analytics.previousExpenses.month = analytics.expenses.month;
     analytics.previousInvestments.month = analytics.investments.month;
 
-    analytics.earnings.month = 0;
+    analytics.income.month = 0;
     analytics.expenses.month = 0;
     analytics.cashFlow.month = 0;
     analytics.investments.month = 0;
@@ -55,12 +55,12 @@ function rolloverPeriods(analytics, date) {
     !analytics.lastUpdated.quarter ||
     analytics.lastUpdated.quarter < quarterStart
   ) {
-    analytics.previousEarnings.quarter = analytics.earnings.quarter;
+    analytics.previousIncome.quarter = analytics.income.quarter;
     analytics.previousExpenses.quarter = analytics.expenses.quarter;
     analytics.previousCashFlow.quarter = analytics.cashFlow.quarter;
     analytics.previousInvestments.quarter = analytics.investments.quarter;
 
-    analytics.earnings.quarter = 0;
+    analytics.income.quarter = 0;
     analytics.expenses.quarter = 0;
     analytics.cashFlow.quarter = 0;
     analytics.investments.quarter = 0;
@@ -70,12 +70,12 @@ function rolloverPeriods(analytics, date) {
 
   // Year rollover
   if (!analytics.lastUpdated.year || analytics.lastUpdated.year < yearStart) {
-    analytics.previousEarnings.annual = analytics.earnings.annual;
+    analytics.previousIncome.annual = analytics.income.annual;
     analytics.previousExpenses.annual = analytics.expenses.annual;
     analytics.previousCashFlow.annual = analytics.cashFlow.annual;
     analytics.previousInvestments.annual = analytics.investments.annual;
 
-    analytics.earnings.annual = 0;
+    analytics.income.annual = 0;
     analytics.expenses.annual = 0;
     analytics.cashFlow.annual = 0;
     analytics.investments.annual = 0;
@@ -88,7 +88,7 @@ function rolloverPeriods(analytics, date) {
  * Incrementally update analytics when income or expense is added
  */
 async function updateAnalyticsOnAdd(
-  { earnings = 0, expenses = 0, investments = 0 },
+  { income = 0, expenses = 0, investments = 0 },
   userId,
   date = new Date()
 ) {
@@ -107,39 +107,39 @@ async function updateAnalyticsOnAdd(
   // Roll over periods if the transaction is in a new month/quarter/year
   rolloverPeriods(analytics, new Date());
 
-  // Update total earnings/expenses regardless of date
-  analytics.earnings.total += earnings;
+  // Update total income/expenses regardless of date
+  analytics.income.total += income;
   analytics.expenses.total += expenses;
   analytics.investments.total += investments;
 
   // Update correct month/quarter/annual if transaction is in previous period
   if (txMonth === currentMonth - 1) {
-    analytics.previousEarnings.month += earnings;
+    analytics.previousIncome.month += income;
     analytics.previousExpenses.month += expenses;
-    analytics.previousCashFlow.month += earnings - expenses;
+    analytics.previousCashFlow.month += income - expenses;
     analytics.previousInvestments.month += investments;
   }
 
   if (txQuarter === currentQuarter - 1) {
-    analytics.previousEarnings.quarter += earnings;
+    analytics.previousIncome.quarter += income;
     analytics.previousExpenses.quarter += expenses;
-    analytics.previousCashFlow.quarter += earnings - expenses;
+    analytics.previousCashFlow.quarter += income - expenses;
     analytics.previousInvestments.quarter += investments;
   }
 
   if (txYear === currentYear - 1) {
-    analytics.previousEarnings.annual += earnings;
+    analytics.previousIncome.annual += income;
     analytics.previousExpenses.annual += expenses;
-    analytics.previousCashFlow.annual += earnings - expenses;
+    analytics.previousCashFlow.annual += income - expenses;
     analytics.previousInvestments.annual += investments;
   }
 
   // Update correct month/quarter/annual if transaction is in current period
   if (txYear === currentYear) {
-    if (txMonth === currentMonth) analytics.earnings.month += earnings;
-    analytics.earnings.annual += earnings;
+    if (txMonth === currentMonth) analytics.income.month += income;
+    analytics.income.annual += income;
 
-    if (txQuarter === currentQuarter) analytics.earnings.quarter += earnings;
+    if (txQuarter === currentQuarter) analytics.income.quarter += income;
 
     if (txMonth === currentMonth) analytics.expenses.month += expenses;
     analytics.expenses.annual += expenses;
@@ -154,27 +154,25 @@ async function updateAnalyticsOnAdd(
   }
 
   // Update cash flow for the affected periods
-  analytics.cashFlow.total =
-    analytics.earnings.total - analytics.expenses.total;
-  analytics.cashFlow.month =
-    analytics.earnings.month - analytics.expenses.month;
+  analytics.cashFlow.total = analytics.income.total - analytics.expenses.total;
+  analytics.cashFlow.month = analytics.income.month - analytics.expenses.month;
   analytics.cashFlow.quarter =
-    analytics.earnings.quarter - analytics.expenses.quarter;
+    analytics.income.quarter - analytics.expenses.quarter;
   analytics.cashFlow.annual =
-    analytics.earnings.annual - analytics.expenses.annual;
+    analytics.income.annual - analytics.expenses.annual;
 
   // Update % changes based on previous periods
-  analytics.earningsChange.month = calcChange(
-    analytics.earnings.month,
-    analytics.previousEarnings.month
+  analytics.incomeChange.month = calcChange(
+    analytics.income.month,
+    analytics.previousIncome.month
   );
-  analytics.earningsChange.quarter = calcChange(
-    analytics.earnings.quarter,
-    analytics.previousEarnings.quarter
+  analytics.incomeChange.quarter = calcChange(
+    analytics.income.quarter,
+    analytics.previousIncome.quarter
   );
-  analytics.earningsChange.annual = calcChange(
-    analytics.earnings.annual,
-    analytics.previousEarnings.annual
+  analytics.incomeChange.annual = calcChange(
+    analytics.income.annual,
+    analytics.previousIncome.annual
   );
 
   analytics.expensesChange.month = calcChange(
@@ -223,12 +221,12 @@ async function updateAnalyticsOnAdd(
  * Update analytics on deletion (subtract amounts)
  */
 async function updateAnalyticsOnDelete(
-  { earnings = 0, expenses = 0, investments = 0 },
+  { income = 0, expenses = 0, investments = 0 },
   userId,
   date = new Date()
 ) {
   return updateAnalyticsOnAdd(
-    { earnings: -earnings, expenses: -expenses, investments: -investments },
+    { income: -income, expenses: -expenses, investments: -investments },
     userId,
     date
   );
@@ -239,8 +237,8 @@ async function updateAnalyticsOnDelete(
  */
 async function updateAnalyticsOnEdit(
   {
-    oldEarnings = 0,
-    newEarnings = 0,
+    oldIncome = 0,
+    newIncome = 0,
 
     oldExpenses = 0,
     newExpenses = 0,
@@ -263,7 +261,7 @@ async function updateAnalyticsOnEdit(
     // Remove old values from old period
     await updateAnalyticsOnAdd(
       {
-        earnings: -oldEarnings,
+        income: -oldIncome,
         expenses: -oldExpenses,
         investments: -oldInvestments,
       },
@@ -274,7 +272,7 @@ async function updateAnalyticsOnEdit(
     // Add new values to new period
     return await updateAnalyticsOnAdd(
       {
-        earnings: newEarnings,
+        income: newIncome,
         expenses: newExpenses,
         investments: newInvestments,
       },
@@ -284,12 +282,12 @@ async function updateAnalyticsOnEdit(
   }
 
   // If period didn't change, just update the difference
-  const diffEarnings = newEarnings - oldEarnings;
+  const diffIncome = newIncome - oldIncome;
   const diffExpenses = newExpenses - oldExpenses;
   const diffInvestments = newInvestments - oldInvestments;
   return await updateAnalyticsOnAdd(
     {
-      earnings: diffEarnings,
+      income: diffIncome,
       expenses: diffExpenses,
       investments: diffInvestments,
     },
@@ -312,27 +310,27 @@ async function updateAnalyticsBatch(transactions, userId) {
   const currentYear = now.getFullYear();
 
   // Aggregate totals by period
-  let totalEarnings = 0;
+  let totalIncome = 0;
   let totalExpenses = 0;
   let totalInvestments = 0;
 
   // Track changes for current periods
-  let monthEarnings = 0;
+  let monthIncome = 0;
   let monthExpenses = 0;
-  let quarterEarnings = 0;
+  let quarterIncome = 0;
   let quarterExpenses = 0;
-  let annualEarnings = 0;
+  let annualIncome = 0;
   let annualExpenses = 0;
   let annualInvestments = 0;
   let monthInvestments = 0;
   let quarterInvestments = 0;
 
   // Track changes for previous periods (if transactions are backdated)
-  let prevMonthEarnings = 0;
+  let prevMonthIncome = 0;
   let prevMonthExpenses = 0;
-  let prevQuarterEarnings = 0;
+  let prevQuarterIncome = 0;
   let prevQuarterExpenses = 0;
-  let prevAnnualEarnings = 0;
+  let prevAnnualIncome = 0;
   let prevAnnualExpenses = 0;
   let prevAnnualInvestments = 0;
   let prevMonthInvestments = 0;
@@ -349,17 +347,17 @@ async function updateAnalyticsBatch(transactions, userId) {
     const year = date.getFullYear();
 
     if (txn.txnType === "income") {
-      totalEarnings += amount;
+      totalIncome += amount;
 
       if (year === currentYear) {
-        annualEarnings += amount;
-        if (month === currentMonth) monthEarnings += amount;
-        if (quarter === currentQuarter) quarterEarnings += amount;
+        annualIncome += amount;
+        if (month === currentMonth) monthIncome += amount;
+        if (quarter === currentQuarter) quarterIncome += amount;
       }
 
       // Previous periods logic
-      if (year === currentYear - 1) prevAnnualEarnings += amount;
-      if (month === currentMonth - 1) prevMonthEarnings += amount; // Simplified: assumes same year for month check or handles year boundary?
+      if (year === currentYear - 1) prevAnnualIncome += amount;
+      if (month === currentMonth - 1) prevMonthIncome += amount; // Simplified: assumes same year for month check or handles year boundary?
       // The original logic for previous period was:
       // if (txMonth === currentMonth - 1) ...
       // This logic is slightly flawed if currentMonth is Jan (0), prev is -1.
@@ -367,8 +365,8 @@ async function updateAnalyticsBatch(transactions, userId) {
       // Original: if (txMonth === currentMonth - 1)
 
       // Let's replicate original logic for consistency, but be careful
-      if (month === currentMonth - 1) prevMonthEarnings += amount;
-      if (quarter === currentQuarter - 1) prevQuarterEarnings += amount;
+      if (month === currentMonth - 1) prevMonthIncome += amount;
+      if (quarter === currentQuarter - 1) prevQuarterIncome += amount;
     } else if (txn.txnType === "expense") {
       totalExpenses += amount;
 
@@ -397,59 +395,57 @@ async function updateAnalyticsBatch(transactions, userId) {
   }
 
   // Apply updates
-  analytics.earnings.total += totalEarnings;
+  analytics.income.total += totalIncome;
   analytics.expenses.total += totalExpenses;
   analytics.investments.total += totalInvestments;
 
-  analytics.earnings.month += monthEarnings;
+  analytics.income.month += monthIncome;
   analytics.expenses.month += monthExpenses;
-  analytics.earnings.quarter += quarterEarnings;
+  analytics.income.quarter += quarterIncome;
   analytics.expenses.quarter += quarterExpenses;
-  analytics.earnings.annual += annualEarnings;
+  analytics.income.annual += annualIncome;
   analytics.expenses.annual += annualExpenses;
   analytics.investments.month += monthInvestments;
   analytics.investments.quarter += quarterInvestments;
   analytics.investments.annual += annualInvestments;
 
-  analytics.previousEarnings.month += prevMonthEarnings;
+  analytics.previousIncome.month += prevMonthIncome;
   analytics.previousExpenses.month += prevMonthExpenses;
-  analytics.previousEarnings.quarter += prevQuarterEarnings;
+  analytics.previousIncome.quarter += prevQuarterIncome;
   analytics.previousExpenses.quarter += prevQuarterExpenses;
-  analytics.previousEarnings.annual += prevAnnualEarnings;
+  analytics.previousIncome.annual += prevAnnualIncome;
   analytics.previousExpenses.annual += prevAnnualExpenses;
   analytics.previousInvestments.month += prevMonthInvestments;
   analytics.previousInvestments.quarter += prevQuarterInvestments;
   analytics.previousInvestments.annual += prevAnnualInvestments;
 
   // Recalculate Cash Flows
-  analytics.cashFlow.total =
-    analytics.earnings.total - analytics.expenses.total;
-  analytics.cashFlow.month =
-    analytics.earnings.month - analytics.expenses.month;
+  analytics.cashFlow.total = analytics.income.total - analytics.expenses.total;
+  analytics.cashFlow.month = analytics.income.month - analytics.expenses.month;
   analytics.cashFlow.quarter =
-    analytics.earnings.quarter - analytics.expenses.quarter;
+    analytics.income.quarter - analytics.expenses.quarter;
   analytics.cashFlow.annual =
-    analytics.earnings.annual - analytics.expenses.annual;
+    analytics.income.annual - analytics.expenses.annual;
 
   analytics.previousCashFlow.month =
-    analytics.previousEarnings.month - analytics.previousExpenses.month;
+    analytics.previousIncome.month - analytics.previousExpenses.month;
   analytics.previousCashFlow.quarter =
-    analytics.previousEarnings.quarter - analytics.previousExpenses.quarter;
+    analytics.previousIncome.quarter - analytics.previousExpenses.quarter;
   analytics.previousCashFlow.annual =
-    analytics.previousEarnings.annual - analytics.previousExpenses.annual;
+    analytics.previousIncome.annual - analytics.previousExpenses.annual;
 
   // Recalculate Changes
-  analytics.earningsChange.month = calcChange(
-    analytics.earnings.month,
-    analytics.previousEarnings.month
+  analytics.incomeChange.month = calcChange(
+    analytics.income.month,
+    analytics.previousIncome.month
   );
-  analytics.earningsChange.quarter = calcChange(
-    analytics.earnings.quarter,
-    analytics.previousEarnings.quarter
+  analytics.incomeChange.quarter = calcChange(
+    analytics.income.quarter,
+    analytics.previousIncome.quarter
   );
-  analytics.earningsChange.annual = calcChange(
-    analytics.earnings.annual,
-    analytics.previousEarnings.annual
+  analytics.incomeChange.annual = calcChange(
+    analytics.income.annual,
+    analytics.previousIncome.annual
   );
 
   analytics.expensesChange.month = calcChange(

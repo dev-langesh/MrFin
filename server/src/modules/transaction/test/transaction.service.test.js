@@ -31,7 +31,7 @@ describe("Transaction Service", () => {
 
       expect(Transaction.create).toHaveBeenCalledWith(mockTxnData);
       expect(analyticsService.updateAnalyticsOnAdd).toHaveBeenCalledWith(
-        { earnings: 100 },
+        { income: 100 },
         "user123",
         mockTxnData.txnDate
       );
@@ -112,8 +112,8 @@ describe("Transaction Service", () => {
       expect(oldTxn.save).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
         expect.objectContaining({
-          oldEarnings: 100,
-          newEarnings: 200,
+          oldIncome: 100,
+          newIncome: 200,
         }),
         "user123"
       );
@@ -138,8 +138,8 @@ describe("Transaction Service", () => {
 
       expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
         expect.objectContaining({
-          oldEarnings: 100,
-          newEarnings: 0,
+          oldIncome: 100,
+          newIncome: 0,
           oldExpenses: 0,
           newExpenses: 100,
         }),
@@ -158,7 +158,7 @@ describe("Transaction Service", () => {
 
       expect(txn.deleteOne).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsOnDelete).toHaveBeenCalledWith(
-        { earnings: 100 },
+        { income: 100 },
         "user123",
         mockTxnData.txnDate
       );

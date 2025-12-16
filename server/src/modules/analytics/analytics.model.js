@@ -8,19 +8,19 @@ const analyticsSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    // Earnings
-    earnings: {
+    // Income
+    income: {
       month: { type: Number, default: 0 },
       quarter: { type: Number, default: 0 },
       annual: { type: Number, default: 0 },
       total: { type: Number, default: 0 },
     },
-    previousEarnings: {
+    previousIncome: {
       month: { type: Number, default: 0 },
       quarter: { type: Number, default: 0 },
       annual: { type: Number, default: 0 },
     },
-    earningsChange: {
+    incomeChange: {
       month: { type: Number, default: 0 },
       quarter: { type: Number, default: 0 },
       annual: { type: Number, default: 0 },
@@ -44,7 +44,7 @@ const analyticsSchema = new mongoose.Schema(
       annual: { type: Number, default: 0 },
     },
 
-    // Cash flow = earnings - expenses
+    // Cash flow = income - expenses
     cashFlow: {
       month: { type: Number, default: 0 },
       quarter: { type: Number, default: 0 },

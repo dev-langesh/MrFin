@@ -115,11 +115,10 @@ export function AreaChart({ data, loading, direction, dataKey, title }) {
               />
               <Area
                 dataKey="amount"
-                type="natural"
+                type="monotone"
                 fill={`url(#fill${dataKey})`}
                 stroke={`var(--chart-${direction})`}
                 stackId="a"
-                label="Revenue"
               />
             </ReAreaChart>
           </ChartContainer>

@@ -12,7 +12,6 @@ import {
   selectRules,
   selectTransactionSettings,
   saveSettings,
-  selectErrorIndices,
   incrementValidationAttempt,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useState, useCallback } from "react";
@@ -29,7 +28,6 @@ export default function ChangeStep() {
   const mappedFields = useSelector(selectMappedFields);
   const rules = useSelector(selectRules);
   const transactionSettings = useSelector(selectTransactionSettings);
-  const errorIndices = useSelector(selectErrorIndices);
   const dispatch = useDispatch();
   const router = useRouter();
   const lastStep = 4;

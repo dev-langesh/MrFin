@@ -22,8 +22,7 @@ import {
 } from "date-fns";
 
 import { MultiSelect } from "@/components/ui/MultiSelect";
-import { toast } from "sonner";
-import { X, Check } from "lucide-react";
+import { TXN_TYPES } from "../config";
 
 // helpers
 function toUtcMidnight(date) {
@@ -124,7 +123,6 @@ function TransactionFilters({
   };
 
   const categoryOptions = categories.map((c) => ({ label: c, value: c }));
-  const txnTypeOptions = txnTypes.map((t) => ({ label: t, value: t }));
 
   return (
     <div className="space-y-4 p-4 min-w-[320px]">
@@ -173,13 +171,22 @@ function TransactionFilters({
         {/* Transaction Type MultiSelect */}
         <div className="space-y-2">
           <Label>Transaction Type</Label>
-          <MultiSelect
-            options={txnTypeOptions}
-            selected={localFilters.txnType || []}
-            onChange={(val) => handleSelectChange("txnType", val)}
-            placeholder="All Types"
-            variant="coloured"
-          />
+
+          <Select
+            onValueChange={(val) => handleSelectChange("txnType", val)}
+            value={localFilters.txnType}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Type" />
+            </SelectTrigger>
+            <SelectContent>
+              {TXN_TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Category MultiSelect */}

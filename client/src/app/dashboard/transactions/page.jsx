@@ -1,49 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
-import { settingsService } from "@/services/settings.service";
-import { toast } from "sonner";
 
 import TransactionTable from "@/components/dashboard/transaction/TransactionTable";
 
 export default function TransactionPage() {
   const router = useRouter();
-  const [filters, setFilters] = useState({
-    dateRange: "all",
-    category: "all",
-    sort: "desc",
-    limit: 10,
-    page: 1,
-  });
-
-  const [settings, setSettings] = useState({
-    transactionSettings: {
-      txnTypes: [],
-      categories: [],
-    },
-    importTransactionSettings: {
-      mapFields: {
-        dateFormat: "yyyy-MM-dd",
-      },
-    },
-  });
-
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        const data = await settingsService.fetchSettings();
-        if (data) {
-          setSettings(data);
-        }
-      } catch (error) {
-        toast.error("Failed to load settings");
-      }
-    }
-    loadSettings();
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -61,11 +25,7 @@ export default function TransactionPage() {
       </div>
 
       {/* Data Table */}
-      <TransactionTable
-        filters={filters}
-        setFilters={setFilters}
-        settings={settings}
-      />
+      <TransactionTable />
     </div>
   );
 }

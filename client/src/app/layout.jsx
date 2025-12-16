@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "DIM",
-  description: "Deploy your application faster with DIM",
+  title: "FMAN",
+  description: "Financial Management Application",
 };
 
 export default function RootLayout({ children }) {

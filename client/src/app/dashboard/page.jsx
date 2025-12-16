@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/Skeleton";
 import DashboardSummary from "@/components/dashboard/dashboard/DashboardSummary";
 import { AreaChart } from "@/components/dashboard/dashboard/AreaChart";
-import { PieChartComponent } from "@/components/dashboard/dashboard/PieChartComponent";
+import CategoryDistribution from "@/components/dashboard/dashboard/CategoryDistribution";
 import { transactionService } from "@/services/transactions.service";
 import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 import {
@@ -219,9 +219,10 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <PieChartComponent
+            <CategoryDistribution
               data={revenueDistribution}
               title="Revenue Sources"
+              variant="revenue"
             />
           )}
         </div>
@@ -244,9 +245,10 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <PieChartComponent
+            <CategoryDistribution
               data={expenseDistribution}
               title="Expense Categories"
+              variant="expense"
             />
           )}
         </div>
@@ -269,9 +271,10 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[300px] w-full rounded-sm" />
           ) : (
-            <PieChartComponent
+            <CategoryDistribution
               data={investmentDistribution}
               title="Investment Portfolio"
+              variant="investment"
             />
           )}
         </div>

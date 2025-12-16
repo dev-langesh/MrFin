@@ -27,8 +27,15 @@ import {
 import { ExportTransactionDialog } from "./ExportTransactionDialog";
 import { exportData } from "@/utils/exportUtils";
 import TransactionFilters from "./TransactionFilters";
+import { settingsService } from "@/services/settings.service";
 
-function TransactionTable({ setFilters, filters, settings }) {
+function TransactionTable() {
+  const [filters, setFilters] = useState({
+    dateRange: "all",
+    sort: "desc",
+    limit: 10,
+    page: 1,
+  });
   const [data, setData] = useState([]);
   const [totalData, setTotalData] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +45,21 @@ function TransactionTable({ setFilters, filters, settings }) {
   const [editingEntry, setEditingEntry] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [settings, setSettings] = useState({});
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await settingsService.fetchSettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        toast.error("Failed to load settings");
+      }
+    }
+    loadSettings();
+  }, []);
 
   async function fetchData() {
     setIsLoading(true);
@@ -325,6 +347,7 @@ function TransactionTable({ setFilters, filters, settings }) {
                     setTotalData={setTotalData}
                     close={() => setIsAddDialogOpen(false)}
                     settings={settings}
+                    onSettingsUpdate={setSettings}
                   />
                 </DialogContent>
               </Dialog>
@@ -354,6 +377,7 @@ function TransactionTable({ setFilters, filters, settings }) {
             setData={setData}
             close={() => setIsEditDialogOpen(false)}
             settings={settings}
+            onSettingsUpdate={setSettings}
           />
         </DialogContent>
       </Dialog>

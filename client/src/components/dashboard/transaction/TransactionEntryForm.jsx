@@ -21,6 +21,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { transactionService } from "@/services/transactions.service";
+import { settingsService } from "@/services/settings.service";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,12 +43,12 @@ function TransactionEntryForm({
   filters,
   setTotalData,
   settings,
+  onSettingsUpdate,
 }) {
   const {
     control,
     handleSubmit,
     watch,
-    setValue,
     register,
     formState: { errors, isSubmitting },
   } = useForm({
@@ -89,6 +90,28 @@ function TransactionEntryForm({
         ...payload,
         txnDate: payload.txnDate.toISOString(),
       };
+
+      // Check and save new category if it doesn't exist
+      const currentCategories = settings?.transactionSettings?.categories || [];
+      const newCategory = data.category.trim();
+
+      if (
+        newCategory &&
+        !currentCategories.some(
+          (c) => c.toLowerCase() === newCategory.toLowerCase()
+        )
+      ) {
+        const updatedSettings = {
+          transactionSettings: {
+            categories: [...currentCategories, newCategory],
+          },
+        };
+
+        const res = await settingsService.saveSettings(updatedSettings);
+        if (onSettingsUpdate) {
+          onSettingsUpdate(res);
+        }
+      }
 
       if (editingEntry) {
         await transactionService.editTransaction(editingEntry._id, payload);

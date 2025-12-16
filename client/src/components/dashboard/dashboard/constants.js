@@ -1,5 +1,5 @@
 export const PI_CHART_COLOR_SETS = {
-  revenue: [
+  income: [
     "#064e3b",
     "#065f46",
     "#047857",

@@ -277,7 +277,7 @@ describe("Analytics Service", () => {
       const txns = [
         {
           amount: 100,
-          txnType: "revenue",
+          txnType: "income",
           txnDate: new Date(), // Current
         },
         {
@@ -292,7 +292,7 @@ describe("Analytics Service", () => {
         },
         {
           amount: 1000,
-          txnType: "revenue",
+          txnType: "income",
           txnDate: new Date(
             new Date().setFullYear(new Date().getFullYear() - 2)
           ), // Old

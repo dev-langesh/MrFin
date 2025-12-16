@@ -47,13 +47,13 @@ function Rules() {
             targetValue: "expense",
           },
           {
-            name: "Set Revenue Type",
+            name: "Set Income Type",
             source: mappedFields.credit,
             operation: "exists",
             operationValue: "",
             action: "update",
             target: "txnType",
-            targetValue: "revenue",
+            targetValue: "income",
           },
         ])
       );

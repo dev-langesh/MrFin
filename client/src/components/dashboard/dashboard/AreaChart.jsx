@@ -31,7 +31,7 @@ export function AreaChart({ data, loading, direction, dataKey, title }) {
 
   const chartConfig = {
     amount: {
-      label: dataKey === "revenue" ? "Revenue" : "Expenses",
+      label: dataKey === "income" ? "Income" : "Expenses",
     },
   };
 

@@ -15,7 +15,7 @@ describe("Transaction Service", () => {
   const mockTxnData = {
     userId: "user123",
     amount: 100,
-    txnType: "revenue",
+    txnType: "income",
     category: "Salary",
     txnDate: new Date(),
 
@@ -23,7 +23,7 @@ describe("Transaction Service", () => {
   };
 
   describe("createTransaction", () => {
-    it("should create transaction and update revenue analytics", async () => {
+    it("should create transaction and update income analytics", async () => {
       Transaction.create.mockResolvedValue({ ...mockTxnData, _id: "txn1" });
       analyticsService.updateAnalyticsOnAdd.mockResolvedValue();
 
@@ -102,7 +102,7 @@ describe("Transaction Service", () => {
         ...mockTxnData,
         _id: id,
         amount: 100,
-        txnType: "revenue",
+        txnType: "income",
         save: jest.fn().mockResolvedValue({ ...mockTxnData, amount: 200 }),
       };
       Transaction.findById.mockResolvedValue(oldTxn);
@@ -119,13 +119,13 @@ describe("Transaction Service", () => {
       );
     });
 
-    it("should handle type change revenue -> expense", async () => {
+    it("should handle type change income -> expense", async () => {
       const id = new mongoose.Types.ObjectId();
       const oldTxn = {
         ...mockTxnData,
         _id: id,
         amount: 100,
-        txnType: "revenue",
+        txnType: "income",
         save: jest.fn().mockResolvedValue({
           ...mockTxnData,
           amount: 100,
@@ -182,14 +182,14 @@ describe("Transaction Service", () => {
       });
 
       const result = await transactionService.getTransactions(
-        { userId: "123", txnType: "revenue" },
+        { userId: "123", txnType: "income" },
         { page: 1 }
       );
 
       expect(Transaction.find).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: "123",
-          txnType: "revenue",
+          txnType: "income",
         })
       );
       expect(result.transactions).toHaveLength(1);

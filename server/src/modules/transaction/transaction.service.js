@@ -13,7 +13,7 @@ function validateId(id) {
 async function createTransaction(data) {
   try {
     const txn = await Transaction.create(data);
-    if (txn.txnType === "revenue") {
+    if (txn.txnType === "income") {
       await analyticsService.updateAnalyticsOnAdd(
         { earnings: txn.amount },
         txn.userId,
@@ -236,11 +236,11 @@ async function updateTransaction(id, data) {
       newDate: savedTxn.txnDate,
     };
 
-    if (oldType === "revenue") updateParams.oldEarnings = oldAmount;
+    if (oldType === "income") updateParams.oldEarnings = oldAmount;
     else if (oldType === "expense") updateParams.oldExpenses = oldAmount;
     else if (oldType === "investment") updateParams.oldInvestments = oldAmount;
 
-    if (savedTxn.txnType === "revenue")
+    if (savedTxn.txnType === "income")
       updateParams.newEarnings = savedTxn.amount;
     else if (savedTxn.txnType === "expense")
       updateParams.newExpenses = savedTxn.amount;
@@ -262,7 +262,7 @@ async function deleteTransaction(id) {
 
   try {
     await txn.deleteOne();
-    if (txn.txnType === "revenue") {
+    if (txn.txnType === "income") {
       await analyticsService.updateAnalyticsOnDelete(
         { earnings: txn.amount },
         txn.userId,

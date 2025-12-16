@@ -46,17 +46,17 @@ function toUtcEndOfDay(date) {
 
 export default function TransactionPage() {
   const [summaryPeriod, setSummaryPeriod] = useState("quarter");
-  const [revenue, setRevenue] = useState([]);
+  const [income, setIncome] = useState([]);
   const [expense, setExpense] = useState([]);
   const [investment, setInvestment] = useState([]);
-  const [revenueDistribution, setRevenueDistribution] = useState([]);
+  const [incomeDistribution, setIncomeDistribution] = useState([]);
   const [expenseDistribution, setExpenseDistribution] = useState([]);
   const [investmentDistribution, setInvestmentDistribution] = useState([]);
   const [timeRange, setTimeRange] = useState({
     startDate: null,
     endDate: null,
   });
-  const [revenueDir, setRevenueDir] = useState("up");
+  const [incomeDir, setIncomeDir] = useState("up");
   const [expenseDir, setExpenseDir] = useState("up");
   const [investmentDir, setInvestmentDir] = useState("up");
   const [loading, setLoading] = useState(true);
@@ -72,7 +72,7 @@ export default function TransactionPage() {
       const req = Promise.all([
         transactionService.getTransactionsToVisualize({
           ...payload,
-          txnType: "revenue",
+          txnType: "income",
         }),
         transactionService.getTransactionsToVisualize({
           ...payload,
@@ -84,7 +84,7 @@ export default function TransactionPage() {
         }),
         transactionService.getTransactionsDistribution({
           ...payload,
-          txnType: "revenue",
+          txnType: "income",
         }),
         transactionService.getTransactionsDistribution({
           ...payload,
@@ -97,10 +97,10 @@ export default function TransactionPage() {
       ]);
 
       const res = await req;
-      setRevenue(res[0].transactions || []);
+      setIncome(res[0].transactions || []);
       setExpense(res[1].transactions || []);
       setInvestment(res[2].transactions || []);
-      setRevenueDistribution(res[3].distribution || []);
+      setIncomeDistribution(res[3].distribution || []);
       setExpenseDistribution(res[4].distribution || []);
       setInvestmentDistribution(res[5].distribution || []);
 
@@ -113,11 +113,11 @@ export default function TransactionPage() {
         }
       };
 
-      checkDir(res[0].transactions, setRevenueDir);
+      checkDir(res[0].transactions, setIncomeDir);
       checkDir(res[1].transactions, setExpenseDir);
       checkDir(res[2].transactions, setInvestmentDir);
     } catch (e) {
-      toast.error("Error fetching Revenue Data");
+      toast.error("Error fetching Income Data");
     } finally {
       setLoading(false);
     }
@@ -208,10 +208,10 @@ export default function TransactionPage() {
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
             <AreaChart
-              data={revenue}
-              direction={revenueDir}
-              dataKey="revenue"
-              title="Revenue Over Time"
+              data={income}
+              direction={incomeDir}
+              dataKey="income"
+              title="Income Over Time"
             />
           )}
         </div>
@@ -220,9 +220,9 @@ export default function TransactionPage() {
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
             <CategoryDistribution
-              data={revenueDistribution}
-              title="Revenue Sources"
-              variant="revenue"
+              data={incomeDistribution}
+              title="Income Sources"
+              variant="income"
             />
           )}
         </div>

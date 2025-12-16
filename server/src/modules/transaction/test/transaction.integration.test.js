@@ -53,10 +53,10 @@ describe("Transaction Integration", () => {
   });
 
   describe("POST /api/transactions", () => {
-    it("should create a revenue transaction and update analytics", async () => {
+    it("should create a income transaction and update analytics", async () => {
       const payload = {
         amount: 1000,
-        txnType: "revenue",
+        txnType: "income",
         category: "Salary",
 
         txnDate: new Date().toISOString(),
@@ -67,7 +67,7 @@ describe("Transaction Integration", () => {
 
       expect(res.status).toBe(201);
       expect(res.body.amount).toBe(1000);
-      expect(res.body.txnType).toBe("revenue");
+      expect(res.body.txnType).toBe("income");
 
       // Verify DB Side effect
       const txn = await Transaction.findOne({ description: "Monthly Salary" });
@@ -131,7 +131,7 @@ describe("Transaction Integration", () => {
         {
           userId: "507f1f77bcf86cd799439011",
           amount: 100,
-          txnType: "revenue",
+          txnType: "income",
           category: "Salary",
           txnDate: new Date("2023-01-01"),
         },
@@ -145,14 +145,14 @@ describe("Transaction Integration", () => {
         {
           userId: "507f1f77bcf86cd799439011",
           amount: 200,
-          txnType: "revenue",
+          txnType: "income",
           category: "Bonus",
           txnDate: new Date("2023-01-03"),
         },
         {
           userId: "507f1f77bcf86cd799439099",
           amount: 999,
-          txnType: "revenue",
+          txnType: "income",
           category: "Salary",
           txnDate: new Date("2023-01-01"),
         },
@@ -197,7 +197,7 @@ describe("Transaction Integration", () => {
       const txn = await Transaction.create({
         userId: "507f1f77bcf86cd799439011",
         amount: 100,
-        txnType: "revenue",
+        txnType: "income",
         category: "Salary",
         txnDate: new Date(),
       });
@@ -229,7 +229,7 @@ describe("Transaction Integration", () => {
       const payload = [
         {
           amount: 100,
-          txnType: "revenue",
+          txnType: "income",
           category: "A",
           txnDate: new Date().toISOString(),
         },
@@ -260,7 +260,7 @@ describe("Transaction Integration", () => {
       const txn = await Transaction.create({
         userId: "507f1f77bcf86cd799439011",
         amount: 100,
-        txnType: "revenue",
+        txnType: "income",
         category: "Salary",
         txnDate: new Date(),
       });
@@ -291,7 +291,7 @@ describe("Transaction Integration", () => {
       // Use API to create so logic is consistent
       const createRes = await request(app).post("/api/transactions").send({
         amount: 100,
-        txnType: "revenue",
+        txnType: "income",
         category: "Salary",
 
         txnDate: new Date().toISOString(),
@@ -313,10 +313,10 @@ describe("Transaction Integration", () => {
   });
   describe("Complex Scenarios", () => {
     it("Scenario 1: Full Transaction Lifecycle (Create -> Update Amount -> Change Type -> Delete)", async () => {
-      // 1. Create Revenue
+      // 1. Create Income
       const createRes = await request(app).post("/api/transactions").send({
         amount: 1000,
-        txnType: "revenue",
+        txnType: "income",
         category: "Salary",
 
         txnDate: new Date().toISOString(),
@@ -340,7 +340,7 @@ describe("Transaction Integration", () => {
       });
       expect(analytics.earnings.total).toBe(2000);
 
-      // 3. Change Type (Revenue -> Expense)
+      // 3. Change Type (Income -> Expense)
       await request(app).put(`/api/transactions/${txnId}`).send({
         txnType: "expense",
         category: "Rent",
@@ -383,7 +383,7 @@ describe("Transaction Integration", () => {
       // 1. Create in Last Month
       const createRes = await request(app).post("/api/transactions").send({
         amount: 500,
-        txnType: "revenue",
+        txnType: "income",
         category: "Old Salary",
 
         txnDate: lastMonthDate.toISOString(),
@@ -424,7 +424,7 @@ describe("Transaction Integration", () => {
       const payload = [
         {
           amount: 1000,
-          txnType: "revenue",
+          txnType: "income",
           category: "Salary",
 
           txnDate: new Date().toISOString(),
@@ -460,7 +460,7 @@ describe("Transaction Integration", () => {
       expect(analytics.investments.total).toBe(200);
       expect(analytics.cashFlow.total).toBe(500); // 1000 - 500
 
-      // 2. Complex Update on Revenue Transaction
+      // 2. Complex Update on Income Transaction
       // A. Change Amount (1000 -> 2000)
       await request(app).put(`/api/transactions/${revId}`).send({
         amount: 2000,
@@ -490,7 +490,7 @@ describe("Transaction Integration", () => {
       // Previous Month Buckets SHOULD have the 2000
       expect(analytics.previousEarnings.month).toBe(2000); // Assuming clean state initially
 
-      // C. Change Type (Revenue -> Expense) WHILE in Last Month
+      // C. Change Type (Income -> Expense) WHILE in Last Month
       await request(app).put(`/api/transactions/${revId}`).send({
         txnType: "expense",
       });
@@ -547,10 +547,10 @@ describe("Transaction Integration", () => {
     });
 
     it("Scenario 4: Zero-Sum & Calculations", async () => {
-      // 1. Add Revenue 1000
+      // 1. Add Income 1000
       await request(app).post("/api/transactions").send({
         amount: 1000,
-        txnType: "revenue",
+        txnType: "income",
         category: "Salary",
         txnDate: new Date().toISOString(),
       });

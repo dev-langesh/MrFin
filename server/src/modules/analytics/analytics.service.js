@@ -85,7 +85,7 @@ function rolloverPeriods(analytics, date) {
 }
 
 /**
- * Incrementally update analytics when revenue or expense is added
+ * Incrementally update analytics when income or expense is added
  */
 async function updateAnalyticsOnAdd(
   { earnings = 0, expenses = 0, investments = 0 },
@@ -348,7 +348,7 @@ async function updateAnalyticsBatch(transactions, userId) {
     const quarter = Math.floor(month / 3);
     const year = date.getFullYear();
 
-    if (txn.txnType === "revenue") {
+    if (txn.txnType === "income") {
       totalEarnings += amount;
 
       if (year === currentYear) {

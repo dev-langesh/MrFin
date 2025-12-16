@@ -47,7 +47,7 @@ const initialState = {
     },
     rules: [],
     transactionSettings: {
-      txnTypes: ["expense", "revenue"],
+      txnTypes: ["expense", "income"],
       categories: [],
     },
     isLoading: false,

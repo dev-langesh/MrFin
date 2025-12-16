@@ -11,7 +11,7 @@ export function PieChart({
   title,
   dataKey = "value",
   nameKey = "name",
-  variant = "investment", // revenue | expense | investment
+  variant = "investment", // income | expense | investment
 }) {
   const [activeName, setActiveName] = useState(null);
 

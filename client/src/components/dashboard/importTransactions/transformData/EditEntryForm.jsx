@@ -82,7 +82,7 @@ function EditEntryForm({ initialData, onSubmit, onCancel }) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="expense">Expense</SelectItem>
-                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="income">Income</SelectItem>
                   </SelectContent>
                 </Select>
               )}

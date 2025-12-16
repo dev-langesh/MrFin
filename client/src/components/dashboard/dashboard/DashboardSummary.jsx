@@ -23,7 +23,7 @@ function DashboardSummary({ period }) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {[1, 2, 3, 4].map((i) => (
           <Skeleton key={i} className="h-[120px] w-full rounded-sm" />
         ))}
@@ -32,7 +32,7 @@ function DashboardSummary({ period }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
       <SummaryCard
         title="Earnings"
         value={data.earnings?.[period] || 0}

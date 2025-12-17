@@ -7,6 +7,7 @@ const { authRouter } = require("../auth.routes");
 const { errorHandler } = require("../../../middleware/errorHandler.middleware");
 const { User } = require("../../user/user.model");
 const { Otp } = require("../../otp/otp.model");
+const { Settings } = require("../../settings/settings.model");
 const { getGoogleUser } = require("../utils/googleAuth");
 
 jest.mock("../utils/googleAuth", () => ({
@@ -48,6 +49,7 @@ describe("Auth Integration", () => {
   beforeEach(async () => {
     await User.deleteMany({});
     await Otp.deleteMany({});
+    await Settings.deleteMany({});
 
     getGoogleUser.mockResolvedValue({
       googleId: "google123",
@@ -63,13 +65,20 @@ describe("Auth Integration", () => {
         name: "Test User",
         email: "test@example.com",
         password: "Password123!",
+        country: "IN",
+        currency: "INR",
       });
 
       expect(res.status).toBe(201);
 
       const user = await User.findOne({ email: "test@example.com" });
       expect(user).toBeTruthy();
-      expect(user.verified).toBe(false); // Should be false initially
+      expect(user.country).toBe("IN");
+      expect(user.verified).toBe(false);
+
+      const settings = await Settings.findOne({ userId: user._id });
+      expect(settings).toBeTruthy();
+      expect(settings.general.currency).toBe("INR");
     });
 
     it("should return 400 for invalid input", async () => {
@@ -87,12 +96,14 @@ describe("Auth Integration", () => {
         email: "test@example.com",
         password: "Password123!",
         verified: true,
+        country: "US",
       });
 
       const res = await request(app).post("/api/auth/register").send({
         name: "Test User",
         email: "test@example.com",
         password: "Password123!",
+        country: "US",
       });
 
       expect(res.status).toBe(409);
@@ -112,6 +123,8 @@ describe("Auth Integration", () => {
         name: "Test User",
         email: "test@example.com",
         password: "Password123!",
+        country: "IN",
+        currency: "INR",
       });
 
       await User.updateOne({ email: "test@example.com" }, { verified: true });
@@ -154,6 +167,7 @@ describe("Auth Integration", () => {
         name: "Test User",
         email: "test@example.com",
         verified: true,
+        country: "IN",
       });
     });
 
@@ -177,6 +191,7 @@ describe("Auth Integration", () => {
         name: "Test User",
         email: "test@example.com",
         verified: false,
+        country: "IN",
       });
       // Create OTP
       await Otp.create({
@@ -215,6 +230,8 @@ describe("Auth Integration", () => {
         name: "Test User",
         email: "test@example.com",
         password: "Password123!",
+        country: "IN",
+        currency: "INR",
       });
       await User.updateOne({ email: "test@example.com" }, { verified: true });
 
@@ -265,6 +282,8 @@ describe("Auth Integration", () => {
         name: "Test User",
         email: "test@example.com",
         password: "Password123!",
+        country: "IN",
+        currency: "INR",
       });
       await User.updateOne({ email: "test@example.com" }, { verified: true });
     });
@@ -330,14 +349,81 @@ describe("Auth Integration", () => {
   });
 
   describe("POST /api/auth/login/google", () => {
-    it("should login with google mock", async () => {
+    it("should return isNew for new user", async () => {
       const res = await request(app).post("/api/auth/login/google").send({
         code: "valid_google_code",
       });
 
       expect(res.status).toBe(200);
-      expect(res.body.user).toBeDefined();
+      expect(res.body.isNew).toBe(true);
+      expect(res.body.registrationToken).toBeDefined();
+      expect(res.body.user).toBeDefined(); // Basic info
       expect(res.body.user.email).toBe("google@example.com");
+    });
+
+    it("should login existing user directly", async () => {
+      // Create user first
+      await User.create({
+        name: "Google User",
+        email: "google@example.com",
+        provider: "google",
+        verified: true,
+        country: "US",
+        googleId: "google123",
+      });
+
+      const res = await request(app).post("/api/auth/login/google").send({
+        code: "valid_google_code",
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.isNew).toBeFalsy();
+      expect(res.headers["set-cookie"]).toBeDefined();
+      expect(res.body.user.email).toBe("google@example.com");
+    });
+  });
+
+  describe("POST /api/auth/login/google/complete", () => {
+    it("should complete registration for new user", async () => {
+      // 1. Get registration token
+      const initRes = await request(app).post("/api/auth/login/google").send({
+        code: "valid_google_code",
+      });
+      const { registrationToken } = initRes.body;
+
+      // 2. Complete registration
+      const res = await request(app)
+        .post("/api/auth/login/google/complete")
+        .send({
+          registrationToken,
+          country: "IN",
+          currency: "INR",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.headers["set-cookie"]).toBeDefined();
+      expect(res.body.user).toBeDefined();
+      expect(res.body.user.country).toBe("IN");
+
+      // Verify DB
+      const user = await User.findOne({ email: "google@example.com" });
+      expect(user).toBeTruthy();
+      expect(user.country).toBe("IN");
+
+      const settings = await Settings.findOne({ userId: user._id });
+      expect(settings).toBeTruthy();
+      expect(settings.general.currency).toBe("INR");
+    });
+
+    it("should fail validation if missing fields", async () => {
+      const res = await request(app)
+        .post("/api/auth/login/google/complete")
+        .send({
+          registrationToken: "some_token",
+          // missing country/currency
+        });
+
+      expect(res.status).toBe(400);
     });
   });
 
@@ -348,6 +434,7 @@ describe("Auth Integration", () => {
         email: "test@example.com",
         password: "OldPassword123",
         verified: true,
+        country: "IN",
       });
 
       // Seed OTP

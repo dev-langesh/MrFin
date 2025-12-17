@@ -27,6 +27,8 @@ const registerSchema = z.object({
       .regex(/[^A-Za-z0-9]/, {
         message: "Password must contain at least one special character",
       }),
+    country: z.string({ required_error: "Country is required" }),
+    currency: z.string().optional(),
   }),
 });
 
@@ -45,6 +47,16 @@ const loginSchema = z.object({
 const googleLoginSchema = z.object({
   body: z.object({
     code: z.string({ required_error: "Authorization code is required" }),
+  }),
+});
+
+const googleCompleteSchema = z.object({
+  body: z.object({
+    registrationToken: z.string({
+      required_error: "Registration token is required",
+    }),
+    country: z.string({ required_error: "Country is required" }),
+    currency: z.string({ required_error: "Currency is required" }),
   }),
 });
 
@@ -105,6 +117,7 @@ const authInputSchema = {
   registerSchema,
   loginSchema,
   googleLoginSchema,
+  googleCompleteSchema,
   sendOtpSchema,
   verifyOtpSchema,
   verifyOtpToResetPasswordSchema,

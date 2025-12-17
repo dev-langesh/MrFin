@@ -24,7 +24,7 @@ router.post(
 );
 router.post(
   "/login/google/complete",
-  // validateInput(authInputSchema.googleCompleteSchema), // TODO: Add schema if strict validation needed
+  validateInput(authInputSchema.googleCompleteSchema),
   authController.completeGoogleLogin
 );
 router.post("/rotate-tokens", authController.rotateTokens);

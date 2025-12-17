@@ -22,7 +22,7 @@ const settingsSchema = new mongoose.Schema(
         type: [
           {
             txnType: { type: String, required: true, enum: config.txnTypes },
-            category: { type: String, required: true, lowercase: true },
+            category: { type: String, required: true, toLowerCase: true },
           },
         ],
         default: config.defaultCategories,

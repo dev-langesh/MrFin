@@ -733,7 +733,7 @@ async function updateAnalyticsBatch(transactions, userId) {
  * Get Time Series Data
  * Returns Monthly data if range > 1 year, else Daily
  */
-async function getTimeSeries(userId, startDate, endDate) {
+async function getTimeSeries(userId, startDate, endDate, allTime = false) {
   // Default to last 30 days if not provided
   const end = endDate ? new Date(endDate) : new Date();
   const start = startDate
@@ -746,8 +746,9 @@ async function getTimeSeries(userId, startDate, endDate) {
     throw new Error("Invalid date range provided");
   }
 
-  if (end - start > oneYear) {
-    return await MonthlyAnalytics.aggregate([
+  // Use Monthly if range > 1 year OR explicit allTime request
+  if (end - start > oneYear || allTime) {
+    const pipeline = [
       {
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
@@ -760,19 +761,28 @@ async function getTimeSeries(userId, startDate, endDate) {
           },
         },
       },
-      {
+    ];
+
+    // Optimize: Skip date filter if allTime is requested
+    if (!allTime) {
+      pipeline.push({
         $match: {
           date: { $gte: start, $lte: end },
         },
-      },
-      { $sort: { date: 1 } },
-    ]);
+      });
+    }
+
+    pipeline.push({ $sort: { date: 1 } });
+
+    return await MonthlyAnalytics.aggregate(pipeline);
   } else {
     // Return Daily Series
-    return await DailyAnalytics.find({
-      userId,
-      date: { $gte: start, $lte: end },
-    }).sort({ date: 1 });
+    const query = { userId };
+
+    if (!allTime) {
+      query.date = { $gte: start, $lte: end };
+    }
+    return await DailyAnalytics.find(query).sort({ date: 1 });
   }
 }
 
@@ -783,7 +793,8 @@ async function getCategoryDistribution(
   userId,
   startDate,
   endDate,
-  type = "expense"
+  type = "expense",
+  allTime = false
 ) {
   // Default to last 30 days if not provided
   const end = endDate ? new Date(endDate) : new Date();
@@ -803,18 +814,47 @@ async function getCategoryDistribution(
   if (type === "income") categoryField = "incomeCategories";
   else if (type === "investment") categoryField = "investmentCategories";
 
-  const pipeline = [
-    {
+  const oneYear = 365 * 24 * 60 * 60 * 1000;
+  const isLongRange = end - start > oneYear;
+
+  const pipeline = [];
+
+  // Match Stage
+  pipeline.push({
+    $match: {
+      userId: new mongoose.Types.ObjectId(userId),
+    },
+  });
+
+  if (isLongRange || allTime) {
+    // For Monthly: Add date, then match
+    pipeline.push({
+      $addFields: {
+        date: {
+          $dateFromParts: { year: "$year", month: "$month", day: 1 },
+        },
+      },
+    });
+  }
+
+  // Filter by Date (Optimize: Skip if All Time)
+  if (!allTime) {
+    pipeline.push({
       $match: {
-        userId: new mongoose.Types.ObjectId(userId),
         date: { $gte: start, $lte: end },
       },
+    });
+  }
+
+  // Project Categories
+  pipeline.push({
+    $project: {
+      byCategory: { $objectToArray: `$${categoryField}` },
     },
-    {
-      $project: {
-        byCategory: { $objectToArray: `$${categoryField}` },
-      },
-    },
+  });
+
+  // Unwind & Group
+  pipeline.push(
     { $unwind: "$byCategory" },
     {
       $group: {
@@ -828,10 +868,14 @@ async function getCategoryDistribution(
         value: 1,
         _id: 0,
       },
-    },
-  ];
+    }
+  );
 
-  return await DailyAnalytics.aggregate(pipeline);
+  if (isLongRange || allTime) {
+    return await MonthlyAnalytics.aggregate(pipeline);
+  } else {
+    return await DailyAnalytics.aggregate(pipeline);
+  }
 }
 
 const analyticsService = {

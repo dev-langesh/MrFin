@@ -14,7 +14,8 @@ async function getTimeSeries(req, res) {
   const result = await analyticsService.getTimeSeries(
     req.user.id,
     req.query.startDate,
-    req.query.endDate
+    req.query.endDate,
+    req.query.allTime === "true"
   );
   res.json(result);
 }
@@ -24,7 +25,8 @@ async function getCategoryDistribution(req, res) {
     req.user.id,
     req.query.startDate,
     req.query.endDate,
-    req.query.txnType
+    req.query.txnType,
+    req.query.allTime === "true"
   );
   res.json(result);
 }

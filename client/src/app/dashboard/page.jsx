@@ -160,16 +160,18 @@ export default function TransactionPage() {
         endDate = toUtcEndOfDay(endOfQuarter(now));
         break;
       case "total":
-        startDate = new Date(0); // Epoch start
+        // Logic handled by server via allTime flag, but we pass valid dates for UI fallback
+        startDate = new Date(0);
         endDate = toUtcEndOfDay(now);
-        break;
+        setTimeRange({ startDate, endDate, allTime: true });
+        return; // Early return as we set it above
       case "annual":
         startDate = toUtcMidnight(startOfYear(now));
         endDate = toUtcEndOfDay(endOfYear(now));
         break;
     }
 
-    setTimeRange({ startDate, endDate });
+    setTimeRange({ startDate, endDate, allTime: false });
   }, [summaryPeriod]);
 
   return (

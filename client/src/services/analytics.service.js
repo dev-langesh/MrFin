@@ -14,6 +14,7 @@ async function getTimeSeries(filters) {
     const params = {
       startDate: filters.startDate,
       endDate: filters.endDate,
+      allTime: filters.allTime,
     };
     const { data } = await analyticsApi.getTimeSeries({ params });
     return data;
@@ -30,6 +31,7 @@ async function getCategoryDistribution(filters) {
       startDate: filters.startDate,
       endDate: filters.endDate,
       txnType: filters.txnType,
+      allTime: filters.allTime,
     };
     const { data } = await analyticsApi.getCategoryDistribution({ params });
     return data;

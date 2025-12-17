@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { config } = require("../../config/constants");
 
 const settingsSchema = new mongoose.Schema(
   {
@@ -14,7 +15,15 @@ const settingsSchema = new mongoose.Schema(
       rules: { type: Array, default: [] },
     },
     transactionSettings: {
-      categories: { type: [String], default: [] },
+      categories: {
+        type: [
+          {
+            txnType: { type: String, required: true, enum: config.txnTypes },
+            category: { type: String, required: true },
+          },
+        ],
+        default: [],
+      },
     },
   },
   { timestamps: true }

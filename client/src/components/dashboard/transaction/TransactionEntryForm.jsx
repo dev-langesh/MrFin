@@ -95,15 +95,20 @@ function TransactionEntryForm({
       const currentCategories = settings?.transactionSettings?.categories || [];
       const newCategory = data.category.trim();
 
-      if (
-        newCategory &&
-        !currentCategories.some(
-          (c) => c.toLowerCase() === newCategory.toLowerCase()
-        )
-      ) {
+      // Find if this category exists for the specific txnType
+      const categoryExists = currentCategories.some(
+        (c) =>
+          c.category.toLowerCase() === newCategory.toLowerCase() &&
+          c.txnType === data.txnType // Strict type check
+      );
+
+      if (newCategory && !categoryExists) {
         const updatedSettings = {
           transactionSettings: {
-            categories: [...currentCategories, newCategory],
+            categories: [
+              ...currentCategories,
+              { txnType: data.txnType, category: newCategory },
+            ],
           },
         };
 
@@ -267,7 +272,11 @@ function TransactionEntryForm({
                 <AutoSelect
                   value={field.value}
                   onChange={field.onChange}
-                  options={settings?.transactionSettings?.categories || []}
+                  options={
+                    (settings?.transactionSettings?.categories || [])
+                      .filter((c) => c.txnType === txnType)
+                      .map((c) => c.category) || []
+                  }
                   placeholder="Enter category"
                 />
               )}

@@ -122,7 +122,16 @@ function TransactionFilters({
     onApply(cleared);
   };
 
-  const categoryOptions = categories.map((c) => ({ label: c, value: c }));
+  const categoryOptions = React.useMemo(() => {
+    let filtered = categories;
+
+    if (localFilters.txnType && localFilters.txnType !== "all") {
+      filtered = categories.filter((c) => c.txnType === localFilters.txnType);
+    }
+
+    const uniqueNames = [...new Set(filtered.map((c) => c.category))];
+    return uniqueNames.map((c) => ({ label: c, value: c }));
+  }, [categories, localFilters.txnType]);
 
   return (
     <div className="space-y-4 p-4 min-w-[320px]">

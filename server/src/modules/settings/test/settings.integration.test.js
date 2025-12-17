@@ -53,7 +53,9 @@ describe("Settings Integration", () => {
       // Pre-seed settings
       await Settings.create({
         userId: "507f1f77bcf86cd799439011",
-        transactionSettings: { categories: ["PreSeeded"] },
+        transactionSettings: {
+          categories: [{ txnType: "income", category: "PreSeeded" }],
+        },
       });
 
       const res = await request(app)
@@ -61,7 +63,11 @@ describe("Settings Integration", () => {
         .set("Cookie", ["accessToken=valid"]);
 
       expect(res.status).toBe(200);
-      expect(res.body.transactionSettings.categories).toContain("PreSeeded");
+      expect(res.body.transactionSettings.categories).toHaveLength(1);
+      expect(res.body.transactionSettings.categories[0]).toMatchObject({
+        txnType: "income",
+        category: "PreSeeded",
+      });
       expect(res.body.userId).toBe("507f1f77bcf86cd799439011");
     });
 
@@ -84,7 +90,12 @@ describe("Settings Integration", () => {
   describe("PUT /api/settings", () => {
     it("should update settings successfully", async () => {
       const updateData = {
-        transactionSettings: { categories: ["Food", "Travel"] },
+        transactionSettings: {
+          categories: [
+            { txnType: "expense", category: "Food" },
+            { txnType: "expense", category: "Travel" },
+          ],
+        },
         importTransactionSettings: {
           preProcess: { foo: "bar" },
         },
@@ -96,10 +107,13 @@ describe("Settings Integration", () => {
         .send(updateData);
 
       expect(res.status).toBe(200);
-      expect(res.body.transactionSettings.categories).toEqual([
-        "Food",
-        "Travel",
-      ]);
+      expect(res.body.transactionSettings.categories).toHaveLength(2);
+      expect(res.body.transactionSettings.categories).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ txnType: "expense", category: "Food" }),
+          expect.objectContaining({ txnType: "expense", category: "Travel" }),
+        ])
+      );
       expect(res.body.importTransactionSettings.preProcess).toEqual({
         foo: "bar",
       });
@@ -107,7 +121,9 @@ describe("Settings Integration", () => {
 
     it("should perform upsert if settings do not exist", async () => {
       const updateData = {
-        transactionSettings: { categories: ["New"] },
+        transactionSettings: {
+          categories: [{ txnType: "income", category: "New" }],
+        },
       };
 
       const res = await request(app)
@@ -117,7 +133,11 @@ describe("Settings Integration", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.userId).toBe("507f1f77bcf86cd799439011");
-      expect(res.body.transactionSettings.categories).toEqual(["New"]);
+      expect(res.body.transactionSettings.categories).toHaveLength(1);
+      expect(res.body.transactionSettings.categories[0]).toMatchObject({
+        txnType: "income",
+        category: "New",
+      });
     });
   });
 });

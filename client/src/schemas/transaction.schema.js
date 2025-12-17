@@ -6,9 +6,12 @@ export const transactionSchema = z.object({
     required_error: "Date is required",
     invalid_type_error: "Invalid date format",
   }),
-  txnType: z.enum(TXN_TYPES.map((type) => type.value), {
-    required_error: "Transaction Type is required",
-  }),
+  txnType: z.enum(
+    TXN_TYPES.map((type) => type.value),
+    {
+      errorMap: () => ({ message: "Transaction Type is required" }),
+    }
+  ),
   description: z
     .string()
     .max(100, "Description must be 100 characters or less")
@@ -28,7 +31,7 @@ export const transactionSchema = z.object({
   amount: z.coerce
     .number({ required_error: "Amount is required" })
     .refine((val) => val > 0, {
-      message: "Amount must be positive greater than 0",
+      message: "Amount must be greater than 0",
     }),
 });
 

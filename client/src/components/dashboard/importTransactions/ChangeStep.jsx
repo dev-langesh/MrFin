@@ -95,14 +95,27 @@ export default function ChangeStep() {
       }
 
       // 2. Save Settings
-      const uniqueTxnTypes = new Set([
-        ...transactionSettings.txnTypes,
-        ...state.transformedData.map((t) => t.txnType).filter(Boolean),
-      ]);
-      const uniqueCategories = new Set([
-        ...transactionSettings.categories,
-        ...state.transformedData.map((t) => t.category).filter(Boolean),
-      ]);
+      // Deduplicate Categories: Existing + New from Import
+      const existingCategories = transactionSettings.categories || [];
+      const newCategoryObjects = state.transformedData
+        .filter((t) => t.category && t.txnType) // Ensure valid
+        .map((t) => ({ txnType: t.txnType, category: t.category }));
+
+      const allCategories = [...existingCategories, ...newCategoryObjects];
+
+      // Use a Map to deduplicate based on "txnType|category" key
+      const uniqueCategoriesMap = new Map();
+      allCategories.forEach((item) => {
+        const key = `${item.txnType}|${item.category.toLowerCase()}`;
+        if (!uniqueCategoriesMap.has(key)) {
+          uniqueCategoriesMap.set(key, {
+            txnType: item.txnType,
+            category: item.category, // Keep original casing of first occurrence
+          });
+        }
+      });
+
+      const uniqueCategories = Array.from(uniqueCategoriesMap.values());
 
       const settingsToSave = {
         importTransactionSettings: {
@@ -111,8 +124,9 @@ export default function ChangeStep() {
           rules: rules,
         },
         transactionSettings: {
-          txnTypes: Array.from(uniqueTxnTypes),
-          categories: Array.from(uniqueCategories),
+          // txnTypes are generally static/global config, but if we track them in settings:
+          txnTypes: transactionSettings.txnTypes || [],
+          categories: uniqueCategories,
         },
       };
 

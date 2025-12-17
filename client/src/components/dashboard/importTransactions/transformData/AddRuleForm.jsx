@@ -258,7 +258,13 @@ function AddRuleForm(props) {
                       <AutoSelect
                         value={field.value}
                         onChange={field.onChange}
-                        options={transactionSettings.categories}
+                        options={[
+                          ...new Set(
+                            (transactionSettings?.categories || []).map(
+                              (c) => c.category
+                            )
+                          ),
+                        ]}
                         placeholder="Select Category"
                       />
                     )}

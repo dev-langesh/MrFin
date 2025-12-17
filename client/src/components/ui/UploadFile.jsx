@@ -154,7 +154,7 @@ function UploadFileComponent({
         onClick={handleBrowseClick}
         className={cn(
           "bg-background relative flex flex-col items-center justify-center p-8 mb-4 border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50 rounded-lg transition-all cursor-pointer select-none overflow-hidden group",
-          isDragging && "border-primary bg-primary/5 ring-2 ring-primary/20",
+          isDragging && "border-primary/50 bg-muted/50",
           className
         )}
       >

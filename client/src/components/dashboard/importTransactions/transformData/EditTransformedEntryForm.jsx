@@ -34,10 +34,13 @@ function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
     formState: { errors },
     reset,
     control,
+    watch,
   } = useForm({
     defaultValues: initialData || {},
     resolver: zodResolver(transformedEntrySchema),
   });
+
+  const txnType = watch("txnType");
 
   useEffect(() => {
     if (initialData) {
@@ -113,7 +116,11 @@ function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
                 <AutoSelect
                   value={field.value}
                   onChange={field.onChange}
-                  options={transactionSettings.categories}
+                  options={
+                    (transactionSettings.categories || [])
+                      .filter((c) => c.txnType === txnType)
+                      .map((c) => c.category) || []
+                  }
                   placeholder="Select category"
                 />
               )}

@@ -515,6 +515,37 @@ describe("Analytics Service", () => {
         expect(MonthlyAnalytics.aggregate).toHaveBeenCalled();
         expect(DailyAnalytics.find).not.toHaveBeenCalled();
       });
+
+      it("should Switch to MonthlyAnalytics if allTime is true", async () => {
+        const { DailyAnalytics } = require("../dailyAnalytics.model");
+        const { MonthlyAnalytics } = require("../monthlyAnalytics.model");
+
+        MonthlyAnalytics.aggregate.mockResolvedValue([]);
+
+        // Even with short date range, allTime=true should force Monthly
+        const start = new Date();
+        const end = new Date();
+
+        await analyticsService.getTimeSeries(
+          "507f1f77bcf86cd799439011",
+          start,
+          end,
+          true // allTime
+        );
+
+        expect(MonthlyAnalytics.aggregate).toHaveBeenCalled();
+        expect(DailyAnalytics.find).not.toHaveBeenCalled();
+
+        // Check filtering optimization: Should NOT include date range in match
+        const pipeline = MonthlyAnalytics.aggregate.mock.calls[0][0];
+        // 1. Initial match (userId)
+        // 2. addFields (date)
+        // 3. sort
+        // Should NOT have a second match stage for date
+        const matchStages = pipeline.filter((s) => s.$match);
+        expect(matchStages.length).toBe(1); // Only userId match
+        expect(matchStages[0].$match.date).toBeUndefined();
+      });
     });
 
     describe("getCategoryDistribution", () => {
@@ -564,6 +595,33 @@ describe("Analytics Service", () => {
           "transfer"
         );
         expect(result).toEqual([]);
+      });
+
+      it("should switch to MonthlyAnalytics if allTime is true", async () => {
+        const { DailyAnalytics } = require("../dailyAnalytics.model");
+        const { MonthlyAnalytics } = require("../monthlyAnalytics.model");
+
+        MonthlyAnalytics.aggregate.mockResolvedValue([]);
+
+        const start = new Date();
+        const end = new Date();
+
+        await analyticsService.getCategoryDistribution(
+          "507f1f77bcf86cd799439011",
+          start,
+          end,
+          "income",
+          true // allTime
+        );
+
+        expect(MonthlyAnalytics.aggregate).toHaveBeenCalled();
+        expect(DailyAnalytics.aggregate).not.toHaveBeenCalled();
+
+        // Check filtering optimization
+        const pipeline = MonthlyAnalytics.aggregate.mock.calls[0][0];
+        // Ensure NO date filtering match stage exists
+        const matchStages = pipeline.filter((s) => s.$match && s.$match.date);
+        expect(matchStages.length).toBe(0);
       });
     });
   });

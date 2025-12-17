@@ -8,7 +8,6 @@ import {
   YAxis,
 } from "recharts";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   ChartContainer,
   ChartTooltip,
@@ -16,119 +15,101 @@ import {
 } from "@/components/ui/Chart";
 import { useEffect, useState } from "react";
 
-export function AreaChart({ data, loading, direction, dataKey, title }) {
+export function AreaChart({
+  data,
+  xKey = "_id",
+  yKey = "amount",
+  color = "chart-1",
+  label = "Amount",
+}) {
   const [showYear, setShowYear] = useState(false);
 
   useEffect(() => {
-    const start = new Date(data[0]?._id);
-    const end = new Date(data[data.length - 1]?._id);
+    if (!data || data.length === 0) return;
+    const start = new Date(data[0]?.[xKey]);
+    const end = new Date(data[data.length - 1]?.[xKey]);
     if (start.getFullYear() !== end.getFullYear()) {
       setShowYear(true);
     } else {
       setShowYear(false);
     }
-  }, [data]);
+  }, [data, xKey]);
 
   const chartConfig = {
-    amount: {
-      label:
-        dataKey === "income"
-          ? "Income"
-          : dataKey === "investment"
-          ? "Investment"
-          : "Expenses",
+    [yKey]: {
+      label: label,
     },
   };
 
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+        No data available
+      </div>
+    );
+  }
+
   return (
-    <Card className="rounded-sm relative h-[350px] flex flex-col gap-2 px-0 py-4">
-      <CardHeader className="flex items-center gap-2 space-y-0 pt-2 sm:flex-row pb-2">
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="px-2 flex-1 min-h-0">
-        {!data || data.length === 0 ? (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-            No data available
-          </div>
-        ) : (
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-auto h-full w-full"
-          >
-            <ReAreaChart data={data}>
-              <defs>
-                <linearGradient
-                  id={`fill${dataKey}`}
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <stop
-                    offset="5%"
-                    stopColor={`var(--chart-${direction})`}
-                    stopOpacity={0.8}
-                  />
-                  <stop
-                    offset="95%"
-                    stopColor={`var(--chart-${direction})`}
-                    stopOpacity={0.1}
-                  />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="_id"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-                tickFormatter={(value) => {
-                  const date = new Date(value);
-                  return date.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: showYear ? "2-digit" : undefined,
-                  });
-                }}
-              />
+    <ChartContainer config={chartConfig} className="aspect-auto h-full w-full">
+      <ReAreaChart data={data}>
+        <defs>
+          <linearGradient id={`fill${yKey}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={`var(--${color})`} stopOpacity={0.8} />
+            <stop
+              offset="95%"
+              stopColor={`var(--${color})`}
+              stopOpacity={0.1}
+            />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} />
+        <XAxis
+          dataKey={xKey}
+          tickLine={false}
+          axisLine={false}
+          tickMargin={8}
+          minTickGap={32}
+          tickFormatter={(value) => {
+            const date = new Date(value);
+            return date.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: showYear ? "2-digit" : undefined,
+            });
+          }}
+        />
 
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                domain={[0, "auto"]}
-                padding={{ top: 10, bottom: 10 }}
-                tickFormatter={(value) =>
-                  value > 1000 ? `${value / 1000}k` : value
-                }
-              />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          domain={[0, "auto"]}
+          padding={{ top: 10, bottom: 10 }}
+          tickFormatter={(value) => (value > 1000 ? `${value / 1000}k` : value)}
+        />
 
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) => {
-                      return new Date(value).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: showYear ? "numeric" : undefined,
-                      });
-                    }}
-                    indicator="dot"
-                  />
-                }
-              />
-              <Area
-                dataKey="amount"
-                type="monotone"
-                fill={`url(#fill${dataKey})`}
-                stroke={`var(--chart-${direction})`}
-                stackId="a"
-              />
-            </ReAreaChart>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              labelFormatter={(value) => {
+                return new Date(value).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: showYear ? "numeric" : undefined,
+                });
+              }}
+              indicator="dot"
+            />
+          }
+        />
+        <Area
+          dataKey={yKey}
+          type="monotone"
+          fill={`url(#fill${yKey})`}
+          stroke={`var(--${color})`}
+          stackId="a"
+        />
+      </ReAreaChart>
+    </ChartContainer>
   );
 }

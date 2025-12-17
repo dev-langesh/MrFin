@@ -11,6 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/Skeleton";
 import DashboardSummary from "@/components/dashboard/dashboard/DashboardSummary";
 import { AreaChart } from "@/components/dashboard/dashboard/AreaChart";
+import { ChartCard } from "@/components/dashboard/dashboard/ChartCard";
 import CategoryDistribution from "@/components/dashboard/dashboard/CategoryDistribution";
 import { analyticsService } from "@/services/analytics.service";
 import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
@@ -224,12 +225,15 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <AreaChart
-              data={income}
-              direction={incomeDir}
-              dataKey="income"
-              title="Income Over Time"
-            />
+            <ChartCard title="Income Over Time">
+              <AreaChart
+                data={income}
+                color={`chart-${incomeDir}`}
+                label="Income"
+                yKey="amount"
+                xKey="_id"
+              />
+            </ChartCard>
           )}
         </div>
         <div className="w-full md:w-[350px]">
@@ -250,12 +254,15 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <AreaChart
-              data={expense}
-              direction={expenseDir}
-              dataKey="expense"
-              title="Expense Over Time"
-            />
+            <ChartCard title="Expense Over Time">
+              <AreaChart
+                data={expense}
+                color={`chart-${expenseDir}`}
+                label="Expense"
+                yKey="amount"
+                xKey="_id"
+              />
+            </ChartCard>
           )}
         </div>
         <div className="w-full md:w-[350px]">
@@ -276,12 +283,15 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <AreaChart
-              data={investment}
-              direction={investmentDir}
-              dataKey="investment"
-              title="Investment Over Time"
-            />
+            <ChartCard title="Investment Over Time">
+              <AreaChart
+                data={investment}
+                color={`chart-${investmentDir}`}
+                label="Investment"
+                yKey="amount"
+                xKey="_id"
+              />
+            </ChartCard>
           )}
         </div>
         <div className="w-full md:w-[350px]">

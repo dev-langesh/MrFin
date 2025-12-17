@@ -13,7 +13,6 @@ async function createOtp({ to, otp, notificationType }) {
 }
 
 async function sendEmail(to, otp, template) {
-  console.log(otp);
   await emailService.sendEmailWithHtml({
     to,
     subject: "Your OTP Code",

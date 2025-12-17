@@ -22,10 +22,10 @@ const settingsSchema = new mongoose.Schema(
         type: [
           {
             txnType: { type: String, required: true, enum: config.txnTypes },
-            category: { type: String, required: true },
+            category: { type: String, required: true, lowercase: true },
           },
         ],
-        default: [],
+        default: config.defaultCategories,
       },
     },
   },

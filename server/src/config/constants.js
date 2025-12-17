@@ -8,6 +8,25 @@ const roles = {
 
 const txnTypes = ["income", "expense", "investment", "transfer"];
 
+const defaultCategories = [
+  { txnType: "income", category: "Salary" },
+  { txnType: "income", category: "Business" },
+  { txnType: "income", category: "Others" },
+  { txnType: "expense", category: "Food" },
+  { txnType: "expense", category: "Travel" },
+  { txnType: "expense", category: "Rent" },
+  { txnType: "expense", category: "Bills" },
+  { txnType: "expense", category: "Shopping" },
+  { txnType: "expense", category: "Entertainment" },
+  { txnType: "expense", category: "Others" },
+  { txnType: "investment", category: "Stocks" },
+  { txnType: "investment", category: "Mutual Funds" },
+  { txnType: "investment", category: "Real Estate" },
+  { txnType: "investment", category: "Gold" },
+  { txnType: "investment", category: "Crypto" },
+  { txnType: "investment", category: "Others" },
+];
+
 const otp = {
   expirationTime: 5 * 60 * 1000, // 5 minutes
   maxAttempts: 3,
@@ -26,6 +45,7 @@ const config = {
   hashing,
   fileUploadPath: path.join(process.cwd(), "uploads"),
   txnTypes,
+  defaultCategories,
 };
 
 module.exports = {

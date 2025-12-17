@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import numeral from "numeral";
+import { formatNumber } from "@/lib/formatters";
+import { useAuth } from "@/context/AuthProvider";
 import { Pie, PieChart as RePieChart, Sector, Label } from "recharts";
 import { ChartContainer, ChartStyle } from "@/components/ui/Chart";
 import { PI_CHART_COLOR_SETS } from "./constants";
@@ -13,6 +14,9 @@ export function PieChart({
   nameKey = "name",
   variant = "investment", // income | expense | investment
 }) {
+  const { auth } = useAuth();
+  const countryCode = auth?.user?.country || "US";
+
   const [activeName, setActiveName] = useState(null);
 
   const COLORS = PI_CHART_COLOR_SETS[variant] ?? PI_CHART_COLOR_SETS.investment;
@@ -63,14 +67,10 @@ export function PieChart({
   }
 
   function formatMoney(value) {
-    if (value >= 1e9) {
-      return numeral(value).format("0.00a"); // 1.23b
-    } else if (value >= 1e6) {
-      return numeral(value).format("0.00a"); // 1.23m
-    } else if (value >= 1e3) {
-      return numeral(value).format("0.00a"); // 1.23k
+    if (value >= 1e3) {
+      return formatNumber(value, { countryCode, compact: true });
     } else {
-      return numeral(value).format("0,0.00"); // 123.45
+      return formatNumber(value, { countryCode, compact: false });
     }
   }
 

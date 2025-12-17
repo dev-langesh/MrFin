@@ -2,8 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { memo } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import numeral from "numeral";
+import { formatNumber } from "@/lib/formatters";
 import { currencyIcons, currencySymbols } from "@/constants/currencies";
+import { useAuth } from "@/context/AuthProvider";
 
 function SummaryCard({
   title,
@@ -13,6 +14,9 @@ function SummaryCard({
   disableTrend,
   currencyCode = "USD",
 }) {
+  const { auth } = useAuth();
+  const countryCode = auth?.user?.country || "US";
+
   const Icon = currencyIcons[currencyCode];
   const symbol = currencySymbols[currencyCode] || "$";
 
@@ -46,7 +50,7 @@ function SummaryCard({
           ) : (
             <span className="">{symbol}</span>
           )}
-          {numeral(value).format("0,0a")}
+          {formatNumber(value, { countryCode, compact: true })}
         </div>
         <p className="text-xs text-muted-foreground max-md:hidden">
           {secondaryTitle}

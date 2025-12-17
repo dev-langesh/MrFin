@@ -6,7 +6,7 @@ const transactionSchema = new mongoose.Schema(
     txnDate: { type: Date, required: true },
     txnType: { type: String, enum: config.txnTypes, required: true },
     description: { type: String },
-    category: { type: String , default: "others"},
+    category: { type: String, default: "Others" },
     amount: { type: Number, required: true },
     userId: {
       type: mongoose.Schema.Types.ObjectId,

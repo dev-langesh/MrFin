@@ -1,15 +1,11 @@
 "use client";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart as PieChartIcon, List } from "lucide-react";
 import { PieChart } from "./PieChart";
-import numeral from "numeral";
+import { formatNumber } from "@/lib/formatters";
+import { useAuth } from "@/context/AuthProvider";
 import { PI_CHART_COLOR_SETS } from "./constants";
 
 export default function CategoryDistribution({
@@ -19,6 +15,8 @@ export default function CategoryDistribution({
   dataKey = "value",
   nameKey = "name",
 }) {
+  const { auth } = useAuth();
+  const countryCode = auth?.user?.country || "US";
   const COLORS = PI_CHART_COLOR_SETS[variant] ?? PI_CHART_COLOR_SETS.investment;
 
   // Re-use logic for color assignment to match chart
@@ -86,7 +84,7 @@ export default function CategoryDistribution({
                         </span>
                       </div>
                       <span className="text-sm text-muted-foreground font-mono">
-                        {numeral(item[dataKey]).format("0,0")}
+                        {formatNumber(item[dataKey], { countryCode })}
                       </span>
                     </div>
                   ))

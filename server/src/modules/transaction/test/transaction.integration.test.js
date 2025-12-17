@@ -9,6 +9,7 @@ const { User } = require("../../user/user.model");
 const { Transaction } = require("../transaction.model");
 const { Analytics } = require("../../analytics/analytics.model"); // Needed as transactions update analytics
 const { DailyAnalytics } = require("../../analytics/dailyAnalytics.model");
+const { MonthlyAnalytics } = require("../../analytics/monthlyAnalytics.model");
 const { analyticsService } = require("../../analytics/analytics.service"); // Real service
 const { tokenService } = require("../../../lib/jwt/token.service");
 
@@ -50,6 +51,7 @@ describe("Transaction Integration", () => {
     await Transaction.deleteMany({});
     await Analytics.deleteMany({});
     await DailyAnalytics.deleteMany({});
+    await MonthlyAnalytics.deleteMany({});
     // Setup initial analytics for the test user
     await Analytics.create({ userId: "507f1f77bcf86cd799439011" });
   });
@@ -126,6 +128,39 @@ describe("Transaction Integration", () => {
         userId: "507f1f77bcf86cd799439011",
       });
       expect(analytics.investments.total).toBe(500);
+    });
+
+    it("should create a transfer transaction and NOT update analytics", async () => {
+      const payload = {
+        amount: 250,
+        txnType: "transfer",
+        category: "Bank Transfer",
+        txnDate: new Date().toISOString(),
+        description: "Moving Money",
+      };
+
+      const res = await request(app).post("/api/transactions").send(payload);
+      expect(res.status).toBe(201);
+      expect(res.body.txnType).toBe("transfer");
+
+      // Verify Transaction Created
+      const txn = await Transaction.findOne({ description: "Moving Money" });
+      expect(txn).toBeDefined();
+
+      // Verify Analytics UNTOUCHED
+      const analytics = await Analytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+
+      expect(analytics.income.total).toBe(0);
+      expect(analytics.expenses.total).toBe(0);
+      expect(analytics.investments.total).toBe(0);
+      expect(analytics.cashFlow.total).toBe(0);
+
+      const daily = await DailyAnalytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      expect(daily).toBeNull();
     });
 
     it("should return 400 for invalid data", async () => {
@@ -541,11 +576,7 @@ describe("Transaction Integration", () => {
 
       expect(analytics.expenses.total).toBe(2000);
       expect(analytics.expenses.month).toBe(0);
-      // Previous expenses are in annual bucket logic too?
-      // Since last month is likely this year (unless Jan test), prevExpenses.annual depends on if last month is same year.
-      // Assuming test runs not in Jan for simplicity, or we check year equality.
-      // If last month was Dec 2024 and now is Jan 2025, annual would be 0.
-      // Let's stick to Month assertions which are safer for relative checks.
+
       expect(analytics.previousExpenses.month).toBe(2000);
 
       expect(analytics.investments.total).toBe(200); // Touched once
@@ -586,6 +617,87 @@ describe("Transaction Integration", () => {
       expect(analytics.incomeChange.month).toBe(0);
       expect(analytics.expensesChange.month).toBe(0);
       expect(analytics.cashFlowChange.month).toBe(0);
+    });
+
+    it("Scenario 5: Transfer Lifecycle & Transitions", async () => {
+      // 1. Create Transfer
+      const createRes = await request(app).post("/api/transactions").send({
+        amount: 500,
+        txnType: "transfer",
+        category: "Init",
+        txnDate: new Date().toISOString(),
+        description: "Transfer Test",
+      });
+      const txnId = createRes.body._id;
+
+      let analytics = await Analytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+
+      // Verify Isolation
+      expect(analytics.income.total).toBe(0);
+      expect(analytics.expenses.total).toBe(0);
+
+      // 2. Update Transfer (Date Change, Category Change)
+      const lastMonth = new Date();
+      lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+      await request(app).put(`/api/transactions/${txnId}`).send({
+        txnDate: lastMonth.toISOString(),
+        category: "Moved",
+      });
+
+      analytics = await Analytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      // Should still be 0
+      expect(analytics.income.total).toBe(0);
+      expect(analytics.expenses.total).toBe(0);
+
+      // Verify no DailyAnalytics for either date
+      const daily = await DailyAnalytics.find({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      expect(daily.length).toBe(0);
+
+      // Verify no MonthlyAnalytics for either date
+      const monthly = await MonthlyAnalytics.find({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      expect(monthly.length).toBe(0);
+
+      // 3. Transition: Transfer -> Expense
+      await request(app).put(`/api/transactions/${txnId}`).send({
+        txnType: "expense",
+        category: "Fee",
+      });
+
+      analytics = await Analytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      // Expense should now show up (500)
+      // Note: Date was moved to last month in previous step!
+      expect(analytics.expenses.total).toBe(500);
+      expect(analytics.previousExpenses.month).toBe(500); // Check period correctness
+
+      // 4. Transition: Expense -> Transfer
+      await request(app).put(`/api/transactions/${txnId}`).send({
+        txnType: "transfer",
+      });
+
+      analytics = await Analytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      // Expense should be reverted to 0
+      expect(analytics.expenses.total).toBe(0);
+
+      // 5. Delete Transfer
+      await request(app).delete(`/api/transactions/${txnId}`);
+      analytics = await Analytics.findOne({
+        userId: "507f1f77bcf86cd799439011",
+      });
+      expect(analytics.expenses.total).toBe(0);
+      expect(analytics.income.total).toBe(0);
     });
   });
 });

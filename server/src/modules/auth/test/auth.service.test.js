@@ -2,6 +2,7 @@ const { userService } = require("../../user/user.service");
 const { otpService } = require("../../otp/otp.service");
 const { tokenService } = require("../../../lib/jwt/token.service");
 const { analyticsService } = require("../../analytics/analytics.service");
+const { settingsService } = require("../../settings/settings.service");
 const bcrypt = require("bcrypt");
 const { AppError } = require("../../../utils/error");
 const { AuthErrors } = require("../../../errors/authErrors");
@@ -11,6 +12,7 @@ jest.mock("../../user/user.service");
 jest.mock("../../otp/otp.service");
 jest.mock("../../../lib/jwt/token.service");
 jest.mock("../../analytics/analytics.service");
+jest.mock("../../settings/settings.service");
 jest.mock("../utils/googleAuth");
 
 // Require authService AFTER mocks are set up
@@ -189,21 +191,57 @@ describe("Auth Service", () => {
     it("should login with google (new user)", async () => {
       getGoogleUser.mockResolvedValue(mockGoogleUser);
       userService.findUserByEmail.mockResolvedValue(null);
-      userService.createUser.mockResolvedValue({
-        _id: "userId",
-        ...mockGoogleUser,
-      });
-      tokenService.generateTokens.mockReturnValue({
-        accessToken: "access",
-        refreshToken: "refresh",
-      });
+      tokenService.generateToken.mockReturnValue("regToken");
 
       const result = await authService.loginWithGoogle("code");
 
       expect(getGoogleUser).toHaveBeenCalledWith("code");
-      expect(userService.createUser).toHaveBeenCalled();
-      expect(analyticsService.createAnalytics).toHaveBeenCalledWith("userId");
-      expect(result).toHaveProperty("tokens");
+      expect(userService.createUser).not.toHaveBeenCalled();
+      expect(analyticsService.createAnalytics).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        isNew: true,
+        registrationToken: "regToken",
+        user: {
+          name: mockGoogleUser.name,
+          email: mockGoogleUser.email,
+          picture: mockGoogleUser.picture,
+        },
+      });
+    });
+
+    it("should complete google login", async () => {
+      tokenService.verifyToken.mockReturnValue(mockGoogleUser);
+      userService.findUserByEmail.mockResolvedValue(null);
+      userService.createUser.mockResolvedValue({
+        _id: "userId",
+        ...mockGoogleUser,
+      });
+      tokenService.generateTokens.mockReturnValue(mockTokens);
+      settingsService.updateSettings.mockResolvedValue();
+
+      const result = await authService.completeGoogleLogin({
+        registrationToken: "regToken",
+        country: "IN",
+        currency: "INR",
+      });
+
+      expect(tokenService.verifyToken).toHaveBeenCalledWith(
+        "regToken",
+        "registration"
+      );
+      expect(userService.createUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: mockGoogleUser.email,
+          country: "IN",
+        })
+      );
+      expect(settingsService.updateSettings).toHaveBeenCalledWith("userId", {
+        general: { currency: "INR" },
+      });
+      expect(result).toEqual({
+        user: expect.objectContaining({ _id: "userId" }),
+        tokens: mockTokens,
+      });
     });
 
     it("should login with google (existing user)", async () => {

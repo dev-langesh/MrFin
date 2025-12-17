@@ -28,6 +28,9 @@ import { ExportTransactionDialog } from "./ExportTransactionDialog";
 import { exportData } from "@/utils/exportUtils";
 import TransactionFilters from "./TransactionFilters";
 import { settingsService } from "@/services/settings.service";
+import { currencySymbols, currencyIcons } from "@/constants/currencies";
+
+// ... existing code ...
 
 function TransactionTable() {
   const [filters, setFilters] = useState({
@@ -249,7 +252,22 @@ function TransactionTable() {
         accessor: "amount",
         className: "text-right",
         cellClassName: "text-right font-medium",
-        render: (entry) => `₹${entry.amount.toLocaleString()}`,
+        render: (entry) => {
+          const currencyCode = settings?.general?.currency || "USD";
+          const Icon = currencyIcons[currencyCode];
+          const symbol = currencySymbols[currencyCode] || "$";
+
+          return (
+            <div className="flex items-center justify-end gap-1">
+              {Icon ? (
+                <Icon className="w-3 h-3 text-muted-foreground" />
+              ) : (
+                <span className="text-muted-foreground">{symbol}</span>
+              )}
+              {entry.amount.toLocaleString()}
+            </div>
+          );
+        },
       },
       {
         header: "Actions",

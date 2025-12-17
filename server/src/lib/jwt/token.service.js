@@ -18,6 +18,10 @@ function getTokenOptions(tokenType) {
       options.secret = env.RESET_PASSWORD_TOKEN_SECRET;
       options.expiresIn = env.RESET_PASSWORD_TOKEN_EXPIRY;
       break;
+    case "registration":
+      options.secret = env.ACCESS_TOKEN_SECRET; // Reuse access secret or different if preferred
+      options.expiresIn = "10m"; // Short lived
+      break;
     default:
       throw new AppError(AuthErrors.INVALID_TOKEN_TYPE);
   }
@@ -25,8 +29,8 @@ function getTokenOptions(tokenType) {
   return options;
 }
 
-function generateToken({ userId, role, tokenType }) {
-  const payload = { userId, role, tokenType };
+function generateToken({ userId, role, tokenType, ...otherProps }) {
+  const payload = { userId, role, tokenType, ...otherProps };
   let { secret, expiresIn } = getTokenOptions(tokenType);
 
   return jwt.sign(payload, secret, { expiresIn });
@@ -58,6 +62,8 @@ function verifyToken(token, tokenType) {
           ? AuthErrors.ACCESS_TOKEN_EXPIRED
           : tokenType === "refresh"
           ? AuthErrors.REFRESH_TOKEN_EXPIRED
+          : tokenType === "registration"
+          ? AuthErrors.TOKEN_EXPIRED
           : AuthErrors.TOKEN_EXPIRED
       );
     } else {

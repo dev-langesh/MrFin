@@ -6,6 +6,7 @@ const { userService } = require("../user/user.service");
 const bcrypt = require("bcrypt");
 const { otpService } = require("../otp/otp.service");
 const { generateHash } = require("./utils/hash");
+const { settingsService } = require("../settings/settings.service");
 const { analyticsService } = require("../analytics/analytics.service");
 const { getGoogleUser } = require("./utils/googleAuth");
 
@@ -14,9 +15,17 @@ async function registerUser(data) {
 
   payload.password = await bcrypt.hash(payload.password, 10);
 
+  // createUser will now accept country if we updated user service or if it just passes payload through (checking user.service next)
   const user = await userService.createUser(payload);
 
   await analyticsService.createAnalytics(user._id);
+
+  // Initialize settings with currency if provided
+  if (data.currency) {
+    await settingsService.updateSettings(user._id, {
+      general: { currency: data.currency },
+    });
+  }
 
   return { user };
 }
@@ -77,21 +86,52 @@ async function loginWithGoogle(code) {
   //...
 
   // If user does not exist, create a new one
+  // If user does not exist, return isNew flag and a temporary token
   if (!user) {
-    user = await userService.createUser({
+    const registrationToken = tokenService.generateToken({
       googleId,
       email,
       name,
       picture,
-      provider: "google",
-      verified: true,
+      tokenType: "registration",
     });
 
-    await analyticsService.createAnalytics(user._id);
+    return { isNew: true, registrationToken, user: { name, email, picture } };
   }
 
   const tokens = tokenService.generateTokens(user);
 
+  return { user, tokens };
+}
+
+async function completeGoogleLogin({ registrationToken, country, currency }) {
+  const decoded = tokenService.verifyToken(registrationToken, "registration");
+  const { googleId, email, name, picture } = decoded;
+
+  let user = await userService.findUserByEmail(email, false, false);
+  if (user) {
+    throw new AppError(AuthErrors.USER_ALREADY_EXISTS);
+  }
+
+  user = await userService.createUser({
+    googleId,
+    email,
+    name,
+    picture,
+    country,
+    provider: "google",
+    verified: true,
+  });
+
+  await analyticsService.createAnalytics(user._id);
+
+  if (currency) {
+    await settingsService.updateSettings(user._id, {
+      general: { currency },
+    });
+  }
+
+  const tokens = tokenService.generateTokens(user);
   return { user, tokens };
 }
 
@@ -123,6 +163,7 @@ const authService = {
   rotateTokens,
   verifyIdToken: getGoogleUser,
   loginWithGoogle,
+  completeGoogleLogin,
   verifyOtpToResetPassword,
   verifyTokenAndResetPassword,
 };

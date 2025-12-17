@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { TXN_TYPES } from "../config";
+import { currencySymbols } from "@/constants/currencies";
 
 function TransactionEntryForm({
   editingEntry = null,
@@ -250,7 +251,10 @@ function TransactionEntryForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Amount */}
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount (₹)</Label>
+            <Label htmlFor="amount">
+              Amount (
+              {currencySymbols[settings?.general?.currency || "USD"] || "$"})
+            </Label>
             <Input
               id="amount"
               type="number"

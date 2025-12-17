@@ -9,6 +9,9 @@ const settingsSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    general: {
+      currency: { type: String, default: "USD" },
+    },
     importTransactionSettings: {
       preProcess: { type: Object, default: {} },
       mapFields: { type: Object, default: {} },

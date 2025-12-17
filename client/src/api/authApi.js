@@ -3,6 +3,7 @@ import { api } from "@/api/axios";
 export const authApi = {
   login: (body) => api.post("/auth/login", body),
   googleLogin: (body) => api.post("/auth/login/google", body),
+  completeGoogleLogin: (body) => api.post("/auth/login/google/complete", body),
   logout: () => api.post("/auth/logout"),
   register: (body) => api.post("/auth/register", body),
   status: () => api.get("/auth/status"),

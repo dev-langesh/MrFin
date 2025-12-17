@@ -83,10 +83,33 @@ async function loginUserWithGoogle(req, res) {
   const { code } = req.body;
   const sres = await authService.loginWithGoogle(code);
 
+  if (sres.isNew) {
+    return res.json({
+      message: "Please select your country to complete registration",
+      isNew: true,
+      registrationToken: sres.registrationToken,
+      user: sres.user,
+    });
+  }
+
   res.cookie("accessToken", sres.tokens.accessToken, cookieOptions);
   res.cookie("refreshToken", sres.tokens.refreshToken, cookieOptions);
 
   res.json({ message: "User logged in successfully", user: sres.user });
+}
+
+async function completeGoogleLogin(req, res) {
+  const { registrationToken, country, currency } = req.body;
+  const sres = await authService.completeGoogleLogin({
+    registrationToken,
+    country,
+    currency,
+  });
+
+  res.cookie("accessToken", sres.tokens.accessToken, cookieOptions);
+  res.cookie("refreshToken", sres.tokens.refreshToken, cookieOptions);
+
+  res.json({ message: "User registered successfully", user: sres.user });
 }
 
 async function logoutUser(req, res) {
@@ -104,6 +127,7 @@ const authController = {
   rotateTokens: asyncHandler(rotateTokens),
   logoutUser: asyncHandler(logoutUser),
   loginUserWithGoogle: asyncHandler(loginUserWithGoogle),
+  completeGoogleLogin: asyncHandler(completeGoogleLogin),
   verifyOtpToResetPassword: asyncHandler(verifyOtpToResetPassword),
   resetPassword: asyncHandler(resetPassword),
 };

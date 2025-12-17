@@ -26,6 +26,9 @@ const registerSchema = z.object({
     .regex(/[^A-Za-z0-9]/, {
       message: "Password must contain at least one special character",
     }),
+
+  country: z.string({ required_error: "Country is required" }),
+  currency: z.string({ required_error: "Currency is required" }),
 });
 
 const loginSchema = z.object({

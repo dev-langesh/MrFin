@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/Badge";
 import { Trash2, Edit2 } from "lucide-react";
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState, useCallback, useEffect } from "react";
 import {
   selectTransformedData,
   selectMappedFields,
@@ -26,6 +26,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/Tooltip";
+import { settingsService } from "@/services/settings.service";
+import { currencySymbols } from "@/constants/currencies";
 
 function TransformedDataTable({ ...props }) {
   const transformedData = useSelector(selectTransformedData);
@@ -36,6 +38,21 @@ function TransformedDataTable({ ...props }) {
 
   const [editingIndex, setEditingIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currencyCode, setCurrencyCode] = useState("USD");
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const settings = await settingsService.fetchSettings();
+        if (settings?.general?.currency) {
+          setCurrencyCode(settings.general.currency);
+        }
+      } catch (error) {
+        console.error("Failed to load settings", error);
+      }
+    }
+    loadSettings();
+  }, []);
 
   const pagination = useTable({ data: transformedData });
   const { resetSelection } = pagination;
@@ -44,7 +61,10 @@ function TransformedDataTable({ ...props }) {
 
   const columns = useMemo(() => {
     const cols = keys.map((key) => ({
-      header: key.replace(/([A-Z])/g, " $1").trim(),
+      header:
+        key === "amount"
+          ? `Amount (${currencySymbols[currencyCode] || "$"})`
+          : key.replace(/([A-Z])/g, " $1").trim(),
       accessor: key,
       className: "capitalize",
       render: (entry) => {
@@ -144,6 +164,7 @@ function TransformedDataTable({ ...props }) {
                 initialData={entry}
                 onSubmit={handleUpdateEntry}
                 onCancel={() => setIsDialogOpen(false)}
+                currencyCode={currencyCode}
               />
             </DialogContent>
           </Dialog>
@@ -168,7 +189,7 @@ function TransformedDataTable({ ...props }) {
     });
 
     return cols;
-  }, [keys, dateFormat, isDialogOpen, editingIndex]);
+  }, [keys, dateFormat, isDialogOpen, editingIndex, currencyCode]);
 
   const handleDeleteRows = useCallback(
     (rows) => {

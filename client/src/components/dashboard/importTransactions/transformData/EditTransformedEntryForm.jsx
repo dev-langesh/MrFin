@@ -25,8 +25,14 @@ import {
   SelectValue,
 } from "@/components/ui/Select";
 import { TXN_TYPES } from "../../config";
+import { currencySymbols } from "@/constants/currencies";
 
-function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
+function EditTransformedEntryForm({
+  initialData,
+  onSubmit,
+  onCancel,
+  currencyCode = "USD",
+}) {
   const transactionSettings = useSelector(selectTransactionSettings);
   const {
     register,
@@ -133,7 +139,7 @@ function EditTransformedEntryForm({ initialData, onSubmit, onCancel }) {
 
         {/* Amount */}
         <Input
-          label="Amount"
+          label={`Amount (${currencySymbols[currencyCode] || "$"})`}
           {...register("amount")}
           placeholder="Enter Amount"
           error={!!errors.amount}

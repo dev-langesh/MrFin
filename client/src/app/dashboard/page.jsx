@@ -159,6 +159,10 @@ export default function TransactionPage() {
         startDate = toUtcMidnight(startOfQuarter(now));
         endDate = toUtcEndOfDay(endOfQuarter(now));
         break;
+      case "total":
+        startDate = new Date(0); // Epoch start
+        endDate = toUtcEndOfDay(now);
+        break;
       case "annual":
         startDate = toUtcMidnight(startOfYear(now));
         endDate = toUtcEndOfDay(endOfYear(now));

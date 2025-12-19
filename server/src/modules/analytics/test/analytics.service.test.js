@@ -72,11 +72,15 @@ describe("Analytics Service", () => {
       expect(res).toBe(mock);
     });
 
-    it("should throw NOT_FOUND", async () => {
+    it("should create if not found", async () => {
       Analytics.findOne.mockResolvedValue(null);
-      await expect(
-        analyticsService.getAnalytics("507f1f77bcf86cd799439011")
-      ).rejects.toThrow(AnalyticsErrors.NOT_FOUND.message);
+      // createAnalytics is called, which calls findOne (again/null) then create
+      Analytics.create.mockResolvedValue([createMockAnalytics()]);
+
+      const res = await analyticsService.getAnalytics(
+        "507f1f77bcf86cd799439011"
+      );
+      expect(res).toBeDefined();
     });
   });
 

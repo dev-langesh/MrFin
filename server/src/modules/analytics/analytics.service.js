@@ -13,14 +13,20 @@ function calcChange(newVal, oldVal) {
 
 // Create new analytics for a user
 async function createAnalytics(userId) {
-  return await Analytics.create({ userId });
+  let analytics = await Analytics.findOne({ userId });
+  if (!analytics) {
+    analytics = await Analytics.create([{ userId }]);
+    // Handle both array (Mongoose default for list input) and object (mocks/single input)
+    analytics = Array.isArray(analytics) ? analytics[0] : analytics;
+  }
+  return analytics;
 }
 
 // Get analytics document by userId
 async function getAnalytics(userId) {
-  const analytics = await Analytics.findOne({ userId });
+  let analytics = await Analytics.findOne({ userId });
   if (!analytics) {
-    throw new AppError(AnalyticsErrors.NOT_FOUND);
+    analytics = await createAnalytics(userId);
   }
 
   // Check and perform rollover if needed (Read-Time Rollover)
@@ -98,6 +104,8 @@ function rolloverPeriods(analytics, date) {
  * Update Time Series Data (Daily & Monthly)
  */
 async function updateTimeSeries(userId, date, type, amount, category) {
+  const safeCategory = category || "Uncategorized"; // Prevent empty field name error
+
   const txnDate = new Date(date);
   const startOfDay = new Date(
     Date.UTC(txnDate.getFullYear(), txnDate.getMonth(), txnDate.getDate())
@@ -105,16 +113,18 @@ async function updateTimeSeries(userId, date, type, amount, category) {
   const year = txnDate.getFullYear();
   const month = txnDate.getMonth() + 1; // 1-12
 
+  const options = { upsert: true, new: true };
+
   // Update Daily
   await DailyAnalytics.findOneAndUpdate(
     { userId, date: startOfDay },
     {
       $inc: {
         [`totals.${type}`]: amount,
-        [`${type}Categories.${category}`]: amount,
+        [`${type}Categories.${safeCategory}`]: amount,
       },
     },
-    { upsert: true, new: true }
+    options
   );
 
   // Update Monthly
@@ -123,10 +133,10 @@ async function updateTimeSeries(userId, date, type, amount, category) {
     {
       $inc: {
         [`totals.${type}`]: amount, // e.g. totals.income
-        [`${type}Categories.${category}`]: amount, // e.g. incomeCategories.Salary
+        [`${type}Categories.${safeCategory}`]: amount, // e.g. incomeCategories.Salary
       },
     },
-    { upsert: true, new: true }
+    options
   );
 }
 
@@ -159,9 +169,6 @@ async function updateAnalyticsOnAdd(txn, userId_manual) {
   return await updateAnalyticsOnAdd_SummaryOnly(txnWithUser);
 }
 
-/**
- * Update analytics on deletion (subtract amounts)
- */
 /**
  * Update analytics on deletion (subtract amounts)
  */
@@ -281,12 +288,9 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
   }
 
   // Previous Period Updates (if backdated to exactly the previous period relative to NOW)
+
+  // Previous Period Updates (if backdated to exactly the previous period relative to NOW)
   if (txYear === currentYear - 1) {
-    if (typeof income === "number")
-      incUpdate["previousIncome.annual"] =
-        (incUpdate["previousIncome.annual"] || 0) + income;
-    // ... (abbreviated for brevity, assuming standard logic holds, but strictly we should check)
-    // For massive refactor, we might skip deeply nested previous logic if not critical, but let's try to keep parity.
     if (typeof income === "number")
       incUpdate["previousIncome.annual"] =
         (incUpdate["previousIncome.annual"] || 0) + income;
@@ -301,8 +305,14 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
         (incUpdate["previousInvestments.annual"] || 0) + investments;
   }
 
-  // ... (Mapping other previous periods similarly)
-  if (txQuarter === currentQuarter - 1) {
+  // Previous Quarter Check (Handles year rollover)
+  const isPreviousQuarter =
+    (currentQuarter > 0 &&
+      txYear === currentYear &&
+      txQuarter === currentQuarter - 1) ||
+    (currentQuarter === 0 && txYear === currentYear - 1 && txQuarter === 3);
+
+  if (isPreviousQuarter) {
     if (typeof income === "number")
       incUpdate["previousIncome.quarter"] =
         (incUpdate["previousIncome.quarter"] || 0) + income;
@@ -317,7 +327,14 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
         (incUpdate["previousInvestments.quarter"] || 0) + investments;
   }
 
-  if (txMonth === currentMonth - 1) {
+  // Previous Month Check (Handles year rollover)
+  const isPreviousMonth =
+    (currentMonth > 0 &&
+      txYear === currentYear &&
+      txMonth === currentMonth - 1) ||
+    (currentMonth === 0 && txYear === currentYear - 1 && txMonth === 11);
+
+  if (isPreviousMonth) {
     if (typeof income === "number")
       incUpdate["previousIncome.month"] =
         (incUpdate["previousIncome.month"] || 0) + income;
@@ -403,11 +420,14 @@ function updateCalculatedChanges(analytics) {
 /**
  * Update analytics on edit
  */
+/**
+ * Update analytics on edit
+ */
 async function updateAnalyticsOnEdit(oldTxn, newTxn) {
   // Revert old
   await updateAnalyticsOnDelete(oldTxn);
   // Add new
-  return await updateAnalyticsOnAdd(newTxn);
+  return await updateAnalyticsOnAdd(newTxn, null);
 }
 
 /**
@@ -463,6 +483,7 @@ async function updateAnalyticsBatch(transactions, userId) {
 
     const amount = Number(txn.amount);
     const date = new Date(txn.txnDate);
+    const category = txn.category || "Uncategorized"; // Safe default
 
     // Summary Analytics Logic (Existing)
     const month = date.getMonth();
@@ -517,21 +538,21 @@ async function updateAnalyticsBatch(transactions, userId) {
     }
     if (txn.txnType === "income") {
       dailyAgg[dayKey].totals.income += amount;
-      if (!dailyAgg[dayKey].incomeCategories[txn.category])
-        dailyAgg[dayKey].incomeCategories[txn.category] = 0;
-      dailyAgg[dayKey].incomeCategories[txn.category] += amount;
+      if (!dailyAgg[dayKey].incomeCategories[category])
+        dailyAgg[dayKey].incomeCategories[category] = 0;
+      dailyAgg[dayKey].incomeCategories[category] += amount;
     }
     if (txn.txnType === "expense") {
       dailyAgg[dayKey].totals.expense += amount;
-      if (!dailyAgg[dayKey].expenseCategories[txn.category])
-        dailyAgg[dayKey].expenseCategories[txn.category] = 0;
-      dailyAgg[dayKey].expenseCategories[txn.category] += amount;
+      if (!dailyAgg[dayKey].expenseCategories[category])
+        dailyAgg[dayKey].expenseCategories[category] = 0;
+      dailyAgg[dayKey].expenseCategories[category] += amount;
     }
     if (txn.txnType === "investment") {
       dailyAgg[dayKey].totals.investment += amount;
-      if (!dailyAgg[dayKey].investmentCategories[txn.category])
-        dailyAgg[dayKey].investmentCategories[txn.category] = 0;
-      dailyAgg[dayKey].investmentCategories[txn.category] += amount;
+      if (!dailyAgg[dayKey].investmentCategories[category])
+        dailyAgg[dayKey].investmentCategories[category] = 0;
+      dailyAgg[dayKey].investmentCategories[category] += amount;
     }
 
     // Monthly Aggregation
@@ -547,21 +568,21 @@ async function updateAnalyticsBatch(transactions, userId) {
     }
     if (txn.txnType === "income") {
       monthlyAgg[monthKey].totals.income += amount;
-      if (!monthlyAgg[monthKey].incomeCategories[txn.category])
-        monthlyAgg[monthKey].incomeCategories[txn.category] = 0;
-      monthlyAgg[monthKey].incomeCategories[txn.category] += amount;
+      if (!monthlyAgg[monthKey].incomeCategories[category])
+        monthlyAgg[monthKey].incomeCategories[category] = 0;
+      monthlyAgg[monthKey].incomeCategories[category] += amount;
     }
     if (txn.txnType === "expense") {
       monthlyAgg[monthKey].totals.expense += amount;
-      if (!monthlyAgg[monthKey].expenseCategories[txn.category])
-        monthlyAgg[monthKey].expenseCategories[txn.category] = 0;
-      monthlyAgg[monthKey].expenseCategories[txn.category] += amount;
+      if (!monthlyAgg[monthKey].expenseCategories[category])
+        monthlyAgg[monthKey].expenseCategories[category] = 0;
+      monthlyAgg[monthKey].expenseCategories[category] += amount;
     }
     if (txn.txnType === "investment") {
       monthlyAgg[monthKey].totals.investment += amount;
-      if (!monthlyAgg[monthKey].investmentCategories[txn.category])
-        monthlyAgg[monthKey].investmentCategories[txn.category] = 0;
-      monthlyAgg[monthKey].investmentCategories[txn.category] += amount;
+      if (!monthlyAgg[monthKey].investmentCategories[category])
+        monthlyAgg[monthKey].investmentCategories[category] = 0;
+      monthlyAgg[monthKey].investmentCategories[category] += amount;
     }
   }
 

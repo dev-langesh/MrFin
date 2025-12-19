@@ -25,10 +25,17 @@ async function createTransactions(transactions) {
     const savedTxns = await Transaction.insertMany(transactions, {
       ordered: false,
     });
-    await analyticsService.updateAnalyticsBatch(
-      savedTxns,
-      transactions[0].userId
-    );
+
+    if (savedTxns.length > 0) {
+      // Assuming all transactions belong to the same user (bulk import context)
+      // or grouped. But here we send all. updateAnalyticsBatch handles array.
+      // But updateAnalyticsBatch requires userId as 2nd arg.
+      // We assume single user bulk create based on typical use case.
+      await analyticsService.updateAnalyticsBatch(
+        savedTxns,
+        savedTxns[0].userId
+      );
+    }
 
     return savedTxns;
   } catch (err) {
@@ -68,7 +75,7 @@ async function getTransactions(filters = {}, { page = 1, limit = 10 }) {
 
   const skip = (page - 1) * limit;
 
-  console.log(query);
+  // console.log(query);
 
   const totalDocuments = await Transaction.countDocuments(query);
 
@@ -92,6 +99,7 @@ async function getTransaction(id) {
 
 async function updateTransaction(id, data) {
   validateId(id);
+
   const txn = await Transaction.findById(id);
   if (!txn) throw new AppError(TransactionErrors.NOT_FOUND);
 
@@ -111,12 +119,15 @@ async function updateTransaction(id, data) {
 
     return savedTxn;
   } catch (err) {
+    console.log(err);
+    if (err instanceof AppError) throw err; // Re-throw known errors
     throw new AppError(TransactionErrors.UPDATE_FAILED);
   }
 }
 
 async function deleteTransaction(id) {
   validateId(id);
+
   const txn = await Transaction.findById(id);
   if (!txn) throw new AppError(TransactionErrors.NOT_FOUND);
 
@@ -125,7 +136,7 @@ async function deleteTransaction(id) {
     await analyticsService.updateAnalyticsOnDelete(txn);
     return txn;
   } catch (err) {
-    console.log(err);
+    if (err instanceof AppError) throw err;
     throw new AppError(TransactionErrors.DELETE_FAILED);
   }
 }

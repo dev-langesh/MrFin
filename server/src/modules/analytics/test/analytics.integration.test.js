@@ -53,10 +53,12 @@ describe("Analytics Integration", () => {
       expect(res.body.income.total).toBe(500);
     });
 
-    it("should return 404/500 if analytics not found", async () => {
-      // Service throws NOT_FOUND which is mapped to error code.
+    it("should create and return 200 if analytics not found (lazy init)", async () => {
+      // Service auto-creates if missing
       const res = await request(app).get("/api/analytics");
-      expect(res.status).not.toBe(200);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("userId");
+      expect(res.body.income.total).toBe(0);
     });
   });
 });

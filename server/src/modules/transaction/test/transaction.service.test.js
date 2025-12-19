@@ -70,6 +70,13 @@ describe("Transaction Service", () => {
       expect(Transaction.insertMany).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsBatch).toHaveBeenCalled();
     });
+
+    it("should throw error if bulk create fails", async () => {
+      Transaction.insertMany.mockRejectedValue(new Error("Bulk Fail"));
+      await expect(
+        transactionService.createTransactions([mockTxnData])
+      ).rejects.toThrow(TransactionErrors.CREATE_FAILED.message);
+    });
   });
 
   describe("getTransaction", () => {
@@ -147,12 +154,37 @@ describe("Transaction Service", () => {
         expect.objectContaining({
           amount: 100,
           txnType: "income",
+          txnDate: expect.any(Date),
         }),
         expect.objectContaining({
           amount: 100,
           txnType: "expense",
+          txnDate: expect.any(Date),
         })
       );
+    });
+
+    it("should throw NOT_FOUND if transaction does not exist", async () => {
+      Transaction.findById.mockResolvedValue(null);
+      await expect(
+        transactionService.updateTransaction(new mongoose.Types.ObjectId(), {
+          amount: 100,
+        })
+      ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
+    });
+
+    it("should throw UPDATE_FAILED if save fails", async () => {
+      const id = new mongoose.Types.ObjectId();
+      const mockTxn = {
+        ...mockTxnData,
+        _id: id,
+        save: jest.fn().mockRejectedValue(new Error("DB Error")),
+      };
+      Transaction.findById.mockResolvedValue(mockTxn);
+
+      await expect(
+        transactionService.updateTransaction(id, { amount: 200 })
+      ).rejects.toThrow(TransactionErrors.UPDATE_FAILED.message);
     });
   });
 
@@ -167,6 +199,23 @@ describe("Transaction Service", () => {
       expect(txn.deleteOne).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsOnDelete).toHaveBeenCalledWith(
         txn
+      );
+    });
+
+    it("should throw NOT_FOUND if transaction to delete does not exist", async () => {
+      Transaction.findById.mockResolvedValue(null);
+      await expect(
+        transactionService.deleteTransaction(new mongoose.Types.ObjectId())
+      ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
+    });
+
+    it("should throw DELETE_FAILED if delete fails", async () => {
+      const id = new mongoose.Types.ObjectId();
+      const txn = { deleteOne: jest.fn().mockRejectedValue(new Error("Fail")) };
+      Transaction.findById.mockResolvedValue(txn);
+
+      await expect(transactionService.deleteTransaction(id)).rejects.toThrow(
+        TransactionErrors.DELETE_FAILED.message
       );
     });
   });
@@ -199,6 +248,43 @@ describe("Transaction Service", () => {
         })
       );
       expect(result.transactions).toHaveLength(1);
+    });
+
+    it("should handle filters (category array, description)", async () => {
+      const mockFind = jest.fn().mockReturnThis();
+      const mockSort = jest.fn().mockReturnThis();
+      const mockSkip = jest.fn().mockReturnThis();
+      const mockLimit = jest.fn().mockReturnThis();
+      const mockLean = jest.fn().mockResolvedValue([]);
+      Transaction.find.mockReturnValue({
+        sort: mockSort,
+        skip: mockSkip,
+        limit: mockLimit,
+        lean: mockLean,
+      });
+      Transaction.countDocuments.mockResolvedValue(1);
+
+      await transactionService.getTransactions(
+        {
+          category: ["A", "B"],
+          description: "test",
+        },
+        {}
+      );
+
+      expect(Transaction.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: { $in: ["A", "B"] },
+          description: { $regex: "test", $options: "i" },
+        })
+      );
+    });
+
+    it("should handle empty result explicitly", async () => {
+      Transaction.countDocuments.mockResolvedValue(0);
+      const res = await transactionService.getTransactions({}, {});
+      expect(res).toEqual({ transactions: [], total: 0 });
+      expect(Transaction.find).not.toHaveBeenCalled();
     });
   });
 });

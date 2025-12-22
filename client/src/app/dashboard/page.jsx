@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import DashboardSummary from "@/components/dashboard/dashboard/DashboardSummary";
-import { AreaChart } from "@/components/dashboard/dashboard/AreaChart";
 import { ChartCard } from "@/components/dashboard/dashboard/ChartCard";
 import CategoryDistribution from "@/components/dashboard/dashboard/CategoryDistribution";
 import { analyticsService } from "@/services/analytics.service";
+import { PI_CHART_COLOR_SETS } from "@/components/dashboard/dashboard/constants";
 import { DatePickerWithRange } from "@/components/ui/DatePickerWithRange";
 import {
   startOfMonth,
@@ -89,10 +89,14 @@ export default function TransactionPage() {
       const [seriesData, incomeDist, expenseDist, investmentDist] = await req;
 
       const processSeries = (data, key) => {
-        return data.map((item) => ({
-          _id: item.date,
-          amount: item.totals?.[key] || 0,
-        }));
+        return data.map((item) => {
+          const categories = item[`${key}Categories`] || {};
+          return {
+            _id: item.date,
+            amount: item.totals?.[key] || 0,
+            ...categories,
+          };
+        });
       };
 
       const incomeData = processSeries(seriesData, "income");
@@ -101,20 +105,22 @@ export default function TransactionPage() {
 
       const hasData = (data) => data.some((item) => item.amount > 0);
 
-      setIncome(hasData(incomeData) ? incomeData : []);
-      setExpense(hasData(expenseData) ? expenseData : []);
-      setInvestment(hasData(investmentData) ? investmentData : []);
-
-      console.log(investmentData);
-
       const filterZero = (data) => {
         if (!data) return [];
         return data.filter((item) => item.value > 0);
       };
 
-      setIncomeDistribution(filterZero(incomeDist));
-      setExpenseDistribution(filterZero(expenseDist));
-      setInvestmentDistribution(filterZero(investmentDist));
+      const incomeDistData = filterZero(incomeDist);
+      const expenseDistData = filterZero(expenseDist);
+      const investmentDistData = filterZero(investmentDist);
+
+      setIncome(hasData(incomeData) ? incomeData : []);
+      setExpense(hasData(expenseData) ? expenseData : []);
+      setInvestment(hasData(investmentData) ? investmentData : []);
+
+      setIncomeDistribution(incomeDistData);
+      setExpenseDistribution(expenseDistData);
+      setInvestmentDistribution(investmentDistData);
 
       const checkDir = (data, setDir) => {
         if (!data || data.length === 0) return;
@@ -225,15 +231,27 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <ChartCard title="Income Over Time">
-              <AreaChart
-                data={income}
-                color={`chart-${incomeDir}`}
-                label="Income"
-                yKey="amount"
-                xKey="_id"
-              />
-            </ChartCard>
+            <ChartCard
+              title="Income Over Time"
+              data={income}
+              color={`chart-${incomeDir}`}
+              label="Income"
+              yKey="amount"
+              xKey="_id"
+              isMonthly={
+                timeRange.endDate && timeRange.startDate
+                  ? new Date(timeRange.endDate) -
+                      new Date(timeRange.startDate) >
+                    31536000000 // approx 1 year in ms
+                  : false
+              }
+              stackedKeys={incomeDistribution.map((i) => i.name)}
+              stackedColors={incomeDistribution.reduce((acc, item, index) => {
+                const COLORS = PI_CHART_COLOR_SETS.income;
+                acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
+                return acc;
+              }, {})}
+            />
           )}
         </div>
         <div className="w-full md:w-[350px]">
@@ -254,15 +272,27 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <ChartCard title="Expense Over Time">
-              <AreaChart
-                data={expense}
-                color={`chart-${expenseDir}`}
-                label="Expense"
-                yKey="amount"
-                xKey="_id"
-              />
-            </ChartCard>
+            <ChartCard
+              title="Expense Over Time"
+              data={expense}
+              color={`chart-${expenseDir}`}
+              label="Expense"
+              yKey="amount"
+              xKey="_id"
+              isMonthly={
+                timeRange.endDate && timeRange.startDate
+                  ? new Date(timeRange.endDate) -
+                      new Date(timeRange.startDate) >
+                    31536000000
+                  : false
+              }
+              stackedKeys={expenseDistribution.map((i) => i.name)}
+              stackedColors={expenseDistribution.reduce((acc, item, index) => {
+                const COLORS = PI_CHART_COLOR_SETS.expense;
+                acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
+                return acc;
+              }, {})}
+            />
           )}
         </div>
         <div className="w-full md:w-[350px]">
@@ -283,15 +313,30 @@ export default function TransactionPage() {
           {loading ? (
             <Skeleton className="h-[350px] w-full rounded-sm" />
           ) : (
-            <ChartCard title="Investment Over Time">
-              <AreaChart
-                data={investment}
-                color={`chart-${investmentDir}`}
-                label="Investment"
-                yKey="amount"
-                xKey="_id"
-              />
-            </ChartCard>
+            <ChartCard
+              title="Investment Over Time"
+              data={investment}
+              color={`chart-${investmentDir}`}
+              label="Investment"
+              yKey="amount"
+              xKey="_id"
+              isMonthly={
+                timeRange.endDate && timeRange.startDate
+                  ? new Date(timeRange.endDate) -
+                      new Date(timeRange.startDate) >
+                    31536000000
+                  : false
+              }
+              stackedKeys={investmentDistribution.map((i) => i.name)}
+              stackedColors={investmentDistribution.reduce(
+                (acc, item, index) => {
+                  const COLORS = PI_CHART_COLOR_SETS.investment;
+                  acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
+                  return acc;
+                },
+                {}
+              )}
+            />
           )}
         </div>
         <div className="w-full md:w-[350px]">

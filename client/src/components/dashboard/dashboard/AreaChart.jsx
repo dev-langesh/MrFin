@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 
 export function AreaChart({
   data,
+  isMonthly = false,
   xKey = "_id",
   yKey = "amount",
   color = "chart-1",
@@ -71,6 +72,12 @@ export function AreaChart({
           minTickGap={32}
           tickFormatter={(value) => {
             const date = new Date(value);
+            if (isMonthly) {
+              return date.toLocaleDateString("en-US", {
+                month: "short",
+                year: "2-digit",
+              });
+            }
             return date.toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
@@ -84,7 +91,9 @@ export function AreaChart({
           axisLine={false}
           domain={[0, "auto"]}
           padding={{ top: 10, bottom: 10 }}
-          tickFormatter={(value) => (value > 1000 ? `${value / 1000}k` : value)}
+          tickFormatter={(value) =>
+            value >= 1000 ? `${value / 1000}k` : value
+          }
         />
 
         <ChartTooltip
@@ -92,6 +101,12 @@ export function AreaChart({
           content={
             <ChartTooltipContent
               labelFormatter={(value) => {
+                if (isMonthly) {
+                  return new Date(value).toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                  });
+                }
                 return new Date(value).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",

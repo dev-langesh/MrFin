@@ -28,7 +28,7 @@ export default function CategoryDistribution({
     }));
 
   return (
-    <Card className="rounded-sm relative h-[350px] flex flex-col gap-2 px-0 py-4">
+    <Card className="rounded-sm relative h-[400px] flex flex-col gap-2 px-0 py-4">
       <Tabs defaultValue="chart" className="flex flex-col h-full w-full">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 ">
           <div className="space-y-1">

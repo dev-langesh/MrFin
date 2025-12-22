@@ -141,6 +141,9 @@ async function getCategoryDistribution(
         value: 1,
         _id: 0,
       },
+    },
+    {
+      $sort: { value: -1 },
     }
   );
 

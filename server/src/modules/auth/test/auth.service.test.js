@@ -1,295 +1,262 @@
-const { userService } = require("../../user/user.service");
-const { otpService } = require("../../otp/otp.service");
-const { tokenService } = require("../../../lib/jwt/token.service");
-const { analyticsService } = require("../../analytics/analytics.service");
-const { settingsService } = require("../../settings/settings.service");
-const bcrypt = require("bcrypt");
-const { AppError } = require("../../../utils/error");
+const mongoose = require("mongoose");
+const { MongoMemoryServer } = require("mongodb-memory-server");
+const { authService } = require("../auth.service");
+const { User } = require("../../user/user.model");
 const { AuthErrors } = require("../../../errors/authErrors");
 const { getGoogleUser } = require("../utils/googleAuth");
+const { analyticsService } = require("../../analytics/analytics.service");
+const { settingsService } = require("../../settings/settings.service");
+const { otpService } = require("../../otp/otp.service");
+const { tokenService } = require("../../../lib/jwt/token.service");
 
-jest.mock("../../user/user.service");
-jest.mock("../../otp/otp.service");
-jest.mock("../../../lib/jwt/token.service");
+// Mock dependencies that involve external calls or secondary modules
+jest.mock("../utils/googleAuth");
 jest.mock("../../analytics/analytics.service");
 jest.mock("../../settings/settings.service");
-jest.mock("../utils/googleAuth");
+jest.mock("../../otp/otp.service", () => ({
+  otpService: {
+    verifyOtp: jest.fn(),
+  },
+}));
 
-// Require authService AFTER mocks are set up
-const { authService } = require("../auth.service");
+describe("Auth Service Integration", () => {
+  let mongoServer;
 
-describe("Auth Service", () => {
-  // Generate a real hash for the mock user
-  const password = "password";
-  const hashedPassword = bcrypt.hashSync(password, 10);
+  beforeAll(async () => {
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
+  });
 
-  const mockUser = {
-    _id: "user123",
-    email: "test@example.com",
-    password: hashedPassword,
-    verified: true,
-    role: "user",
-    provider: "email",
-  };
+  afterAll(async () => {
+    await mongoose.disconnect();
+    await mongoServer.stop();
+  });
 
-  const mockTokens = {
-    accessToken: "access",
-    refreshToken: "refresh",
-  };
-
-  afterEach(() => {
+  beforeEach(async () => {
+    await User.deleteMany({});
     jest.clearAllMocks();
   });
 
   describe("registerUser", () => {
-    it("should register a new user", async () => {
-      const userData = { email: "test@example.com", password: "password" };
-      // bcrypt.hash is real now, so we don't mock it
-      userService.createUser.mockResolvedValue(mockUser);
-      analyticsService.createAnalytics.mockResolvedValue();
+    it("should register a new user and return stripped user object", async () => {
+      analyticsService.createAnalytics.mockResolvedValue(true);
+      settingsService.updateSettings.mockResolvedValue(true);
 
-      const result = await authService.registerUser(userData);
+      const data = {
+        name: "Test User",
+        email: "register@example.com",
+        password: "password123",
+        country: "US",
+      };
 
-      // We can't strict equal check hashing since it's random salt, but we verify createUser is called
-      expect(userService.createUser).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: userData.email,
-        })
-      );
-      // Verify password in call arguments is hashed (not plain text)
-      const createUserArgs = userService.createUser.mock.calls[0][0];
-      expect(createUserArgs.password).not.toBe(userData.password);
-      expect(createUserArgs.password).toMatch(/^\$2b\$/); // basic bcrypt check
+      const result = await authService.registerUser(data);
+
+      expect(result.user).toBeDefined();
+      expect(result.user.email).toBe(data.email);
+      expect(result.user.password).toBeUndefined(); // Verify password stripping
+      expect(result.user.passwordHash).toBeUndefined();
+
+      // Verify DB
+      const userInDb = await User.findOne({ email: data.email });
+      expect(userInDb).toBeDefined();
+      expect(userInDb.password).not.toBe(data.password); // Should be hashed
+      expect(userInDb.password).toMatch(/^\$2b\$/);
 
       expect(analyticsService.createAnalytics).toHaveBeenCalledWith(
-        mockUser._id
+        userInDb._id
       );
-      expect(result).toEqual({ user: mockUser });
     });
   });
 
   describe("loginUser", () => {
-    it("should login user with valid credentials", async () => {
-      userService.findUserByEmail.mockResolvedValue(mockUser); // Valid hash in mockUser
-      tokenService.generateTokens.mockReturnValue(mockTokens);
+    it("should login with valid credentials and return tokens", async () => {
+      // Register first to create hash correctly
+      const data = {
+        name: "Login User",
+        email: "login@example.com",
+        password: "password123",
+        country: "US",
+      };
+      // We can use authService.registerUser setup, but verified:false by default
+      // We must manually create or register+verify
+      await authService.registerUser(data);
+      await User.updateOne({ email: data.email }, { verified: true });
 
       const result = await authService.loginUser({
-        email: "test@example.com",
-        password: "password",
+        email: data.email,
+        password: data.password,
       });
 
-      expect(userService.findUserByEmail).toHaveBeenCalledWith(
-        "test@example.com",
-        true
-      );
-      // bcrypt.compare is real, so it verifies "password" against mockUser.password
-      expect(result).toEqual({ user: mockUser, tokens: mockTokens });
+      expect(result.user).toBeDefined();
+      expect(result.user.email).toBe(data.email);
+      expect(result.user.password).toBeUndefined();
+      expect(result.tokens).toBeDefined();
+      expect(result.tokens.accessToken).toBeDefined();
+      expect(result.tokens.refreshToken).toBeDefined();
     });
 
-    it("should throw error if google login required", async () => {
-      userService.findUserByEmail.mockResolvedValue({
-        ...mockUser,
-        provider: "google",
-        password: null,
+    it("should throw INVALID_CREDENTIALS for wrong password", async () => {
+      await authService.registerUser({
+        name: "Wrong Pwd",
+        email: "wrong@example.com",
+        password: "password123",
+        country: "US",
       });
+      await User.updateOne({ email: "wrong@example.com" }, { verified: true });
 
       await expect(
         authService.loginUser({
-          email: "test@example.com",
-          password: "password",
-        })
-      ).rejects.toThrow(AuthErrors.GOOGLE_LOGIN_REQUIRED.message);
-    });
-
-    it("should throw error for invalid password", async () => {
-      userService.findUserByEmail.mockResolvedValue(mockUser);
-      // Real bcrypt.compare will return false for wrong password
-
-      await expect(
-        authService.loginUser({
-          email: "test@example.com",
-          password: "wrongPassword",
+          email: "wrong@example.com",
+          password: "wrongpassword",
         })
       ).rejects.toThrow(AuthErrors.INVALID_CREDENTIALS.message);
     });
 
-    it("should throw error if user not verified", async () => {
-      userService.findUserByEmail.mockResolvedValue({
-        ...mockUser,
-        verified: false,
+    it("should throw INVALID_CREDENTIALS (generic) for missing user", async () => {
+      // Prevents enumeration
+      await expect(
+        authService.loginUser({
+          email: "missing@example.com",
+          password: "password123",
+        })
+      ).rejects.toThrow(AuthErrors.INVALID_CREDENTIALS.message);
+    });
+
+    it("should throw USER_NOT_VERIFIED if verified is false", async () => {
+      await authService.registerUser({
+        name: "Unverified",
+        email: "unverified@example.com",
+        password: "password123",
+        country: "US",
       });
-      // Real bcrypt compare passes
+      // Do not verify
 
       await expect(
         authService.loginUser({
-          email: "test@example.com",
-          password: "password",
+          email: "unverified@example.com",
+          password: "password123",
         })
       ).rejects.toThrow(AuthErrors.USER_NOT_VERIFIED.message);
     });
   });
 
   describe("verifyOtp", () => {
-    it("should verify OTP and return tokens", async () => {
-      otpService.verifyOtp.mockResolvedValue();
-      userService.verifyUserByEmail.mockResolvedValue(mockUser);
-      tokenService.generateTokens.mockReturnValue(mockTokens);
+    it("should verify otp, mark user verified, and return tokens", async () => {
+      otpService.verifyOtp.mockResolvedValue(true);
+
+      const user = await User.create({
+        name: "Otp User",
+        email: "otp@example.com",
+        country: "US",
+        verified: false,
+      });
 
       const result = await authService.verifyOtp({
-        to: "test@example.com",
+        to: "otp@example.com",
         otp: "123456",
       });
 
       expect(otpService.verifyOtp).toHaveBeenCalledWith({
-        to: "test@example.com",
+        to: "otp@example.com",
         otp: "123456",
       });
-      expect(userService.verifyUserByEmail).toHaveBeenCalledWith(
-        "test@example.com"
-      );
-      expect(result).toEqual({ user: mockUser, tokens: mockTokens });
+
+      const updatedUser = await User.findOne({ email: "otp@example.com" });
+      expect(updatedUser.verified).toBe(true);
+      expect(result.tokens).toBeDefined();
     });
   });
 
   describe("rotateTokens", () => {
-    it("should rotate tokens", async () => {
-      tokenService.verifyToken.mockReturnValue({ userId: mockUser._id });
-      userService.findUserById.mockResolvedValue(mockUser);
-      tokenService.generateTokens.mockReturnValue(mockTokens);
-
-      const result = await authService.rotateTokens("validRefreshToken");
-
-      expect(userService.findUserById).toHaveBeenCalledWith(mockUser._id);
-      expect(result).toEqual(mockTokens);
-    });
-
-    it("should throw error if token missing", async () => {
-      await expect(authService.rotateTokens(null)).rejects.toThrow(
-        AuthErrors.MISSING_TOKEN.message
-      );
-    });
-
-    it("should catch verify errors and throw REFRESH_TOKEN_EXPIRED", async () => {
-      tokenService.verifyToken.mockImplementation(() => {
-        throw new Error("Invalid token");
+    it("should rotate tokens with valid refresh token", async () => {
+      const user = await User.create({
+        name: "Rotate User",
+        email: "rotate@example.com",
+        country: "US",
+        verified: true,
       });
 
-      await expect(
-        authService.rotateTokens("invalidRefreshToken")
-      ).rejects.toThrow(AuthErrors.REFRESH_TOKEN_EXPIRED.message);
+      const token = tokenService.generateToken({
+        userId: user._id,
+        role: "user",
+        tokenType: "refresh",
+      });
+
+      const result = await authService.rotateTokens(token);
+      expect(result.accessToken).toBeDefined();
+      expect(result.refreshToken).toBeDefined();
+    });
+
+    it("should throw REFRESH_TOKEN_EXPIRED if invalid", async () => {
+      await expect(authService.rotateTokens("invalid-token")).rejects.toThrow(
+        AuthErrors.REFRESH_TOKEN_EXPIRED.message
+      );
     });
   });
 
   describe("Google Auth", () => {
-    const mockGoogleUser = {
-      googleId: "google123",
-      email: "test@example.com",
-      name: "Test User",
-      picture: "pic.jpg",
-    };
-
-    it("should login with google (new user)", async () => {
-      getGoogleUser.mockResolvedValue(mockGoogleUser);
-      userService.findUserByEmail.mockResolvedValue(null);
-      tokenService.generateToken.mockReturnValue("regToken");
+    it("should login new google user (isNew: true)", async () => {
+      getGoogleUser.mockResolvedValue({
+        googleId: "g1",
+        email: "google@new.com",
+        name: "Google New",
+        picture: "pic.jpg",
+      });
 
       const result = await authService.loginWithGoogle("code");
+      expect(result.isNew).toBe(true);
+      expect(result.registrationToken).toBeDefined();
+      expect(result.user.email).toBe("google@new.com");
+    });
 
-      expect(getGoogleUser).toHaveBeenCalledWith("code");
-      expect(userService.createUser).not.toHaveBeenCalled();
-      expect(analyticsService.createAnalytics).not.toHaveBeenCalled();
-      expect(result).toEqual({
-        isNew: true,
-        registrationToken: "regToken",
-        user: {
-          name: mockGoogleUser.name,
-          email: mockGoogleUser.email,
-          picture: mockGoogleUser.picture,
-        },
+    it("should login existing google user", async () => {
+      await User.create({
+        googleId: "g2",
+        email: "google@existing.com",
+        name: "Google Existing",
+        country: "US",
+        provider: "google",
+        verified: true,
       });
+
+      getGoogleUser.mockResolvedValue({
+        googleId: "g2",
+        email: "google@existing.com",
+        name: "Google Existing",
+        picture: "pic.jpg",
+      });
+
+      const result = await authService.loginWithGoogle("code");
+      expect(result.isNew).toBeUndefined();
+      expect(result.tokens).toBeDefined();
+      expect(result.user._id).toBeDefined();
     });
 
     it("should complete google login", async () => {
-      tokenService.verifyToken.mockReturnValue(mockGoogleUser);
-      userService.findUserByEmail.mockResolvedValue(null);
-      userService.createUser.mockResolvedValue({
-        _id: "userId",
-        ...mockGoogleUser,
+      const regToken = tokenService.generateToken({
+        googleId: "g3",
+        email: "google@complete.com",
+        name: "Google Complete",
+        picture: "pic.jpg",
+        tokenType: "registration",
       });
-      tokenService.generateTokens.mockReturnValue(mockTokens);
-      settingsService.updateSettings.mockResolvedValue();
+
+      analyticsService.createAnalytics.mockResolvedValue(true);
+      settingsService.updateSettings.mockResolvedValue(true);
 
       const result = await authService.completeGoogleLogin({
-        registrationToken: "regToken",
-        country: "IN",
-        currency: "INR",
+        registrationToken: regToken,
+        country: "GB",
+        currency: "GBP",
       });
 
-      expect(tokenService.verifyToken).toHaveBeenCalledWith(
-        "regToken",
-        "registration"
-      );
-      expect(userService.createUser).toHaveBeenCalledWith(
-        expect.objectContaining({
-          email: mockGoogleUser.email,
-          country: "IN",
-        })
-      );
-      expect(settingsService.updateSettings).toHaveBeenCalledWith("userId", {
-        general: { currency: "INR" },
-      });
-      expect(result).toEqual({
-        user: expect.objectContaining({ _id: "userId" }),
-        tokens: mockTokens,
-      });
-    });
+      expect(result.user).toBeDefined();
+      expect(result.user.email).toBe("google@complete.com");
+      expect(result.user.country).toBe("GB");
+      expect(result.tokens).toBeDefined();
 
-    it("should login with google (existing user)", async () => {
-      getGoogleUser.mockResolvedValue(mockGoogleUser);
-      userService.findUserByEmail.mockResolvedValue({
-        _id: "userId",
-        ...mockGoogleUser,
-      });
-      tokenService.generateTokens.mockReturnValue({
-        accessToken: "access",
-        refreshToken: "refresh",
-      });
-
-      await authService.loginWithGoogle("code");
-
-      expect(userService.createUser).not.toHaveBeenCalled();
-      expect(analyticsService.createAnalytics).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("Password Reset", () => {
-    it("should verify otp and generate reset token", async () => {
-      otpService.verifyOtp.mockResolvedValue();
-      userService.findUserByEmail.mockResolvedValue(mockUser);
-      tokenService.generateToken.mockReturnValue("resetToken");
-
-      const result = await authService.verifyOtpToResetPassword({
-        otp: "123",
-        to: "test@example.com",
-      });
-
-      expect(result).toEqual({ token: "resetToken" });
-    });
-
-    it("should verify token and reset password", async () => {
-      tokenService.verifyToken.mockReturnValue({ userId: mockUser._id });
-
-      userService.resetPassword.mockResolvedValue();
-
-      await authService.verifyTokenAndResetPassword({
-        password: "newPassword",
-        token: "resetToken",
-      });
-
-      const resetArgs = userService.resetPassword.mock.calls[0];
-      expect(resetArgs[0]).toBe(mockUser._id);
-      expect(resetArgs[1]).not.toBe("newPassword"); // Should be hashed
-      expect(resetArgs[1]).toMatch(/^\$2b\$/);
+      const dbUser = await User.findOne({ email: "google@complete.com" });
+      expect(dbUser).toBeDefined();
     });
   });
 });

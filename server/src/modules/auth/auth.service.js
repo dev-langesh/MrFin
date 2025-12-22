@@ -27,12 +27,21 @@ async function registerUser(data) {
     });
   }
 
-  return { user };
+  const userObj = user.toObject();
+  delete userObj.password;
+
+  return { user: userObj };
 }
 
 async function loginUser(data) {
   const { email, password } = data;
-  const user = await userService.findUserByEmail(email, true);
+  let user;
+
+  try {
+    user = await userService.findUserByEmail(email, true);
+  } catch (error) {
+    throw new AppError(AuthErrors.INVALID_CREDENTIALS);
+  }
 
   if (!user.password && user.provider === "google") {
     throw new AppError(AuthErrors.GOOGLE_LOGIN_REQUIRED);
@@ -49,7 +58,10 @@ async function loginUser(data) {
 
   const tokens = tokenService.generateTokens(user);
 
-  return { user, tokens };
+  const userObj = user.toObject();
+  delete userObj.password;
+
+  return { user: userObj, tokens };
 }
 
 async function verifyOtp({ to, otp }) {

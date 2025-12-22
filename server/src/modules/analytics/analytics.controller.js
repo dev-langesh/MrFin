@@ -1,4 +1,5 @@
 const { analyticsService } = require("./analytics.service");
+const { timeSeriesService } = require("./timeSeries.service");
 const asyncHandler = require("express-async-handler");
 
 async function getAnalytics(req, res) {
@@ -11,7 +12,7 @@ async function getAnalytics(req, res) {
 }
 
 async function getTimeSeries(req, res) {
-  const result = await analyticsService.getTimeSeries(
+  const result = await timeSeriesService.getTimeSeries(
     req.user.id,
     req.query.startDate,
     req.query.endDate,
@@ -21,7 +22,7 @@ async function getTimeSeries(req, res) {
 }
 
 async function getCategoryDistribution(req, res) {
-  const result = await analyticsService.getCategoryDistribution(
+  const result = await timeSeriesService.getCategoryDistribution(
     req.user.id,
     req.query.startDate,
     req.query.endDate,

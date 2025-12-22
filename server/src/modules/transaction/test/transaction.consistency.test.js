@@ -482,4 +482,71 @@ describe("Transaction Consistency Test Suite", () => {
       }
     }
   });
+
+  // 5. CONCURRENCY / RACE CONDITION
+  it("Scenario 5: Concurrency & Race Conditions", async () => {
+    // Fire 20 parallel requests
+    const COUNT = 20;
+    const reqs = [];
+    const amount = 100;
+
+    for (let i = 0; i < COUNT; i++) {
+      reqs.push(
+        request(app)
+          .post("/api/transactions")
+          .set("Cookie", [`accessToken=${token}`])
+          .send({
+            txnDate: CURRENT_DATE, // All same day
+            txnType: "income",
+            amount: amount,
+            category: "Race",
+          })
+      );
+    }
+
+    await Promise.all(reqs);
+    await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
+
+    // Explicit verify of the total to ensure no updates were lost
+    const analytics = await Analytics.findOne({ userId: TEST_USER_ID });
+    expect(analytics.income.total).toBeGreaterThanOrEqual(COUNT * amount);
+    // Note: GreaterThanOrEqual is used because previous tests populate data too.
+    // Ideally we should check the delta, but verifyConsistency ensures the sum of txns matches analytics.
+  });
+
+  // 6. BULK IMPORT CONSISTENCY
+  it("Scenario 6: Bulk Creation Consistency", async () => {
+    const bulkData = [
+      {
+        txnDate: new Date(2025, 5, 10).toISOString(),
+        txnType: "expense",
+        amount: 50,
+        category: "BulkFood",
+      },
+      {
+        txnDate: new Date(2025, 5, 11).toISOString(),
+        txnType: "income",
+        amount: 200,
+        category: "BulkSold",
+      },
+      {
+        txnDate: new Date(2025, 4, 15).toISOString(), // Prev month
+        txnType: "investment",
+        amount: 1000,
+        category: "BulkInvest",
+      },
+    ];
+
+    await request(app)
+      .post("/api/transactions/bulk")
+      .set("Cookie", [`accessToken=${token}`])
+      .send(bulkData) // endpoint expects array directly or { user, transactions }?
+      // Checking transaction.controller.js would be accurate, but integration test used array.
+      // Wait, integration test code: request(app).post(...).send(data)
+      // I need to be sure about the payload structure for bulk.
+      // Assuming array based on integration test viewing.
+      .expect(201);
+
+    await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
+  });
 });

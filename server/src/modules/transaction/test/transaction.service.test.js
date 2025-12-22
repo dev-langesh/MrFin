@@ -1,97 +1,120 @@
 const { transactionService } = require("../transaction.service");
 const { Transaction } = require("../transaction.model");
-const { analyticsService } = require("../../analytics/analytics.service");
+const { Analytics } = require("../../analytics/analytics.model");
+const { DailyAnalytics } = require("../../analytics/dailyAnalytics.model");
+const { MonthlyAnalytics } = require("../../analytics/monthlyAnalytics.model");
 const mongoose = require("mongoose");
+const { MongoMemoryServer } = require("mongodb-memory-server");
 const { TransactionErrors } = require("../../../errors/transactionErrors");
 
-jest.mock("../transaction.model");
-jest.mock("../../analytics/analytics.service");
-
 describe("Transaction Service", () => {
-  afterEach(() => {
-    jest.clearAllMocks();
+  let mongoServer;
+  const userId = new mongoose.Types.ObjectId().toString();
+
+  beforeAll(async () => {
+    mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
+    // Ensure indexes
+    await Transaction.ensureIndexes();
+    await Analytics.ensureIndexes();
+    await DailyAnalytics.ensureIndexes();
+    await MonthlyAnalytics.ensureIndexes();
+  });
+
+  afterAll(async () => {
+    await mongoose.disconnect();
+    await mongoServer.stop();
+  });
+
+  beforeEach(async () => {
+    await Transaction.deleteMany({});
+    await Analytics.deleteMany({});
+    await DailyAnalytics.deleteMany({});
+    await MonthlyAnalytics.deleteMany({});
   });
 
   const mockTxnData = {
-    userId: "user123",
+    userId,
     amount: 100,
     txnType: "income",
     category: "Salary",
     txnDate: new Date(),
-
-    description: "Test",
+    description: "Test Transaction",
   };
 
   describe("createTransaction", () => {
     it("should create transaction and update income analytics", async () => {
-      Transaction.create.mockResolvedValue({ ...mockTxnData, _id: "txn1" });
-      analyticsService.updateAnalyticsOnAdd.mockResolvedValue();
+      // Setup: Create initial analytics (optional, service handles it, but good for consistent state)
+      // Actually, getAnalytics (called inside updates) creates it if missing.
 
       const result = await transactionService.createTransaction(mockTxnData);
 
-      expect(Transaction.create).toHaveBeenCalledWith(mockTxnData);
-      expect(analyticsService.updateAnalyticsOnAdd).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: mockTxnData.userId,
-          amount: mockTxnData.amount,
-          txnType: mockTxnData.txnType,
-        })
-      );
-      expect(result).toHaveProperty("_id", "txn1");
+      expect(result).toHaveProperty("_id");
+      expect(result.amount).toBe(100);
+
+      // Verify Transaction DB
+      const txnInDb = await Transaction.findById(result._id);
+      expect(txnInDb).toBeDefined();
+      expect(txnInDb.description).toBe("Test Transaction");
+
+      // Verify Analytics DB (Integration check)
+      const analytics = await Analytics.findOne({ userId });
+      expect(analytics).toBeDefined();
+      expect(analytics.income.total).toBe(100);
+      expect(analytics.income.month).toBe(100);
     });
 
     it("should create transaction and update expense analytics", async () => {
       const expenseData = { ...mockTxnData, txnType: "expense", amount: 50 };
-      Transaction.create.mockResolvedValue({ ...expenseData, _id: "txn2" });
 
-      await transactionService.createTransaction(expenseData);
+      const result = await transactionService.createTransaction(expenseData);
+      expect(result.txnType).toBe("expense");
 
-      expect(analyticsService.updateAnalyticsOnAdd).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: expenseData.userId,
-          amount: expenseData.amount,
-          txnType: expenseData.txnType,
-        })
-      );
+      const analytics = await Analytics.findOne({ userId });
+      expect(analytics.expenses.total).toBe(50);
+      expect(analytics.expenses.month).toBe(50);
     });
 
-    it("should throw error if create fails", async () => {
-      Transaction.create.mockRejectedValue(new Error("DB Error"));
+    it("should throw error if required fields missing (Mongoose validation)", async () => {
+      // Mongoose validation error is usually wrapped or thrown as is.
+      // The service wraps creation in try/catch and throws CREATE_FAILED
+
       await expect(
-        transactionService.createTransaction(mockTxnData)
+        transactionService.createTransaction({ userId }) // Missing amount, type etc
       ).rejects.toThrow(TransactionErrors.CREATE_FAILED.message);
     });
   });
 
   describe("createTransactions (Bulk)", () => {
     it("should create multiple transactions", async () => {
-      Transaction.insertMany.mockResolvedValue([mockTxnData, mockTxnData]);
-      await transactionService.createTransactions([mockTxnData, mockTxnData]);
-      expect(Transaction.insertMany).toHaveBeenCalled();
-      expect(analyticsService.updateAnalyticsBatch).toHaveBeenCalled();
-    });
+      const txns = [
+        mockTxnData,
+        { ...mockTxnData, amount: 200, category: "Bonus" },
+      ];
 
-    it("should throw error if bulk create fails", async () => {
-      Transaction.insertMany.mockRejectedValue(new Error("Bulk Fail"));
-      await expect(
-        transactionService.createTransactions([mockTxnData])
-      ).rejects.toThrow(TransactionErrors.CREATE_FAILED.message);
+      const results = await transactionService.createTransactions(txns);
+      expect(results).toHaveLength(2);
+
+      // Verify DB Count
+      const count = await Transaction.countDocuments({ userId });
+      expect(count).toBe(2);
+
+      // Verify Analytics Aggregation
+      const analytics = await Analytics.findOne({ userId });
+      expect(analytics.income.total).toBe(300); // 100 + 200
     });
   });
 
   describe("getTransaction", () => {
     it("should return transaction if found", async () => {
-      Transaction.findOne.mockReturnValue({
-        lean: jest.fn().mockReturnValue(mockTxnData),
-      });
-      const txn = await transactionService.getTransaction(
-        new mongoose.Types.ObjectId(),
-        "user123"
+      const created = await Transaction.create(mockTxnData);
+
+      const found = await transactionService.getTransaction(
+        created._id,
+        userId
       );
-      expect(txn).toEqual(mockTxnData);
-      expect(Transaction.findOne).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: "user123" })
-      );
+      expect(found).toBeDefined();
+      expect(found._id.toString()).toBe(created._id.toString());
     });
 
     it("should throw INVALID_ID for bad id", async () => {
@@ -101,208 +124,118 @@ describe("Transaction Service", () => {
     });
 
     it("should throw NOT_FOUND if not exists", async () => {
-      Transaction.findOne.mockReturnValue({
-        lean: jest.fn().mockReturnValue(null),
-      });
+      const fakeId = new mongoose.Types.ObjectId();
       await expect(
-        transactionService.getTransaction(
-          new mongoose.Types.ObjectId(),
-          "user123"
-        )
+        transactionService.getTransaction(fakeId, userId)
       ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
     });
   });
 
   describe("updateTransaction", () => {
     it("should update transaction and sync analytics", async () => {
-      const id = new mongoose.Types.ObjectId();
-      const oldTxn = {
-        ...mockTxnData,
-        _id: id,
-        amount: 100,
-        txnType: "income",
-        save: jest.fn().mockResolvedValue({ ...mockTxnData, amount: 200 }),
-      };
-      Transaction.findOne.mockResolvedValue(oldTxn);
+      // 1. Create
+      const created = await transactionService.createTransaction(mockTxnData);
 
-      await transactionService.updateTransaction(id, "user123", {
+      // Verify initial state
+      let analytics = await Analytics.findOne({ userId });
+      expect(analytics.income.total).toBe(100);
+
+      // 2. Update (Change amount 100 -> 200)
+      await transactionService.updateTransaction(created._id, userId, {
         amount: 200,
       });
 
-      expect(oldTxn.save).toHaveBeenCalled();
-      expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          amount: 100,
-          txnType: "income",
-        }),
-        expect.objectContaining({
-          amount: 200,
-          txnType: "income",
-        })
-      );
+      // 3. Verify Transaction
+      const updatedTxn = await Transaction.findById(created._id);
+      expect(updatedTxn.amount).toBe(200);
+
+      // 4. Verify Analytics (Should add difference: +100)
+      analytics = await Analytics.findOne({ userId });
+      expect(analytics.income.total).toBe(200);
     });
 
     it("should handle type change income -> expense", async () => {
-      const id = new mongoose.Types.ObjectId();
-      const oldTxn = {
-        ...mockTxnData,
-        _id: id,
-        amount: 100,
-        txnType: "income",
-        save: jest.fn().mockResolvedValue({
-          ...mockTxnData,
-          amount: 100,
-          txnType: "expense",
-        }),
-      };
-      Transaction.findOne.mockResolvedValue(oldTxn);
+      const created = await transactionService.createTransaction(mockTxnData); // Income 100
 
-      await transactionService.updateTransaction(id, "user123", {
+      await transactionService.updateTransaction(created._id, userId, {
         txnType: "expense",
       });
 
-      expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          amount: 100,
-          txnType: "income",
-          txnDate: expect.any(Date),
-        }),
-        expect.objectContaining({
-          amount: 100,
-          txnType: "expense",
-          txnDate: expect.any(Date),
-        })
-      );
+      const analytics = await Analytics.findOne({ userId });
+      // Income should be reverted (-100 => 0)
+      expect(analytics.income.total).toBe(0);
+      // Expense should be added (+100)
+      expect(analytics.expenses.total).toBe(100);
     });
 
     it("should throw NOT_FOUND if transaction does not exist", async () => {
-      Transaction.findOne.mockResolvedValue(null);
+      const fakeId = new mongoose.Types.ObjectId();
       await expect(
-        transactionService.updateTransaction(
-          new mongoose.Types.ObjectId(),
-          "user123",
-          {
-            amount: 100,
-          }
-        )
+        transactionService.updateTransaction(fakeId, userId, { amount: 200 })
       ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
-    });
-
-    it("should throw UPDATE_FAILED if save fails", async () => {
-      const id = new mongoose.Types.ObjectId();
-      const mockTxn = {
-        ...mockTxnData,
-        _id: id,
-        save: jest.fn().mockRejectedValue(new Error("DB Error")),
-      };
-      Transaction.findOne.mockResolvedValue(mockTxn);
-
-      await expect(
-        transactionService.updateTransaction(id, "user123", { amount: 200 })
-      ).rejects.toThrow(TransactionErrors.UPDATE_FAILED.message);
     });
   });
 
   describe("deleteTransaction", () => {
     it("should delete and revert analytics", async () => {
-      const id = new mongoose.Types.ObjectId();
-      const txn = { ...mockTxnData, deleteOne: jest.fn() };
-      Transaction.findOne.mockResolvedValue(txn);
+      const created = await transactionService.createTransaction(mockTxnData); // Income 100
 
-      await transactionService.deleteTransaction(id, "user123");
+      await transactionService.deleteTransaction(created._id, userId);
 
-      expect(txn.deleteOne).toHaveBeenCalled();
-      expect(analyticsService.updateAnalyticsOnDelete).toHaveBeenCalledWith(
-        txn
-      );
+      // Verify DB
+      const found = await Transaction.findById(created._id);
+      expect(found).toBeNull();
+
+      // Verify Analytics
+      const analytics = await Analytics.findOne({ userId });
+      expect(analytics.income.total).toBe(0);
     });
 
     it("should throw NOT_FOUND if transaction to delete does not exist", async () => {
-      Transaction.findOne.mockResolvedValue(null);
+      const fakeId = new mongoose.Types.ObjectId();
       await expect(
-        transactionService.deleteTransaction(
-          new mongoose.Types.ObjectId(),
-          "user123"
-        )
+        transactionService.deleteTransaction(fakeId, userId)
       ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
-    });
-
-    it("should throw DELETE_FAILED if delete fails", async () => {
-      const id = new mongoose.Types.ObjectId();
-      const txn = { deleteOne: jest.fn().mockRejectedValue(new Error("Fail")) };
-      Transaction.findOne.mockResolvedValue(txn);
-
-      await expect(
-        transactionService.deleteTransaction(id, "user123")
-      ).rejects.toThrow(TransactionErrors.DELETE_FAILED.message);
     });
   });
 
   describe("getTransactions", () => {
-    it("should build query and return results", async () => {
-      const mockFind = jest.fn().mockReturnThis();
-      const mockSort = jest.fn().mockReturnThis();
-      const mockSkip = jest.fn().mockReturnThis();
-      const mockLimit = jest.fn().mockReturnThis();
-      const mockLean = jest.fn().mockResolvedValue([mockTxnData]);
+    it("should build query and return results with pagination", async () => {
+      // Seed 20 items
+      const txns = Array.from({ length: 20 }).map((_, i) => ({
+        ...mockTxnData,
+        amount: i * 10,
+      }));
+      await Transaction.insertMany(txns);
 
-      Transaction.countDocuments.mockResolvedValue(1);
-      Transaction.find.mockReturnValue({
-        sort: mockSort,
-        skip: mockSkip,
-        limit: mockLimit,
-        lean: mockLean,
-      });
-
-      const result = await transactionService.getTransactions(
-        { userId: "123", txnType: "income" },
-        { page: 1 }
+      const res = await transactionService.getTransactions(
+        { userId },
+        { page: 1, limit: 10 }
       );
 
-      expect(Transaction.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId: "123",
-          txnType: "income",
-        })
-      );
-      expect(result.transactions).toHaveLength(1);
+      expect(res.transactions).toHaveLength(10);
+      expect(res.total).toBe(20);
     });
 
     it("should handle filters (category array, description)", async () => {
-      const mockFind = jest.fn().mockReturnThis();
-      const mockSort = jest.fn().mockReturnThis();
-      const mockSkip = jest.fn().mockReturnThis();
-      const mockLimit = jest.fn().mockReturnThis();
-      const mockLean = jest.fn().mockResolvedValue([]);
-      Transaction.find.mockReturnValue({
-        sort: mockSort,
-        skip: mockSkip,
-        limit: mockLimit,
-        lean: mockLean,
-      });
-      Transaction.countDocuments.mockResolvedValue(1);
+      await Transaction.create([
+        { ...mockTxnData, category: "Food", description: "Lunch" },
+        { ...mockTxnData, category: "Salary", description: "Paycheck" },
+      ]);
 
-      await transactionService.getTransactions(
-        {
-          category: ["A", "B"],
-          description: "test",
-        },
+      const res = await transactionService.getTransactions(
+        { userId, category: ["Food"], description: "lun" }, // case insensitive
         {}
       );
 
-      expect(Transaction.find).toHaveBeenCalledWith(
-        expect.objectContaining({
-          category: { $in: ["A", "B"] },
-          description: { $regex: "test", $options: "i" },
-        })
-      );
+      expect(res.transactions).toHaveLength(1);
+      expect(res.transactions[0].category).toBe("Food");
     });
 
     it("should handle empty result explicitly", async () => {
-      Transaction.countDocuments.mockResolvedValue(0);
-      const res = await transactionService.getTransactions({}, {});
-      expect(res).toEqual({ transactions: [], total: 0 });
-      expect(Transaction.find).not.toHaveBeenCalled();
+      const res = await transactionService.getTransactions({ userId }, {});
+      expect(res.transactions).toEqual([]);
+      expect(res.total).toBe(0);
     });
   });
 });

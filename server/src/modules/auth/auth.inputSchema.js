@@ -6,11 +6,14 @@ const registerSchema = z.object({
       .string({
         required_error: "Name is required",
       })
+      .trim()
       .min(2, { message: "Name must be at least 2 characters" })
       .max(50, { message: "Name must be at most 50 characters" }),
 
     email: z
       .string({ required_error: "Email is required" })
+      .trim()
+      .toLowerCase()
       .email({ message: "Enter a valid email address" }),
 
     password: z
@@ -27,8 +30,11 @@ const registerSchema = z.object({
       .regex(/[^A-Za-z0-9]/, {
         message: "Password must contain at least one special character",
       }),
-    country: z.string({ required_error: "Country is required" }),
-    currency: z.string().optional(),
+    country: z
+      .string({ required_error: "Country is required" })
+      .trim()
+      .min(1, { message: "Country is required" }),
+    currency: z.string().trim().optional(),
   }),
 });
 
@@ -36,6 +42,8 @@ const loginSchema = z.object({
   body: z.object({
     email: z
       .string({ required_error: "Email is required" })
+      .trim()
+      .toLowerCase()
       .email({ message: "Enter a valid email address" }),
     password: z
       .string({ required_error: "Password is required" })
@@ -46,17 +54,29 @@ const loginSchema = z.object({
 
 const googleLoginSchema = z.object({
   body: z.object({
-    code: z.string({ required_error: "Authorization code is required" }),
+    code: z
+      .string({ required_error: "Authorization code is required" })
+      .trim()
+      .min(1, { message: "Authorization code cannot be empty" }),
   }),
 });
 
 const googleCompleteSchema = z.object({
   body: z.object({
-    registrationToken: z.string({
-      required_error: "Registration token is required",
-    }),
-    country: z.string({ required_error: "Country is required" }),
-    currency: z.string({ required_error: "Currency is required" }),
+    registrationToken: z
+      .string({
+        required_error: "Registration token is required",
+      })
+      .trim()
+      .min(1, { message: "Registration token cannot be empty" }),
+    country: z
+      .string({ required_error: "Country is required" })
+      .trim()
+      .min(1, { message: "Country is required" }),
+    currency: z
+      .string({ required_error: "Currency is required" })
+      .trim()
+      .min(1, { message: "Currency is required" }),
   }),
 });
 
@@ -68,8 +88,9 @@ const sendOtpSchema = z.object({
     }),
     to: z
       .string({ required_error: "'To' field is required" })
+      .trim()
       .min(1, { message: "'To' field cannot be empty" }),
-    template: z.string().optional(),
+    template: z.string().trim().optional(),
   }),
 });
 
@@ -77,9 +98,11 @@ const verifyOtpSchema = z.object({
   body: z.object({
     otp: z
       .string({ required_error: "OTP is required" })
+      .trim()
       .length(6, { message: "OTP must be exactly 6 digits" }),
     to: z
       .string({ required_error: "'To' field is required" })
+      .trim()
       .min(1, { message: "'To' field cannot be empty" }),
   }),
 });
@@ -88,9 +111,11 @@ const verifyOtpToResetPasswordSchema = z.object({
   body: z.object({
     otp: z
       .string({ required_error: "OTP is required" })
+      .trim()
       .length(6, { message: "OTP must be exactly 6 digits" }),
     to: z
       .string({ required_error: "'To' field is required" })
+      .trim()
       .min(1, { message: "'To' field cannot be empty" }),
   }),
 });
@@ -99,6 +124,7 @@ const resetPasswordSchema = z.object({
   body: z.object({
     token: z
       .string({ required_error: "Reset token is required" })
+      .trim()
       .min(1, { message: "Reset token cannot be empty" }),
     password: z
       .string({ required_error: "New password is required" })

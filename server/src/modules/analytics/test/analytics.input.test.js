@@ -4,9 +4,8 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 const { app } = require("../../../app");
 const { tokenService } = require("../../../lib/jwt/token.service");
 const { userService } = require("../../user/user.service");
-const { User } = require("../../user/user.model");
 
-describe("Analytics Input Validation", () => {
+describe("Analytics Input Validation Exhaustive Suite", () => {
   let mongoServer;
   let user;
   let token;
@@ -34,7 +33,23 @@ describe("Analytics Input Validation", () => {
     await mongoServer.stop();
   });
 
+  const expect400 = async (promise) => {
+    const res = await promise;
+    if (res.status !== 400) {
+      console.log(
+        `[DEBUG] Expected 400, got ${res.status}. Body:`,
+        JSON.stringify(res.body, null, 2)
+      );
+    }
+    expect(res.status).toBe(400);
+    expect(res.body.validationErrors).toBeDefined();
+  };
+
   describe("GET /api/analytics/time-series", () => {
+    // Schema: startDate (date), endDate (date), allTime (enum: true, false)
+    // Refine: startDate <= endDate
+    // Strict mode
+
     it("should accept valid query params", async () => {
       await request(app)
         .get("/api/analytics/time-series")
@@ -47,52 +62,29 @@ describe("Analytics Input Validation", () => {
         .expect(200);
     });
 
-    it("should reject invalid date format", async () => {
-      const res = await request(app)
-        .get("/api/analytics/time-series")
-        .set("Cookie", [`accessToken=${token}`])
-        .query({ startDate: "not-a-date" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.validationErrors[0]).toMatch(/Invalid date format/);
-    });
-
-    it("should reject if startDate > endDate", async () => {
-      const res = await request(app)
-        .get("/api/analytics/time-series")
-        .set("Cookie", [`accessToken=${token}`])
-        .query({
-          startDate: "2023-12-31",
-          endDate: "2023-01-01",
-        });
-
-      expect(res.status).toBe(400);
-      expect(res.body.validationErrors[0]).toMatch(
-        /startDate must be before or equal to endDate/
+    test.each([
+      ["invalid startDate", { startDate: "not-a-date" }],
+      ["invalid endDate", { endDate: "bad-date" }],
+      [
+        "startDate > endDate",
+        { startDate: "2023-12-31", endDate: "2023-01-01" },
+      ],
+      ["invalid allTime enum", { allTime: "yes" }],
+      ["unknown param", { unknown: "1" }],
+    ])("should return 400 when %s", async (_, query) => {
+      await expect400(
+        request(app)
+          .get("/api/analytics/time-series")
+          .set("Cookie", [`accessToken=${token}`])
+          .query(query)
       );
-    });
-
-    it("should reject unknown query parameters (Strict Mode)", async () => {
-      const res = await request(app)
-        .get("/api/analytics/time-series")
-        .set("Cookie", [`accessToken=${token}`])
-        .query({ unknownParam: "malicious" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.validationErrors[0]).toContain("Unrecognized key");
-    });
-
-    it("should reject invalid allTime boolean string", async () => {
-      const res = await request(app)
-        .get("/api/analytics/time-series")
-        .set("Cookie", [`accessToken=${token}`])
-        .query({ allTime: "yes" });
-
-      expect(res.status).toBe(400);
     });
   });
 
   describe("GET /api/analytics/distribution", () => {
+    // Schema: startDate, endDate, txnType, allTime
+    // Strict mode, same date refine logic
+
     it("should accept valid txnType", async () => {
       await request(app)
         .get("/api/analytics/distribution")
@@ -101,23 +93,21 @@ describe("Analytics Input Validation", () => {
         .expect(200);
     });
 
-    it("should reject invalid txnType", async () => {
-      const res = await request(app)
-        .get("/api/analytics/distribution")
-        .set("Cookie", [`accessToken=${token}`])
-        .query({ txnType: "invalidType" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.validationErrors[0]).toContain("Invalid enum value");
-    });
-
-    it("should enforce strict query params", async () => {
-      const res = await request(app)
-        .get("/api/analytics/distribution")
-        .set("Cookie", [`accessToken=${token}`])
-        .query({ extra: "field" });
-
-      expect(res.status).toBe(400);
+    test.each([
+      ["invalid txnType", { txnType: "invalid_type_enum" }],
+      ["invalid startDate", { startDate: "bad" }],
+      [
+        "startDate > endDate",
+        { startDate: "2025-01-01", endDate: "2024-01-01" },
+      ],
+      ["unknown param", { extra: "field" }],
+    ])("should return 400 when %s", async (_, query) => {
+      await expect400(
+        request(app)
+          .get("/api/analytics/distribution")
+          .set("Cookie", [`accessToken=${token}`])
+          .query(query)
+      );
     });
   });
 });

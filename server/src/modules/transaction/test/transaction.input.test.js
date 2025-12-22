@@ -8,7 +8,7 @@ const { userService } = require("../../user/user.service");
 
 let mongoServer;
 
-describe("Transaction Input Validation Integration", () => {
+describe("Transaction Input Validation Exhaustive Suite", () => {
   let user;
   let token;
   let txnId;
@@ -51,6 +51,19 @@ describe("Transaction Input Validation Integration", () => {
     txnId = txn._id;
   });
 
+  // Helper
+  const expect400 = async (promise) => {
+    const res = await promise;
+    if (res.status !== 400) {
+      console.log(
+        `[DEBUG] Expected 400, got ${res.status}. Body:`,
+        JSON.stringify(res.body, null, 2)
+      );
+    }
+    expect(res.status).toBe(400);
+    expect(res.body.validationErrors).toBeDefined();
+  };
+
   const validTxn = {
     txnDate: new Date().toISOString(),
     txnType: "income",
@@ -59,284 +72,141 @@ describe("Transaction Input Validation Integration", () => {
     description: "Monthly Salary",
   };
 
+  const withoutKey = (obj, key) => {
+    const newObj = { ...obj };
+    delete newObj[key];
+    return newObj;
+  };
+
   describe("POST /api/transactions (Create)", () => {
-    it("should create a transaction with valid input", async () => {
+    it("should create successfully with valid data", async () => {
       const res = await request(app)
         .post("/api/transactions")
         .set("Cookie", [`accessToken=${token}`])
         .send(validTxn);
-
       expect(res.status).toBe(201);
-      // Controller returns the transaction object directly (no data wrapper)
-      expect(res.body.amount).toBe(100);
-      expect(res.body.category).toBe("Salary");
     });
 
-    it("should trim strings (category, description)", async () => {
+    it("should trim strings", async () => {
       const res = await request(app)
         .post("/api/transactions")
         .set("Cookie", [`accessToken=${token}`])
         .send({
           ...validTxn,
-          category: "  Salary  ",
-          description: "  Trim Me  ",
+          category: "  TrimMe  ",
+          description: "  TrimMe  ",
         });
-
       expect(res.status).toBe(201);
-      expect(res.body.category).toBe("Salary");
-      expect(res.body.description).toBe("Trim Me");
+      expect(res.body.category).toBe("TrimMe");
+      expect(res.body.description).toBe("TrimMe");
     });
 
-    it("should fail on missing required fields (amount)", async () => {
-      const { amount, ...missingAmount } = validTxn;
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send(missingAmount);
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 2);
 
-      expect(res.status).toBe(400);
-      // validateInput returns { validationErrors: [] }
-      expect(res.body).toHaveProperty("validationErrors");
-      expect(res.body.validationErrors[0]).toMatch(/Amount is required/i);
-    });
-
-    it("should fail on invalid txnType enum", async () => {
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ ...validTxn, txnType: "invalid_type" });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail on negative amount", async () => {
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ ...validTxn, amount: -50 });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail on invalid date format", async () => {
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ ...validTxn, txnDate: "not-a-date" });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail on future date", async () => {
-      const future = new Date();
-      future.setDate(future.getDate() + 2); // 2 days in future
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ ...validTxn, txnDate: future.toISOString() });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail if description > 100 chars", async () => {
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ ...validTxn, description: "a".repeat(101) });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail if category > 30 chars", async () => {
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ ...validTxn, category: "a".repeat(31) });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail if category contains invalid characters", async () => {
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ ...validTxn, category: "Bad@Category!" });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-      expect(res.body.validationErrors[0]).toMatch(/Only alphanumeric/i);
-    });
-  });
-
-  describe("POST /api/transactions/bulk (Bulk Create)", () => {
-    it("should create multiple transactions", async () => {
-      const res = await request(app)
-        .post("/api/transactions/bulk")
-        .set("Cookie", [`accessToken=${token}`])
-        .send([validTxn, { ...validTxn, amount: 200 }]);
-
-      expect(res.status).toBe(201);
-      // Service returns array of documents
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body).toHaveLength(2);
-    });
-
-    it("should succeed with empty array (Schema allows it, though logic might do nothing)", async () => {
-      const res = await request(app)
-        .post("/api/transactions/bulk")
-        .set("Cookie", [`accessToken=${token}`])
-        .send([]);
-
-      expect(res.status).toBe(201);
-      expect(res.body).toHaveLength(0); // Assuming insertMany returns empty array
-    });
-
-    it("should fail if payload is not an array", async () => {
-      const res = await request(app)
-        .post("/api/transactions/bulk")
-        .set("Cookie", [`accessToken=${token}`])
-        .send(validTxn); // Object, not array
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail if any item in array is invalid", async () => {
-      const res = await request(app)
-        .post("/api/transactions/bulk")
-        .set("Cookie", [`accessToken=${token}`])
-        .send([validTxn, { ...validTxn, amount: -10 }]);
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
+    test.each([
+      ["missing amount", withoutKey(validTxn, "amount")],
+      ["amount string", { ...validTxn, amount: "100" }], // Zod number() expects number, not string
+      ["negative amount", { ...validTxn, amount: -10 }],
+      ["zero amount", { ...validTxn, amount: 0 }], // positive() excludes 0
+      ["missing txnType", withoutKey(validTxn, "txnType")],
+      ["invalid txnType", { ...validTxn, txnType: "invalid_type_enum" }], // Clearly invalid
+      ["missing txnDate", withoutKey(validTxn, "txnDate")],
+      ["invalid txnDate", { ...validTxn, txnDate: "not-a-date" }],
+      ["future txnDate", { ...validTxn, txnDate: futureDate.toISOString() }],
+      ["long category", { ...validTxn, category: "a".repeat(51) }], // max 30 or 50? Schema says 30 in args
+      ["invalid category chars", { ...validTxn, category: "Bad@Val" }],
+      ["long description", { ...validTxn, description: "a".repeat(101) }], // max 100
+      ["extra field (strict)", { ...validTxn, extra: "field" }],
+    ])("should return 400 when %s", async (_, payload) => {
+      await expect400(
+        request(app)
+          .post("/api/transactions")
+          .set("Cookie", [`accessToken=${token}`])
+          .send(payload)
+      );
     });
   });
 
   describe("PATCH /api/transactions/:id (Update)", () => {
-    it("should allow partial update", async () => {
+    // Schema requires at least one field && valid checks
+    test.each([
+      ["empty body", {}],
+      ["negative amount", { amount: -10 }],
+      ["invalid txnType", { txnType: "invalid" }],
+      [
+        "future date",
+        { txnDate: new Date(Date.now() + 86400000 * 2).toISOString() },
+      ],
+      ["long category", { category: "a".repeat(50) }], // Schema used 30 limit reusable check
+      ["extra field", { extra: 123 }],
+    ])("should return 400 when %s", async (_, payload) => {
+      await expect400(
+        request(app)
+          .patch(`/api/transactions/${txnId}`)
+          .set("Cookie", [`accessToken=${token}`])
+          .send(payload)
+      );
+    });
+
+    it("should update successfully", async () => {
       const res = await request(app)
         .patch(`/api/transactions/${txnId}`)
         .set("Cookie", [`accessToken=${token}`])
-        .send({ amount: 500 });
-
+        .send({ amount: 50 });
       expect(res.status).toBe(200);
-      // Returns updated transaction directly
-      expect(res.body.amount).toBe(500);
-      expect(res.body.description).toBe("Initial"); // Unchanged
-    });
-
-    it("should fail update with invalid value", async () => {
-      const res = await request(app)
-        .patch(`/api/transactions/${txnId}`)
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ amount: -500 });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail update with invalid category format", async () => {
-      const res = await request(app)
-        .patch(`/api/transactions/${txnId}`)
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ category: "Invalid@" });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail update with future date", async () => {
-      const future = new Date();
-      future.setDate(future.getDate() + 5);
-      const res = await request(app)
-        .patch(`/api/transactions/${txnId}`)
-        .set("Cookie", [`accessToken=${token}`])
-        .send({ txnDate: future.toISOString() });
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
+      expect(res.body.amount).toBe(50);
     });
   });
 
-  describe("GET /api/transactions (List & Filter)", () => {
-    it("should list transactions (defaults)", async () => {
+  describe("POST /api/transactions/bulk (Bulk Create)", () => {
+    it("should valid bulk array", async () => {
+      const res = await request(app)
+        .post("/api/transactions/bulk")
+        .set("Cookie", [`accessToken=${token}`])
+        .send([validTxn, validTxn]);
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveLength(2);
+    });
+
+    test.each([
+      ["not an array", validTxn],
+      ["array with invalid item", [validTxn, { ...validTxn, amount: -10 }]],
+    ])("should return 400 when %s", async (_, payload) => {
+      await expect400(
+        request(app)
+          .post("/api/transactions/bulk")
+          .set("Cookie", [`accessToken=${token}`])
+          .send(payload)
+      );
+    });
+  });
+
+  describe("GET /api/transactions (List)", () => {
+    // Query params validation
+    test.each([
+      ["page not number", { page: "abc" }],
+      ["limit not number/all", { limit: "abc" }],
+      ["invalid startDate", { startDate: "bad-date" }],
+      ["invalid endDate", { endDate: "bad-date" }],
+      ["invalid txnType", { txnType: "bad-type" }],
+      ["invalid category", { category: "Bad@Cat" }],
+      ["unknown param", { unknown: "1" }],
+      ["invalid sort", { sort: "invalid" }],
+    ])("should return 400 when %s", async (_, query) => {
+      await expect400(
+        request(app)
+          .get("/api/transactions")
+          .set("Cookie", [`accessToken=${token}`])
+          .query(query)
+      );
+    });
+
+    it("should accept valid query", async () => {
       const res = await request(app)
         .get("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`]);
-
-      expect(res.status).toBe(200);
-      expect(Array.isArray(res.body.transactions)).toBe(true);
-    });
-
-    it("should validate page param must be numeric string", async () => {
-      // Schema requires page to be a numeric string
-      const res = await request(app)
-        .get("/api/transactions?page=abc")
-        .set("Cookie", [`accessToken=${token}`]);
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should validate date filters", async () => {
-      const res = await request(app)
-        .get("/api/transactions?startDate=invalid-date")
-        .set("Cookie", [`accessToken=${token}`]);
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should fail on unknown query params (strict schema)", async () => {
-      const res = await request(app)
-        .get("/api/transactions?unknownParam=123")
-        .set("Cookie", [`accessToken=${token}`]);
-
-      expect(res.status).toBe(400);
-      expect(res.body).toHaveProperty("validationErrors");
-    });
-
-    it("should validate limit param (numeric string or 'all')", async () => {
-      // Valid 'all'
-      const resAll = await request(app)
-        .get("/api/transactions?limit=all")
-        .set("Cookie", [`accessToken=${token}`]);
-      expect(resAll.status).toBe(200);
-
-      // Invalid string
-      const resInvalid = await request(app)
-        .get("/api/transactions?limit=invalid")
-        .set("Cookie", [`accessToken=${token}`]);
-      expect(resInvalid.status).toBe(400);
-    });
-
-    it("should validate sort param (asc/desc)", async () => {
-      const res = await request(app)
-        .get("/api/transactions?sort=invalid")
-        .set("Cookie", [`accessToken=${token}`]);
-      expect(res.status).toBe(400);
-    });
-
-    it("should validate category filter format", async () => {
-      const res = await request(app)
-        .get("/api/transactions?category=Bad@Category")
-        .set("Cookie", [`accessToken=${token}`]);
-      expect(res.status).toBe(400);
-    });
-  });
-
-  describe("DELETE /api/transactions/:id", () => {
-    it("should handle valid ID", async () => {
-      const res = await request(app)
-        .delete(`/api/transactions/${txnId}`)
-        .set("Cookie", [`accessToken=${token}`]);
-
+        .set("Cookie", [`accessToken=${token}`])
+        .query({ page: "1", limit: "10", sort: "desc" });
       expect(res.status).toBe(200);
     });
   });

@@ -2,10 +2,20 @@ import { TXN_TYPES } from "@/components/dashboard/config";
 import { z } from "zod";
 
 export const transactionSchema = z.object({
-  txnDate: z.coerce.date({
-    required_error: "Date is required",
-    invalid_type_error: "Invalid date format",
-  }),
+  txnDate: z.coerce
+    .date({
+      required_error: "Date is required",
+      invalid_type_error: "Invalid date format",
+    })
+    .refine(
+      (val) => {
+        const date = new Date(val);
+        const now = new Date();
+        now.setHours(23, 59, 59, 999);
+        return date <= now;
+      },
+      { message: "Transaction date cannot be in the future" }
+    ),
   txnType: z.enum(
     TXN_TYPES.map((type) => type.value),
     {
@@ -24,7 +34,7 @@ export const transactionSchema = z.object({
   category: z
     .string()
     .trim()
-    .max(25, "Category must be 25 characters or less")
+    .max(30, "Category must be 30 characters or less")
     .regex(
       /^$|^[a-zA-Z0-9\s\-_]+$/, // Allows empty string or the specified characters
       "Only alphanumeric characters, spaces, hyphens and underscores are allowed"

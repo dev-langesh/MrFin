@@ -81,13 +81,17 @@ describe("Transaction Service", () => {
 
   describe("getTransaction", () => {
     it("should return transaction if found", async () => {
-      Transaction.findById.mockReturnValue({
+      Transaction.findOne.mockReturnValue({
         lean: jest.fn().mockReturnValue(mockTxnData),
       });
       const txn = await transactionService.getTransaction(
-        new mongoose.Types.ObjectId()
+        new mongoose.Types.ObjectId(),
+        "user123"
       );
       expect(txn).toEqual(mockTxnData);
+      expect(Transaction.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: "user123" })
+      );
     });
 
     it("should throw INVALID_ID for bad id", async () => {
@@ -97,11 +101,14 @@ describe("Transaction Service", () => {
     });
 
     it("should throw NOT_FOUND if not exists", async () => {
-      Transaction.findById.mockReturnValue({
+      Transaction.findOne.mockReturnValue({
         lean: jest.fn().mockReturnValue(null),
       });
       await expect(
-        transactionService.getTransaction(new mongoose.Types.ObjectId())
+        transactionService.getTransaction(
+          new mongoose.Types.ObjectId(),
+          "user123"
+        )
       ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
     });
   });
@@ -116,9 +123,11 @@ describe("Transaction Service", () => {
         txnType: "income",
         save: jest.fn().mockResolvedValue({ ...mockTxnData, amount: 200 }),
       };
-      Transaction.findById.mockResolvedValue(oldTxn);
+      Transaction.findOne.mockResolvedValue(oldTxn);
 
-      await transactionService.updateTransaction(id, { amount: 200 });
+      await transactionService.updateTransaction(id, "user123", {
+        amount: 200,
+      });
 
       expect(oldTxn.save).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
@@ -146,9 +155,11 @@ describe("Transaction Service", () => {
           txnType: "expense",
         }),
       };
-      Transaction.findById.mockResolvedValue(oldTxn);
+      Transaction.findOne.mockResolvedValue(oldTxn);
 
-      await transactionService.updateTransaction(id, { txnType: "expense" });
+      await transactionService.updateTransaction(id, "user123", {
+        txnType: "expense",
+      });
 
       expect(analyticsService.updateAnalyticsOnEdit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -165,11 +176,15 @@ describe("Transaction Service", () => {
     });
 
     it("should throw NOT_FOUND if transaction does not exist", async () => {
-      Transaction.findById.mockResolvedValue(null);
+      Transaction.findOne.mockResolvedValue(null);
       await expect(
-        transactionService.updateTransaction(new mongoose.Types.ObjectId(), {
-          amount: 100,
-        })
+        transactionService.updateTransaction(
+          new mongoose.Types.ObjectId(),
+          "user123",
+          {
+            amount: 100,
+          }
+        )
       ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
     });
 
@@ -180,10 +195,10 @@ describe("Transaction Service", () => {
         _id: id,
         save: jest.fn().mockRejectedValue(new Error("DB Error")),
       };
-      Transaction.findById.mockResolvedValue(mockTxn);
+      Transaction.findOne.mockResolvedValue(mockTxn);
 
       await expect(
-        transactionService.updateTransaction(id, { amount: 200 })
+        transactionService.updateTransaction(id, "user123", { amount: 200 })
       ).rejects.toThrow(TransactionErrors.UPDATE_FAILED.message);
     });
   });
@@ -192,9 +207,9 @@ describe("Transaction Service", () => {
     it("should delete and revert analytics", async () => {
       const id = new mongoose.Types.ObjectId();
       const txn = { ...mockTxnData, deleteOne: jest.fn() };
-      Transaction.findById.mockResolvedValue(txn);
+      Transaction.findOne.mockResolvedValue(txn);
 
-      await transactionService.deleteTransaction(id);
+      await transactionService.deleteTransaction(id, "user123");
 
       expect(txn.deleteOne).toHaveBeenCalled();
       expect(analyticsService.updateAnalyticsOnDelete).toHaveBeenCalledWith(
@@ -203,20 +218,23 @@ describe("Transaction Service", () => {
     });
 
     it("should throw NOT_FOUND if transaction to delete does not exist", async () => {
-      Transaction.findById.mockResolvedValue(null);
+      Transaction.findOne.mockResolvedValue(null);
       await expect(
-        transactionService.deleteTransaction(new mongoose.Types.ObjectId())
+        transactionService.deleteTransaction(
+          new mongoose.Types.ObjectId(),
+          "user123"
+        )
       ).rejects.toThrow(TransactionErrors.NOT_FOUND.message);
     });
 
     it("should throw DELETE_FAILED if delete fails", async () => {
       const id = new mongoose.Types.ObjectId();
       const txn = { deleteOne: jest.fn().mockRejectedValue(new Error("Fail")) };
-      Transaction.findById.mockResolvedValue(txn);
+      Transaction.findOne.mockResolvedValue(txn);
 
-      await expect(transactionService.deleteTransaction(id)).rejects.toThrow(
-        TransactionErrors.DELETE_FAILED.message
-      );
+      await expect(
+        transactionService.deleteTransaction(id, "user123")
+      ).rejects.toThrow(TransactionErrors.DELETE_FAILED.message);
     });
   });
 

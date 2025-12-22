@@ -14,6 +14,7 @@ export const transactionSchema = z.object({
   ),
   description: z
     .string()
+    .trim()
     .max(100, "Description must be 100 characters or less")
     .regex(
       /^$|^[a-zA-Z0-9\s\-_]+$/, // Allows empty string or the specified characters
@@ -22,6 +23,7 @@ export const transactionSchema = z.object({
     .optional(),
   category: z
     .string()
+    .trim()
     .max(25, "Category must be 25 characters or less")
     .regex(
       /^$|^[a-zA-Z0-9\s\-_]+$/, // Allows empty string or the specified characters

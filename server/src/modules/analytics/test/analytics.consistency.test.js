@@ -280,7 +280,7 @@ describe("Analytics System Rigorous Consistency Suite", () => {
 
       // 2. Complex Update: Move 'B' (200) from Jan to Feb and change to Expense
       const txnB = txns.find((t) => t.category === "B");
-      await transactionService.updateTransaction(txnB._id, {
+      await transactionService.updateTransaction(txnB._id, userId, {
         txnDate: new Date("2025-02-15"),
         txnType: "expense",
         category: "Y", // Change category too
@@ -317,7 +317,7 @@ describe("Analytics System Rigorous Consistency Suite", () => {
 
       // 3. Delete: Remove 'I' (500 Investment)
       const txnI = txns.find((t) => t.category === "I");
-      await transactionService.deleteTransaction(txnI._id);
+      await transactionService.deleteTransaction(txnI._id, userId);
 
       state = await getSystemState(userId);
 

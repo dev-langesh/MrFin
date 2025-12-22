@@ -1,8 +1,13 @@
 // middlewares/errorHandler.js
 
 function errorHandler(err, req, res, next) {
+  console.error("ErrorHandler Caught:", {
+    name: err.name,
+    message: err.message,
+    statusCode: err.statusCode,
+    errorCode: err.errorCode,
+  });
   console.error(err.stack || err);
-
   const statusCode = err.statusCode || 500;
 
   res.status(statusCode).json({

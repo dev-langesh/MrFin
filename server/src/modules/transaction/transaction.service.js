@@ -27,10 +27,6 @@ async function createTransactions(transactions) {
     });
 
     if (savedTxns.length > 0) {
-      // Assuming all transactions belong to the same user (bulk import context)
-      // or grouped. But here we send all. updateAnalyticsBatch handles array.
-      // But updateAnalyticsBatch requires userId as 2nd arg.
-      // We assume single user bulk create based on typical use case.
       await analyticsService.updateAnalyticsBatch(
         savedTxns,
         savedTxns[0].userId
@@ -90,17 +86,17 @@ async function getTransactions(filters = {}, { page = 1, limit = 10 }) {
   return { transactions: txns, total: totalDocuments };
 }
 
-async function getTransaction(id) {
+async function getTransaction(id, userId) {
   validateId(id);
-  const txn = await Transaction.findById(id).lean();
+  const txn = await Transaction.findOne({ _id: id, userId }).lean();
   if (!txn) throw new AppError(TransactionErrors.NOT_FOUND);
   return txn;
 }
 
-async function updateTransaction(id, data) {
+async function updateTransaction(id, userId, data) {
   validateId(id);
 
-  const txn = await Transaction.findById(id);
+  const txn = await Transaction.findOne({ _id: id, userId });
   if (!txn) throw new AppError(TransactionErrors.NOT_FOUND);
 
   const oldTxnState = {
@@ -125,10 +121,10 @@ async function updateTransaction(id, data) {
   }
 }
 
-async function deleteTransaction(id) {
+async function deleteTransaction(id, userId) {
   validateId(id);
 
-  const txn = await Transaction.findById(id);
+  const txn = await Transaction.findOne({ _id: id, userId });
   if (!txn) throw new AppError(TransactionErrors.NOT_FOUND);
 
   try {

@@ -1,41 +1,21 @@
 const request = require("supertest");
-const express = require("express");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const cookieParser = require("cookie-parser");
-const { transactionRouter } = require("../transaction.routes");
-const { errorHandler } = require("../../../middleware/errorHandler.middleware");
+const { app } = require("../../../app"); // Use global app
 const { User } = require("../../user/user.model");
 const { Transaction } = require("../transaction.model");
-const { Analytics } = require("../../analytics/analytics.model"); // Needed as transactions update analytics
+const { Analytics } = require("../../analytics/analytics.model");
 const { DailyAnalytics } = require("../../analytics/dailyAnalytics.model");
 const { MonthlyAnalytics } = require("../../analytics/monthlyAnalytics.model");
-const { analyticsService } = require("../../analytics/analytics.service"); // Real service
+const { analyticsService } = require("../../analytics/analytics.service");
 const { tokenService } = require("../../../lib/jwt/token.service");
-
-// We need to bypass validateToken for integration tests simply, OR we generate a valid token
-// Strategy: Create a real user, generate a real token, use it in headers.
-
-const app = express();
-app.use(express.json());
-app.use(cookieParser());
-
-app.use((req, res, next) => {
-  next();
-});
-
-jest.mock("../../../middleware/validateToken.middleware", () => ({
-  validateToken: (req, res, next) => {
-    req.user = { id: "507f1f77bcf86cd799439011" }; // user1
-    next();
-  },
-}));
-
-app.use("/api/transactions", transactionRouter);
-app.use(errorHandler);
+const { userService } = require("../../user/user.service");
 
 describe("Transaction Integration", () => {
   let mongoServer;
+  let user;
+  let token;
+  let userId;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -52,8 +32,29 @@ describe("Transaction Integration", () => {
     await Analytics.deleteMany({});
     await DailyAnalytics.deleteMany({});
     await MonthlyAnalytics.deleteMany({});
-    // Setup initial analytics for the test user
-    await Analytics.create({ userId: "507f1f77bcf86cd799439011" });
+    await User.deleteMany({});
+
+    // Create a real user
+    user = await userService.createUser({
+      username: "integrationUser",
+      name: "Integration Test User",
+      email: "integration@test.com",
+      password: "password123",
+      country: "US",
+    });
+    userId = user._id.toString();
+
+    // Generate real token
+    token = tokenService.generateToken({
+      userId: user._id,
+      role: "user",
+      tokenType: "access",
+    });
+
+    let analytics = await Analytics.findOne({ userId: user._id });
+    if (!analytics) {
+      await Analytics.create({ userId: user._id });
+    }
   });
 
   describe("POST /api/transactions", () => {
@@ -62,12 +63,14 @@ describe("Transaction Integration", () => {
         amount: 1000,
         txnType: "income",
         category: "Salary",
-
         txnDate: new Date().toISOString(),
         description: "Monthly Salary",
       };
 
-      const res = await request(app).post("/api/transactions").send(payload);
+      const res = await request(app)
+        .post("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`])
+        .send(payload);
 
       expect(res.status).toBe(201);
       expect(res.body.amount).toBe(1000);
@@ -78,18 +81,14 @@ describe("Transaction Integration", () => {
       expect(txn).toBeDefined();
 
       // Verify Analytics Side effect
-      const analytics = await Analytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const analytics = await Analytics.findOne({ userId });
       expect(analytics.income.total).toBe(1000);
 
       // Verify Time Series Side effect
-      const daily = await DailyAnalytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const daily = await DailyAnalytics.findOne({ userId });
       expect(daily).toBeDefined();
       expect(daily.totals.income).toBe(1000);
-      expect(daily.incomeCategories.get("Salary")).toBe(1000); // Access map via get if Schema uses Map, or dot access if POJO. Mongoose Map uses .get()
+      expect(daily.incomeCategories.get("Salary")).toBe(1000);
     });
 
     it("should create an expense transaction", async () => {
@@ -97,17 +96,17 @@ describe("Transaction Integration", () => {
         amount: 50,
         txnType: "expense",
         category: "Food",
-
         txnDate: new Date().toISOString(),
         description: "Lunch",
       };
 
-      const res = await request(app).post("/api/transactions").send(payload);
+      const res = await request(app)
+        .post("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`])
+        .send(payload);
       expect(res.status).toBe(201);
 
-      const analytics = await Analytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const analytics = await Analytics.findOne({ userId });
       expect(analytics.expenses.total).toBe(50);
     });
 
@@ -116,17 +115,17 @@ describe("Transaction Integration", () => {
         amount: 500,
         txnType: "investment",
         category: "Stocks",
-
         txnDate: new Date().toISOString(),
         description: "Stock Purchase",
       };
 
-      const res = await request(app).post("/api/transactions").send(payload);
+      const res = await request(app)
+        .post("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`])
+        .send(payload);
       expect(res.status).toBe(201);
 
-      const analytics = await Analytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const analytics = await Analytics.findOne({ userId });
       expect(analytics.investments.total).toBe(500);
     });
 
@@ -139,7 +138,10 @@ describe("Transaction Integration", () => {
         description: "Moving Money",
       };
 
-      const res = await request(app).post("/api/transactions").send(payload);
+      const res = await request(app)
+        .post("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`])
+        .send(payload);
       expect(res.status).toBe(201);
       expect(res.body.txnType).toBe("transfer");
 
@@ -148,54 +150,54 @@ describe("Transaction Integration", () => {
       expect(txn).toBeDefined();
 
       // Verify Analytics UNTOUCHED
-      const analytics = await Analytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const analytics = await Analytics.findOne({ userId });
 
       expect(analytics.income.total).toBe(0);
       expect(analytics.expenses.total).toBe(0);
       expect(analytics.investments.total).toBe(0);
       expect(analytics.cashFlow.total).toBe(0);
 
-      const daily = await DailyAnalytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const daily = await DailyAnalytics.findOne({ userId });
       expect(daily).toBeNull();
     });
 
     it("should return 400 for invalid data", async () => {
-      const res = await request(app).post("/api/transactions").send({});
+      const res = await request(app)
+        .post("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`])
+        .send({});
       expect(res.status).toBe(400);
     });
   });
 
   describe("GET /api/transactions", () => {
     beforeEach(async () => {
-      // Seed some data
+      // Seed some data for the test user
       await Transaction.create([
         {
-          userId: "507f1f77bcf86cd799439011",
+          userId,
           amount: 100,
           txnType: "income",
           category: "Salary",
           txnDate: new Date("2023-01-01"),
         },
         {
-          userId: "507f1f77bcf86cd799439011",
+          userId,
           amount: 50,
           txnType: "expense",
           category: "Food",
           txnDate: new Date("2023-01-02"),
         },
         {
-          userId: "507f1f77bcf86cd799439011",
+          userId,
           amount: 200,
           txnType: "income",
           category: "Bonus",
           txnDate: new Date("2023-01-03"),
         },
+        // Transaction for DIFFERENT user (should be invisible)
         {
-          userId: "507f1f77bcf86cd799439099",
+          userId: new mongoose.Types.ObjectId(),
           amount: 999,
           txnType: "income",
           category: "Salary",
@@ -205,30 +207,35 @@ describe("Transaction Integration", () => {
     });
 
     it("should return list of transactions for user", async () => {
-      const res = await request(app).get("/api/transactions");
+      const res = await request(app)
+        .get("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`]);
       expect(res.status).toBe(200);
       expect(res.body.transactions.length).toBe(3);
       expect(res.body.total).toBe(3);
     });
 
     it("should filter by type", async () => {
-      const res = await request(app).get("/api/transactions?txnType=expense");
+      const res = await request(app)
+        .get("/api/transactions?txnType=expense")
+        .set("Cookie", [`accessToken=${token}`]);
       expect(res.status).toBe(200);
       expect(res.body.transactions.length).toBe(1);
       expect(res.body.transactions[0].txnType).toBe("expense");
     });
 
     it("should filter by date range", async () => {
-      const res = await request(app).get(
-        "/api/transactions?startDate=2023-01-02&endDate=2023-01-02"
-      );
+      const res = await request(app)
+        .get("/api/transactions?startDate=2023-01-02&endDate=2023-01-02")
+        .set("Cookie", [`accessToken=${token}`]);
       expect(res.body.transactions.length).toBe(1);
       expect(res.body.transactions[0].amount).toBe(50);
     });
 
-    it("should sort transactions desc by default (or as logic defines)", async () => {
-      // Service default is desc (-1) if sort prop is not asc
-      const res = await request(app).get("/api/transactions");
+    it("should sort transactions desc by default", async () => {
+      const res = await request(app)
+        .get("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`]);
       const dates = res.body.transactions.map((t) =>
         new Date(t.txnDate).getTime()
       );
@@ -240,32 +247,33 @@ describe("Transaction Integration", () => {
   describe("GET /api/transactions/:id", () => {
     it("should return a transaction by id", async () => {
       const txn = await Transaction.create({
-        userId: "507f1f77bcf86cd799439011",
+        userId,
         amount: 100,
         txnType: "income",
         category: "Salary",
         txnDate: new Date(),
       });
 
-      const res = await request(app).get(`/api/transactions/${txn._id}`);
+      const res = await request(app)
+        .get(`/api/transactions/${txn._id}`)
+        .set("Cookie", [`accessToken=${token}`]);
       expect(res.status).toBe(200);
       expect(res.body._id).toBe(txn._id.toString());
     });
 
     it("should return 404 for unknown id", async () => {
-      const res = await request(app).get(
-        "/api/transactions/507f1f77bcf86cd799439999"
-      );
+      const res = await request(app)
+        .get("/api/transactions/507f1f77bcf86cd799439999")
+        .set("Cookie", [`accessToken=${token}`]);
       expect(res.status).toBe(404);
     });
 
-    it("should return 500/400 for invalid id format", async () => {
-      // validateId in service throws INVALID_ID which is 400 usually, or 500 if AppError map?
-      // Checking TransactionErrors.INVALID_ID
-      const res = await request(app).get("/api/transactions/invalid-id");
-      // If AppError is handled, it should be mapped. Let's see.
-      // Usually 400 for bad request.
-      expect(res.status).not.toBe(200);
+    it("should return 400 for invalid id format", async () => {
+      const res = await request(app)
+        .get("/api/transactions/invalid-id")
+        .set("Cookie", [`accessToken=${token}`]);
+      // Should be 400 for validation error or invalid ID
+      expect([400, 500]).toContain(res.status);
     });
   });
 
@@ -288,13 +296,12 @@ describe("Transaction Integration", () => {
 
       const res = await request(app)
         .post("/api/transactions/bulk")
+        .set("Cookie", [`accessToken=${token}`])
         .send(payload);
       expect(res.status).toBe(201);
       expect(res.body.length).toBe(2);
 
-      const analytics = await Analytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const analytics = await Analytics.findOne({ userId });
       expect(analytics.income.total).toBe(100);
       expect(analytics.expenses.total).toBe(200);
     });
@@ -303,7 +310,7 @@ describe("Transaction Integration", () => {
   describe("PATCH /api/transactions/:id", () => {
     it("should update transaction and adjust analytics", async () => {
       const txn = await Transaction.create({
-        userId: "507f1f77bcf86cd799439011",
+        userId,
         amount: 100,
         txnType: "income",
         category: "Salary",
@@ -312,16 +319,17 @@ describe("Transaction Integration", () => {
 
       await analyticsService.updateAnalyticsOnAdd(txn);
 
-      const res = await request(app).put(`/api/transactions/${txn._id}`).send({
-        amount: 200,
-      });
+      const res = await request(app)
+        .patch(`/api/transactions/${txn._id}`)
+        .set("Cookie", [`accessToken=${token}`])
+        .send({
+          amount: 200,
+        });
 
       expect(res.status).toBe(200);
       expect(res.body.amount).toBe(200);
 
-      const analytics = await Analytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const analytics = await Analytics.findOne({ userId });
       // Old 100 removed, New 200 added -> Total 200
       expect(analytics.income.total).toBe(200);
     });
@@ -330,25 +338,27 @@ describe("Transaction Integration", () => {
   describe("DELETE /api/transactions/:id", () => {
     it("should delete transaction and revert analytics", async () => {
       // Use API to create so logic is consistent
-      const createRes = await request(app).post("/api/transactions").send({
-        amount: 100,
-        txnType: "income",
-        category: "Salary",
-
-        txnDate: new Date().toISOString(),
-        description: "To Delete",
-      });
+      const createRes = await request(app)
+        .post("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`])
+        .send({
+          amount: 100,
+          txnType: "income",
+          category: "Salary",
+          txnDate: new Date().toISOString(),
+          description: "To Delete",
+        });
       const txnId = createRes.body._id;
 
-      const res = await request(app).delete(`/api/transactions/${txnId}`);
+      const res = await request(app)
+        .delete(`/api/transactions/${txnId}`)
+        .set("Cookie", [`accessToken=${token}`]);
       expect(res.status).toBe(200);
 
       const check = await Transaction.findById(txnId);
       expect(check).toBeNull();
 
-      const analytics = await Analytics.findOne({
-        userId: "507f1f77bcf86cd799439011",
-      });
+      const analytics = await Analytics.findOne({ userId });
       expect(analytics.income.total).toBe(0);
     });
   });

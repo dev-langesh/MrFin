@@ -14,7 +14,7 @@ export const transactionsApi = {
   getTransaction: (id) => protectedApi.get(`/transactions/${id}`),
 
   // Update a transaction by ID
-  editTransaction: (id, data) => protectedApi.put(`/transactions/${id}`, data),
+  editTransaction: (id, data) => protectedApi.patch(`/transactions/${id}`, data),
 
   // Delete a transaction by ID
   deleteTransaction: (id) => protectedApi.delete(`/transactions/${id}`),

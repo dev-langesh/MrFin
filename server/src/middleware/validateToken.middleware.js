@@ -20,9 +20,9 @@ async function validateToken(req, res, next) {
   } catch (error) {
     console.log(error);
 
-    return res.status(error.statusCode).json({
-      message: error.message,
-      errorCode: error.errorCode,
+    return res.status(error.statusCode || 401).json({
+      message: error.message || "Invalid Token",
+      errorCode: error.errorCode || 4001,
     });
   }
 }

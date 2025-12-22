@@ -137,7 +137,7 @@ describe("Analytics System Stress & Consistency Tests", () => {
       expect(state.totals.daily.income).toBe(1000);
 
       // 2. Update Amount (1000 -> 2500)
-      txn = await transactionService.updateTransaction(txn._id, {
+      txn = await transactionService.updateTransaction(txn._id, userId, {
         amount: 2500,
       });
       state = await getSystemState(userId);
@@ -147,7 +147,7 @@ describe("Analytics System Stress & Consistency Tests", () => {
 
       // 3. Move Date (Jan -> Feb)
       // This should clear Jan Daily/Monthly and populate Feb
-      txn = await transactionService.updateTransaction(txn._id, {
+      txn = await transactionService.updateTransaction(txn._id, userId, {
         txnDate: new Date("2025-02-15"),
       });
       state = await getSystemState(userId);
@@ -172,7 +172,7 @@ describe("Analytics System Stress & Consistency Tests", () => {
       expect(febSum).toBe(2500);
 
       // 4. Change Type (Income -> Expense)
-      txn = await transactionService.updateTransaction(txn._id, {
+      txn = await transactionService.updateTransaction(txn._id, userId, {
         txnType: "expense",
         category: "Rent",
       });
@@ -184,7 +184,7 @@ describe("Analytics System Stress & Consistency Tests", () => {
       expect(state.totals.daily.expense).toBe(2500);
 
       // 5. Delete
-      await transactionService.deleteTransaction(txn._id);
+      await transactionService.deleteTransaction(txn._id, userId);
       state = await getSystemState(userId);
 
       expect(state.totals.summary.income).toBe(0);

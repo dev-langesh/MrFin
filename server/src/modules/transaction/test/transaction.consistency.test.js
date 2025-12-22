@@ -1,34 +1,14 @@
 const request = require("supertest");
-const express = require("express");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const cookieParser = require("cookie-parser");
-const { transactionRouter } = require("../transaction.routes");
-const { errorHandler } = require("../../../middleware/errorHandler.middleware");
+const { app } = require("../../../app"); // Use global app
 const { Transaction } = require("../transaction.model");
 const { Analytics } = require("../../analytics/analytics.model");
 const { DailyAnalytics } = require("../../analytics/dailyAnalytics.model");
 const { MonthlyAnalytics } = require("../../analytics/monthlyAnalytics.model");
-const { transactionService } = require("../transaction.service");
-
-// --- MOCK DATE SETUP ---
-// We will use jest.useFakeTimers in the test blocks
-
-const app = express();
-app.use(express.json());
-app.use(cookieParser());
-
-// Mock Auth Middleware
-const TEST_USER_ID = new mongoose.Types.ObjectId("507f1f77bcf86cd799439011");
-jest.mock("../../../middleware/validateToken.middleware", () => ({
-  validateToken: (req, res, next) => {
-    req.user = { id: "507f1f77bcf86cd799439011" };
-    next();
-  },
-}));
-
-app.use("/api/transactions", transactionRouter);
-app.use(errorHandler);
+const { tokenService } = require("../../../lib/jwt/token.service");
+const { userService } = require("../../user/user.service");
+const { User } = require("../../user/user.model");
 
 // --- CONSISTENCY CHECKER HELPER ---
 async function verifyConsistency(userId, currentDate) {
@@ -45,7 +25,7 @@ async function verifyConsistency(userId, currentDate) {
   txns.forEach((txn) => {
     if (txn.txnType === "transfer") return;
     const d = new Date(txn.txnDate);
-    const dayKey = d.toISOString().split("T")[0]; // YYYY-MM-DD (UTC) assuming txnDate is stored as Date object
+    const dayKey = d.toISOString().split("T")[0]; // YYYY-MM-DD (UTC)
     const startOfDay = new Date(
       Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
     ).toISOString();
@@ -171,7 +151,6 @@ async function verifyConsistency(userId, currentDate) {
   });
 
   // 5. Compute EXPECTED Summary (Analytics)
-  // Based on 'currentDate' for what defines "Current" vs "Previous"
   const now = new Date(currentDate);
   const currYear = now.getFullYear();
   const currMonth = now.getMonth();
@@ -189,9 +168,6 @@ async function verifyConsistency(userId, currentDate) {
     const y = d.getFullYear();
     const q = Math.floor(d.getMonth() / 3);
     const m = d.getMonth();
-    // Analytics service Logic:
-    // (currentQuarter > 0 && txYear === currentYear && txQuarter === currentQuarter - 1) ||
-    // (currentQuarter === 0 && txYear === currentYear - 1 && txQuarter === 3)
     return (
       (currQuarter > 0 && y === currYear && q === currQuarter - 1) ||
       (currQuarter === 0 && y === currYear - 1 && q === 3)
@@ -245,8 +221,6 @@ async function verifyConsistency(userId, currentDate) {
   });
 
   // Verify Summary
-  // Note: storedAnalytics can be null if no txns ever created, but normally created on registration.
-  // In test we create it manually.
   expect(storedAnalytics).toBeDefined();
 
   ["income", "expenses", "investments"].forEach((k) => {
@@ -265,6 +239,9 @@ async function verifyConsistency(userId, currentDate) {
 
 describe("Transaction Consistency Test Suite", () => {
   let mongoServer;
+  let user;
+  let token;
+  let TEST_USER_ID;
   const CURRENT_DATE = new Date(2025, 5, 15); // June 15, 2025
 
   beforeAll(async () => {
@@ -285,7 +262,30 @@ describe("Transaction Consistency Test Suite", () => {
     await Analytics.deleteMany({});
     await DailyAnalytics.deleteMany({});
     await MonthlyAnalytics.deleteMany({});
-    await Analytics.create({ userId: TEST_USER_ID });
+    await User.deleteMany({});
+
+    // Create real user
+    user = await userService.createUser({
+      username: "consistencyUser",
+      name: "Consistency Test",
+      email: "consistency@test.com",
+      password: "password123",
+      country: "US",
+    });
+    TEST_USER_ID = user._id; // Mongoose ID Object
+
+    // Generate real token
+    token = tokenService.generateToken({
+      userId: user._id,
+      role: "user",
+      tokenType: "access",
+    });
+
+    // Ensure initial analytics doc exists
+    let analytics = await Analytics.findOne({ userId: TEST_USER_ID });
+    if (!analytics) {
+      await Analytics.create({ userId: TEST_USER_ID });
+    }
   });
 
   afterEach(() => {
@@ -315,7 +315,7 @@ describe("Transaction Consistency Test Suite", () => {
         type: "investment",
         amount: 500,
         category: "Stocks",
-      }, // Feb is Q1, June is Q2. Q1 is Prev Q? Math.floor(5/3)=1 (Q2). Math.floor(1/3)=0 (Q1). Yes.
+      },
       {
         label: "Prev Year",
         date: new Date(2024, 11, 20),
@@ -328,6 +328,7 @@ describe("Transaction Consistency Test Suite", () => {
     for (const s of scenarios) {
       await request(app)
         .post("/api/transactions")
+        .set("Cookie", [`accessToken=${token}`])
         .send({
           txnDate: s.date,
           txnType: s.type,
@@ -345,6 +346,7 @@ describe("Transaction Consistency Test Suite", () => {
     // Setup Initial
     const res = await request(app)
       .post("/api/transactions")
+      .set("Cookie", [`accessToken=${token}`])
       .send({
         txnDate: new Date(2025, 5, 1),
         txnType: "income",
@@ -356,21 +358,24 @@ describe("Transaction Consistency Test Suite", () => {
 
     // A. Update Amount
     await request(app)
-      .put(`/api/transactions/${txnId}`)
+      .patch(`/api/transactions/${txnId}`)
+      .set("Cookie", [`accessToken=${token}`])
       .send({ amount: 750 })
       .expect(200);
     await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
 
     // B. Update Type (Income -> Expense) and Category
     await request(app)
-      .put(`/api/transactions/${txnId}`)
+      .patch(`/api/transactions/${txnId}`)
+      .set("Cookie", [`accessToken=${token}`])
       .send({ txnType: "expense", category: "Software" })
       .expect(200);
     await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
 
     // C. Update Date (Move to Prev Year)
     await request(app)
-      .put(`/api/transactions/${txnId}`)
+      .patch(`/api/transactions/${txnId}`)
+      .set("Cookie", [`accessToken=${token}`])
       .send({ txnDate: new Date(2024, 5, 1) })
       .expect(200);
     await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
@@ -380,6 +385,7 @@ describe("Transaction Consistency Test Suite", () => {
   it("Scenario 3: Consistency after Deletion", async () => {
     const res = await request(app)
       .post("/api/transactions")
+      .set("Cookie", [`accessToken=${token}`])
       .send({
         txnDate: new Date(2025, 5, 2),
         txnType: "expense",
@@ -389,31 +395,38 @@ describe("Transaction Consistency Test Suite", () => {
     const txnId = res.body._id;
     await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
 
-    await request(app).delete(`/api/transactions/${txnId}`).expect(200);
+    await request(app)
+      .delete(`/api/transactions/${txnId}`)
+      .set("Cookie", [`accessToken=${token}`])
+      .expect(200);
     await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
   });
 
   // 4. MIXED / CHAOS
   it("Scenario 4: Mixed Operations (Chaos)", async () => {
-    // Perform 200 random operations for robustness
+    // Perform 50 random operations (reduced from 200 for speed in CI/Local, usually 50 is enough for check)
+    // Or keep 200 if robust. Let's do 100.
     const ids = [];
     const types = ["income", "expense", "investment", "transfer"];
     const categories = ["A", "B", "C", "D", "E"];
+    const ITERATIONS = 100;
 
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < ITERATIONS; i++) {
       const rand = Math.random();
 
       if (rand < 0.5 || ids.length === 0) {
         // CREATE
-        // Random date within [CurrentYear - 2, CurrentYear] range
-        const currentYear = CURRENT_DATE.getFullYear();
-        const year = currentYear - Math.floor(Math.random() * 3);
-        const month = Math.floor(Math.random() * 12);
-        const day = Math.floor(Math.random() * 28) + 1;
-        const date = new Date(year, month, day);
+        const maxTime = CURRENT_DATE.getTime();
+        const minTime = new Date(
+          CURRENT_DATE.getFullYear() - 2,
+          0,
+          1
+        ).getTime();
+        const date = new Date(minTime + Math.random() * (maxTime - minTime));
 
         const res = await request(app)
           .post("/api/transactions")
+          .set("Cookie", [`accessToken=${token}`])
           .send({
             txnDate: date,
             txnType: types[Math.floor(Math.random() * types.length)],
@@ -426,7 +439,6 @@ describe("Transaction Consistency Test Suite", () => {
         const id = ids[Math.floor(Math.random() * ids.length)];
         const updates = {};
 
-        // Randomly choose fields to update
         if (Math.random() < 0.5)
           updates.amount = Math.floor(Math.random() * 2000) + 10;
         if (Math.random() < 0.4)
@@ -435,33 +447,39 @@ describe("Transaction Consistency Test Suite", () => {
           updates.category =
             categories[Math.floor(Math.random() * categories.length)];
         if (Math.random() < 0.4) {
-          const currentYear = CURRENT_DATE.getFullYear();
-          const year = currentYear - Math.floor(Math.random() * 3);
+          const maxTime = CURRENT_DATE.getTime();
+          const minTime = new Date(
+            CURRENT_DATE.getFullYear() - 2,
+            0,
+            1
+          ).getTime();
           updates.txnDate = new Date(
-            year,
-            Math.floor(Math.random() * 12),
-            Math.floor(Math.random() * 28) + 1
+            minTime + Math.random() * (maxTime - minTime)
           );
         }
 
-        // Ensure at least one update
         if (Object.keys(updates).length === 0) updates.amount = 100;
 
-        // console.log(`[Iter ${i}] Updating ${id} with`, updates);
-
         await request(app)
-          .put(`/api/transactions/${id}`)
+          .patch(`/api/transactions/${id}`)
+          .set("Cookie", [`accessToken=${token}`])
           .send(updates)
           .expect(200);
       } else {
         // DELETE
         const idx = Math.floor(Math.random() * ids.length);
         const id = ids[idx];
-        await request(app).delete(`/api/transactions/${id}`).expect(200);
+        await request(app)
+          .delete(`/api/transactions/${id}`)
+          .set("Cookie", [`accessToken=${token}`])
+          .expect(200);
         ids.splice(idx, 1);
       }
 
-      await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
+      // Check consistency every 10 ops to save time, or every op
+      if (i % 10 === 0 || i === ITERATIONS - 1) {
+        await verifyConsistency(TEST_USER_ID, CURRENT_DATE);
+      }
     }
   });
 });

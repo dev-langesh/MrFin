@@ -5,7 +5,15 @@ const { validateToken } = require("../../middleware/validateToken.middleware");
 const { validateInput } = require("../../middleware/validateInput.middleware");
 const { transactionInputSchema } = require("./transaction.inputSchema");
 
-// Single transaction routes
+router.get(
+  "/",
+  validateToken,
+  validateInput(transactionInputSchema.getTransactionsSchema),
+  transactionController.getTransactions
+);
+
+router.get("/:id", validateToken, transactionController.getTransaction);
+
 router.post(
   "/",
   validateToken,
@@ -13,11 +21,14 @@ router.post(
   transactionController.createTransaction
 );
 
-router.get("/", validateToken, transactionController.getTransactions);
+router.post(
+  "/bulk",
+  validateToken,
+  validateInput(transactionInputSchema.createTransactionsSchema),
+  transactionController.createTransactions
+);
 
-router.get("/:id", validateToken, transactionController.getTransaction);
-
-router.put(
+router.patch(
   "/:id",
   validateToken,
   validateInput(transactionInputSchema.updateTransactionSchema),
@@ -25,13 +36,5 @@ router.put(
 );
 
 router.delete("/:id", validateToken, transactionController.deleteTransaction);
-
-// Bulk transactions
-router.post(
-  "/bulk",
-  validateToken,
-  validateInput(transactionInputSchema.createTransactionsSchema),
-  transactionController.createTransactions
-);
 
 module.exports = { transactionRouter: router };

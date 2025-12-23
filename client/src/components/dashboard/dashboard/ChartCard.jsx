@@ -38,6 +38,8 @@ export const ChartCard = memo(function ChartCard({
   className,
   data,
   color,
+  areaColor,
+  barColor,
   label,
   yKey,
   xKey,
@@ -56,7 +58,7 @@ export const ChartCard = memo(function ChartCard({
         return (
           <AreaChart
             data={data}
-            color={color}
+            color={areaColor || color}
             label={label}
             yKey={yKey}
             xKey={xKey}
@@ -67,7 +69,7 @@ export const ChartCard = memo(function ChartCard({
         return (
           <BarChart
             data={data}
-            color={color}
+            color={barColor || color}
             label={label}
             yKey={yKey}
             xKey={xKey}

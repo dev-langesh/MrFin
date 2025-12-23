@@ -277,7 +277,8 @@ export default function TransactionPage() {
             <ChartCard
               title="Income Over Time"
               data={income}
-              color={`chart-green`}
+              areaColor="chart-green"
+              barColor="chart-green-700"
               label="Income"
               yKey="amount"
               xKey="_id"
@@ -318,7 +319,8 @@ export default function TransactionPage() {
             <ChartCard
               title="Expense Over Time"
               data={expense}
-              color={`chart-red`}
+              areaColor="chart-red"
+              barColor="chart-red-700"
               label="Expense"
               yKey="amount"
               xKey="_id"
@@ -359,7 +361,8 @@ export default function TransactionPage() {
             <ChartCard
               title="Investment Over Time"
               data={investment}
-              color={`chart-blue`}
+              areaColor="chart-blue"
+              barColor="chart-blue-700"
               label="Investment"
               yKey="amount"
               xKey="_id"

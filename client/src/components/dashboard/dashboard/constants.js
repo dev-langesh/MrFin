@@ -2,7 +2,7 @@ export const PI_CHART_COLOR_SETS = {
  income: [
     // --- Section 1: The Greens (Dark -> Light) ---
     // 7 Colors: Visual Foundation (Anchors to Area Chart)
-    "#14532d", // 1. Green 900 (Deepest Anchor)
+    // "#14532d", // 1. Green 900 (Deepest Anchor)
     "#15803d", // 2. Green 700
     "#16a34a", // 3. Green 600
     "#22c55e", // 4. Green 500
@@ -32,7 +32,7 @@ export const PI_CHART_COLOR_SETS = {
   expense: [
     // --- Section 1: The Reds (Dark -> Light) ---
     // Anchors to your Area Chart, fading out smoothly
-    "#7f1d1d", // 1. Red 900 (Deepest Anchor)
+    // "#7f1d1d", // 1. Red 900 (Deepest Anchor)
     "#991b1b", // 2. Red 800
     "#b91c1c", // 3. Red 700
     "#dc2626", // 4. Red 600
@@ -63,7 +63,7 @@ export const PI_CHART_COLOR_SETS = {
   investment: [
     // --- Section 1: The Blues (Dark -> Light) ---
     // 8 Colors: Visual Foundation
-    "#1e3a8a", // 1. Navy Blue (Darkest Anchor)
+    // "#1e3a8a", // 1. Navy Blue (Darkest Anchor)
     "#1e40af", // 2. Royal Blue
     "#1d4ed8", // 3. Bright Blue
     "#2563eb", // 4. Azure

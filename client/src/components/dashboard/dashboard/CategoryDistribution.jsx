@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { memo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart as PieChartIcon, List } from "lucide-react";
 import { PieChart } from "./PieChart";
@@ -8,12 +9,14 @@ import { formatNumber } from "@/lib/formatters";
 import { useAuth } from "@/context/AuthProvider";
 import { PI_CHART_COLOR_SETS } from "./constants";
 
-export default function CategoryDistribution({
+function CategoryDistribution({
   data = [],
   title,
   variant = "investment",
   dataKey = "value",
   nameKey = "name",
+  hoveredCategory,
+  setHoveredCategory,
 }) {
   const { auth } = useAuth();
   const countryCode = auth?.user?.country || "US";
@@ -55,6 +58,8 @@ export default function CategoryDistribution({
               variant={variant}
               dataKey={dataKey}
               nameKey={nameKey}
+              activeName={hoveredCategory}
+              setActiveName={setHoveredCategory}
             />
           </TabsContent>
 
@@ -97,3 +102,5 @@ export default function CategoryDistribution({
     </Card>
   );
 }
+
+export default memo(CategoryDistribution);

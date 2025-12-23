@@ -20,7 +20,7 @@ export function AreaChart({
   isMonthly = false,
   xKey = "_id",
   yKey = "amount",
-  color = "chart-1",
+  color = "chart-green",
   label = "Amount",
 }) {
   const [showYear, setShowYear] = useState(false);
@@ -54,7 +54,7 @@ export function AreaChart({
     <ChartContainer config={chartConfig} className="aspect-auto h-full w-full">
       <ReAreaChart data={data}>
         <defs>
-          <linearGradient id={`fill${yKey}`} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={`fill${color}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor={`var(--${color})`} stopOpacity={0.8} />
             <stop
               offset="95%"
@@ -120,7 +120,7 @@ export function AreaChart({
         <Area
           dataKey={yKey}
           type="monotone"
-          fill={`url(#fill${yKey})`}
+          fill={`url(#fill${color})`}
           stroke={`var(--${color})`}
           stackId="a"
         />

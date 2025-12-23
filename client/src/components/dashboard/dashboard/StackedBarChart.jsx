@@ -14,18 +14,20 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/Chart";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, memo } from "react";
 
-export function StackedBarChart({
+export const StackedBarChart = memo(function StackedBarChart({
   data,
   keys = [],
   colors = {},
   isMonthly = false,
   xKey = "_id",
   label = "Amount",
+  hoveredCategory,
+  setHoveredCategory,
 }) {
   const [showYear, setShowYear] = useState(false);
-  const [hoveredBar, setHoveredBar] = useState(null);
+  // Remove local state: const [hoveredBar, setHoveredBar] = useState(null);
 
   useEffect(() => {
     if (!data || data.length === 0) return;
@@ -37,6 +39,21 @@ export function StackedBarChart({
       setShowYear(false);
     }
   }, [data, xKey]);
+
+  const topKeys = useMemo(() => {
+    if (!data || data.length === 0 || !keys || keys.length === 0) return [];
+
+    return data.map((entry) => {
+      // Iterate keys in reverse to find the first one with a value > 0
+      for (let i = keys.length - 1; i >= 0; i--) {
+        const k = keys[i];
+        if (entry[k] && entry[k] > 0) {
+          return k;
+        }
+      }
+      return null;
+    });
+  }, [data, keys]);
 
   // If no keys provided, can't render stacks
   if (!keys || keys.length === 0) {
@@ -106,7 +123,7 @@ export function StackedBarChart({
               labelFormatter={(value) => {
                 if (isMonthly) {
                   return new Date(value).toLocaleDateString("en-US", {
-                    month: "short",
+                    month: "long",
                     year: "numeric",
                   });
                 }
@@ -127,22 +144,17 @@ export function StackedBarChart({
               dataKey={key}
               stackId="a"
               fill={colors[key] || "var(--color-primary)"}
-              fillOpacity={hoveredBar ? (hoveredBar === key ? 1 : 0.6) : 1}
-              onMouseEnter={() => setHoveredBar(key)}
-              onMouseLeave={() => setHoveredBar(null)}
+              fillOpacity={
+                hoveredCategory ? (hoveredCategory === key ? 1 : 0.1) : 1
+              }
+              onMouseEnter={() => setHoveredCategory && setHoveredCategory(key)}
+              onMouseLeave={() =>
+                setHoveredCategory && setHoveredCategory(null)
+              }
             >
               {data.map((entry, index) => {
                 // Determine if this is the top-most visible segment for this entry
-                // Iterate keys in reverse to find the first one with a value > 0
-                let topKey = null;
-                for (let i = keys.length - 1; i >= 0; i--) {
-                  const k = keys[i];
-                  if (entry[k] && entry[k] > 0) {
-                    topKey = k;
-                    break;
-                  }
-                }
-                const isTop = topKey === key;
+                const isTop = topKeys[index] === key;
                 const radius = isTop ? [4, 4, 0, 0] : [0, 0, 0, 0];
                 return <Cell key={`cell-${index}`} radius={radius} />;
               })}
@@ -152,4 +164,4 @@ export function StackedBarChart({
       </ReBarChart>
     </ChartContainer>
   );
-}
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -60,6 +60,11 @@ export default function TransactionPage() {
   const [incomeDir, setIncomeDir] = useState("up");
   const [expenseDir, setExpenseDir] = useState("up");
   const [investmentDir, setInvestmentDir] = useState("up");
+  // Hover states for synchronized highlighting
+  const [hoveredIncomeCategory, setHoveredIncomeCategory] = useState(null);
+  const [hoveredExpenseCategory, setHoveredExpenseCategory] = useState(null);
+  const [hoveredInvestmentCategory, setHoveredInvestmentCategory] =
+    useState(null);
   const [loading, setLoading] = useState(true);
 
   async function fetchData() {
@@ -181,6 +186,44 @@ export default function TransactionPage() {
     setTimeRange({ startDate, endDate, allTime: false });
   }, [summaryPeriod]);
 
+  const incomeStackedKeys = useMemo(
+    () => incomeDistribution.map((i) => i.name),
+    [incomeDistribution]
+  );
+  const incomeStackedColors = useMemo(() => {
+    return incomeDistribution.reduce((acc, item, index) => {
+      const COLORS = PI_CHART_COLOR_SETS.income;
+      acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
+      return acc;
+    }, {});
+  }, [incomeDistribution]);
+
+  const expenseStackedKeys = useMemo(
+    () => expenseDistribution.map((i) => i.name),
+    [expenseDistribution]
+  );
+  const expenseStackedColors = useMemo(() => {
+    return expenseDistribution.reduce((acc, item, index) => {
+      const COLORS = PI_CHART_COLOR_SETS.expense;
+      acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
+      return acc;
+    }, {});
+  }, [expenseDistribution]);
+
+  const investmentStackedKeys = useMemo(
+    () => investmentDistribution.map((i) => i.name),
+    [investmentDistribution]
+  );
+  const investmentStackedColors = useMemo(() => {
+    return investmentDistribution.reduce((acc, item, index) => {
+      const COLORS = PI_CHART_COLOR_SETS.investment;
+      acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
+      return acc;
+    }, {});
+  }, [investmentDistribution]);
+
+  // checkDir logic needs to be moved or memoized if it causes re-renders but it sets state so its fine.
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -234,7 +277,7 @@ export default function TransactionPage() {
             <ChartCard
               title="Income Over Time"
               data={income}
-              color={`chart-${incomeDir}`}
+              color={`chart-green`}
               label="Income"
               yKey="amount"
               xKey="_id"
@@ -245,12 +288,10 @@ export default function TransactionPage() {
                     31536000000 // approx 1 year in ms
                   : false
               }
-              stackedKeys={incomeDistribution.map((i) => i.name)}
-              stackedColors={incomeDistribution.reduce((acc, item, index) => {
-                const COLORS = PI_CHART_COLOR_SETS.income;
-                acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
-                return acc;
-              }, {})}
+              stackedKeys={incomeStackedKeys}
+              stackedColors={incomeStackedColors}
+              hoveredCategory={hoveredIncomeCategory}
+              setHoveredCategory={setHoveredIncomeCategory}
             />
           )}
         </div>
@@ -262,6 +303,8 @@ export default function TransactionPage() {
               data={incomeDistribution}
               title="Income Sources"
               variant="income"
+              hoveredCategory={hoveredIncomeCategory}
+              setHoveredCategory={setHoveredIncomeCategory}
             />
           )}
         </div>
@@ -275,7 +318,7 @@ export default function TransactionPage() {
             <ChartCard
               title="Expense Over Time"
               data={expense}
-              color={`chart-${expenseDir}`}
+              color={`chart-red`}
               label="Expense"
               yKey="amount"
               xKey="_id"
@@ -286,12 +329,10 @@ export default function TransactionPage() {
                     31536000000
                   : false
               }
-              stackedKeys={expenseDistribution.map((i) => i.name)}
-              stackedColors={expenseDistribution.reduce((acc, item, index) => {
-                const COLORS = PI_CHART_COLOR_SETS.expense;
-                acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
-                return acc;
-              }, {})}
+              stackedKeys={expenseStackedKeys}
+              stackedColors={expenseStackedColors}
+              hoveredCategory={hoveredExpenseCategory}
+              setHoveredCategory={setHoveredExpenseCategory}
             />
           )}
         </div>
@@ -303,6 +344,8 @@ export default function TransactionPage() {
               data={expenseDistribution}
               title="Expense Categories"
               variant="expense"
+              hoveredCategory={hoveredExpenseCategory}
+              setHoveredCategory={setHoveredExpenseCategory}
             />
           )}
         </div>
@@ -316,7 +359,7 @@ export default function TransactionPage() {
             <ChartCard
               title="Investment Over Time"
               data={investment}
-              color={`chart-${investmentDir}`}
+              color={`chart-blue`}
               label="Investment"
               yKey="amount"
               xKey="_id"
@@ -327,15 +370,10 @@ export default function TransactionPage() {
                     31536000000
                   : false
               }
-              stackedKeys={investmentDistribution.map((i) => i.name)}
-              stackedColors={investmentDistribution.reduce(
-                (acc, item, index) => {
-                  const COLORS = PI_CHART_COLOR_SETS.investment;
-                  acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
-                  return acc;
-                },
-                {}
-              )}
+              stackedKeys={investmentStackedKeys}
+              stackedColors={investmentStackedColors}
+              hoveredCategory={hoveredInvestmentCategory}
+              setHoveredCategory={setHoveredInvestmentCategory}
             />
           )}
         </div>
@@ -347,6 +385,8 @@ export default function TransactionPage() {
               data={investmentDistribution}
               title="Investment Portfolio"
               variant="investment"
+              hoveredCategory={hoveredInvestmentCategory}
+              setHoveredCategory={setHoveredInvestmentCategory}
             />
           )}
         </div>

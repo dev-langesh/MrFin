@@ -1,23 +1,25 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, memo } from "react";
 import { formatNumber } from "@/lib/formatters";
 import { useAuth } from "@/context/AuthProvider";
 import { Pie, PieChart as RePieChart, Sector, Label } from "recharts";
 import { ChartContainer, ChartStyle } from "@/components/ui/Chart";
 import { PI_CHART_COLOR_SETS } from "./constants";
 
-export function PieChart({
+export const PieChart = memo(function PieChart({
   data = [],
   title,
   dataKey = "value",
   nameKey = "name",
   variant = "investment", // income | expense | investment
+  activeName,
+  setActiveName,
 }) {
   const { auth } = useAuth();
   const countryCode = auth?.user?.country || "US";
 
-  const [activeName, setActiveName] = useState(null);
+  // const [activeName, setActiveName] = useState(null); // Managed by parent
 
   const COLORS = PI_CHART_COLOR_SETS[variant] ?? PI_CHART_COLOR_SETS.investment;
 
@@ -142,4 +144,4 @@ export function PieChart({
       )}
     </div>
   );
-}
+});

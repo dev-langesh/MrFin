@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   Popover,
@@ -12,11 +12,28 @@ import {
   AreaChart as AreaChartIcon,
   BarChart as BarChartIcon,
   Layers as StackedBarChartIcon,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function ChartCard({
+const chartOptions = [
+  {
+    id: "area",
+    label: "Area Chart",
+    icon: AreaChartIcon,
+  },
+  {
+    id: "bar",
+    label: "Bar Chart",
+    icon: BarChartIcon,
+  },
+  {
+    id: "stacked",
+    label: "Stacked Bar",
+    icon: StackedBarChartIcon,
+  },
+];
+
+export const ChartCard = memo(function ChartCard({
   title,
   className,
   data,
@@ -27,6 +44,8 @@ export function ChartCard({
   isMonthly,
   stackedKeys,
   stackedColors,
+  hoveredCategory,
+  setHoveredCategory,
 }) {
   const [chartType, setChartType] = useState("area");
   const [isOpen, setIsOpen] = useState(false);
@@ -65,30 +84,14 @@ export function ChartCard({
             yKey={yKey}
             xKey={xKey}
             isMonthly={isMonthly}
+            hoveredCategory={hoveredCategory}
+            setHoveredCategory={setHoveredCategory}
           />
         );
       default:
         return null;
     }
   };
-
-  const chartOptions = [
-    {
-      id: "area",
-      label: "Area Chart",
-      icon: AreaChartIcon,
-    },
-    {
-      id: "bar",
-      label: "Bar Chart",
-      icon: BarChartIcon,
-    },
-    {
-      id: "stacked",
-      label: "Stacked Bar",
-      icon: StackedBarChartIcon,
-    },
-  ];
 
   return (
     <Card
@@ -139,4 +142,4 @@ export function ChartCard({
       <CardContent className="px-2 flex-1 min-h-0">{renderChart()}</CardContent>
     </Card>
   );
-}
+});

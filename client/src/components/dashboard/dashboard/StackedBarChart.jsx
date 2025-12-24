@@ -118,12 +118,13 @@ export const StackedBarChart = memo(function StackedBarChart({
 
         <ChartTooltip
           cursor={false}
+          shared={false}
           content={
             <ChartTooltipContent
               labelFormatter={(value) => {
                 if (isMonthly) {
                   return new Date(value).toLocaleDateString("en-US", {
-                    month: "long",
+                    month: "short",
                     year: "numeric",
                   });
                 }
@@ -147,10 +148,8 @@ export const StackedBarChart = memo(function StackedBarChart({
               fillOpacity={
                 hoveredCategory ? (hoveredCategory === key ? 1 : 0.1) : 1
               }
-              onMouseEnter={() => setHoveredCategory && setHoveredCategory(key)}
-              onMouseLeave={() =>
-                setHoveredCategory && setHoveredCategory(null)
-              }
+              onMouseEnter={() => setHoveredCategory?.(key)}
+              onMouseLeave={() => setHoveredCategory?.(null)}
             >
               {data.map((entry, index) => {
                 // Determine if this is the top-most visible segment for this entry

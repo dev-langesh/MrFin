@@ -21,6 +21,8 @@ export const PieChart = memo(function PieChart({
 
   // const [activeName, setActiveName] = useState(null); // Managed by parent
 
+  const [selectedName, setSelectedName] = useState(null);
+
   const COLORS = PI_CHART_COLOR_SETS[variant] ?? PI_CHART_COLOR_SETS.investment;
 
   const validData = useMemo(
@@ -41,15 +43,19 @@ export const PieChart = memo(function PieChart({
   }, [validData, dataKey, COLORS]);
 
   const activeIndex = useMemo(() => {
-    if (!activeName) return 0;
-    return processedData.findIndex((item) => item[nameKey] === activeName);
-  }, [activeName, processedData, nameKey]);
+    const targetName = activeName || selectedName;
+    if (!targetName) return 0;
+    const index = processedData.findIndex(
+      (item) => item[nameKey] === targetName
+    );
+    return index >= 0 ? index : 0;
+  }, [activeName, selectedName, processedData, nameKey]);
 
   useEffect(() => {
-    if (processedData.length && !activeName) {
-      setActiveName(processedData[0][nameKey]);
+    if (processedData.length && !selectedName) {
+      setSelectedName(processedData[0][nameKey]);
     }
-  }, [processedData, activeName, nameKey]);
+  }, [processedData, selectedName, nameKey]);
 
   const chartConfig = useMemo(() => {
     const config = {};
@@ -99,7 +105,11 @@ export const PieChart = memo(function PieChart({
               strokeWidth={4}
               activeIndex={activeIndex}
               className="cursor-pointer"
-              onMouseEnter={(item) => setActiveName(item[nameKey])}
+              onMouseEnter={(item) => {
+                setActiveName(item[nameKey]);
+                setSelectedName(item[nameKey]);
+              }}
+              onMouseLeave={() => setActiveName(null)}
               activeShape={({ outerRadius = 0, ...props }) => (
                 <g>
                   <Sector {...props} outerRadius={outerRadius + 4} />

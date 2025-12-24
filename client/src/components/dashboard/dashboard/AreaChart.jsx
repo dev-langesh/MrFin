@@ -103,7 +103,7 @@ export function AreaChart({
               labelFormatter={(value) => {
                 if (isMonthly) {
                   return new Date(value).toLocaleDateString("en-US", {
-                    month: "long",
+                    month: "short",
                     year: "numeric",
                   });
                 }
@@ -113,7 +113,7 @@ export function AreaChart({
                   year: showYear ? "numeric" : undefined,
                 });
               }}
-              indicator="dot"
+              indicator="line"
             />
           }
         />

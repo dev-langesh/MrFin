@@ -93,7 +93,7 @@ export function BarChart({
               labelFormatter={(value) => {
                 if (isMonthly) {
                   return new Date(value).toLocaleDateString("en-US", {
-                    month: "long",
+                    month: "short",
                     year: "numeric",
                   });
                 }
@@ -103,7 +103,7 @@ export function BarChart({
                   year: showYear ? "numeric" : undefined,
                 });
               }}
-              indicator="dashed"
+              indicator="line"
             />
           }
         />

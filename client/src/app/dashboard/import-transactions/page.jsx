@@ -6,6 +6,7 @@ import PreProcessData from "@/components/dashboard/importTransactions/preProcess
 import TransformData from "@/components/dashboard/importTransactions/transformData/TransformData";
 import { Stepper } from "@/components/ui/Stepper";
 import { UploadFile } from "@/components/ui/UploadFile";
+import { MobileStepIndicator } from "@/components/dashboard/importTransactions/MobileStepIndicator";
 import {
   nextStep,
   selectImportTransactions,
@@ -65,24 +66,48 @@ export default function ImportTransactionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Import Transactions</h1>
-      <Stepper
-        currentStep={state.step}
-        steps={[
-          {
-            name: "Upload File",
-          },
-          {
-            name: "Pre Process",
-          },
-          {
-            name: "Map Fields",
-          },
-          {
-            name: "Transform Data",
-          },
-        ]}
-      />
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Import Transactions
+        </h1>
+        <p className="text-gray-500">
+          Import transactions from bank statements in CSV format.
+        </p>
+      </div>
+      
+      {/* Mobile Step Indicator */}
+      <div className="block md:hidden">
+        <MobileStepIndicator
+          currentStep={state.step}
+          steps={[
+            { name: "Upload" },
+            { name: "Pre Process" },
+            { name: "Map Fields" },
+            { name: "Transform" },
+          ]}
+        />
+      </div>
+
+      {/* Desktop Stepper */}
+      <div className="hidden md:block">
+        <Stepper
+          currentStep={state.step}
+          steps={[
+            {
+              name: "Upload File",
+            },
+            {
+              name: "Pre Process",
+            },
+            {
+              name: "Map Fields",
+            },
+            {
+              name: "Transform Data",
+            },
+          ]}
+        />
+      </div>
 
       {Component}
       <ChangeStep />

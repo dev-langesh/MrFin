@@ -58,10 +58,10 @@ function CsvTable() {
             trigger={
               <Button
                 variant="ghost"
-                size="sm"
-                className="text-red-600 hover:text-red-700"
+                size="icon"
+                className="h-8 w-8 md:h-9 md:w-9 text-red-600 hover:text-red-700"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </Button>
             }
             title="Delete Entry"

@@ -1,4 +1,5 @@
 import React, { memo } from "react";
+import { Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -50,21 +51,32 @@ function GenericDataTable({
   } = pagination;
 
   return (
-    <Card className="px-0 rounded-sm py-5 relative">
+    <Card className="px-0 rounded-sm py-3 md:py-5 relative gap-2">
       {isLoading && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
-          <Loading variant="spinner"  text="Processing..." />
+          <Loading variant="spinner" text="Processing..." />
         </div>
       )}
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <h1>
-            {title} ({totalCount || data.length})
+      <CardHeader className="max-md:px-3">
+        <CardTitle className="flex flex-row items-center justify-between gap-2">
+          <h1 className="text-base font-semibold md:text-xl">
+            {title}{" "}
+            <span className="text-muted-foreground font-normal text-xs md:text-sm">
+              ({totalCount || data.length})
+            </span>
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             {selectedRows.length > 0 && onDelete && (
               <ConfirmationDialog
-                trigger={<Button size="sm">Delete</Button>}
+                trigger={
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-8 w-8 md:h-9 md:w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  </Button>
+                }
                 title="Delete Selected Rows"
                 description="Are you sure you want to delete the selected entries? This action cannot be undone."
                 onConfirm={() => onDelete(selectedRows)}
@@ -75,9 +87,9 @@ function GenericDataTable({
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-md border grid grid-cols-1">
-          <Table className="overflow-x-auto">
+      <CardContent className="max-md:px-3">
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
             {data.length > 0 && (
               <TableHeader>
                 <TableRow>
@@ -113,6 +125,7 @@ function GenericDataTable({
                     <TableRow
                       key={globalIndex}
                       className={cn(
+                        "text-xs md:text-sm",
                         getRowClassName ? getRowClassName(entry) : ""
                       )}
                     >
@@ -146,20 +159,26 @@ function GenericDataTable({
         {/* Pagination */}
         <div className="flex items-center justify-between mt-4 w-full">
           {(totalCount || data.length) > 10 && (
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Label className="whitespace-nowrap">Rows per page:</Label>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Label className="whitespace-nowrap text-xs max-md:hidden">
+                Rows
+              </Label>
               <Select
                 value={
                   limit === (totalCount || data.length) ? "all" : String(limit)
                 }
                 onValueChange={handleLimitChange}
               >
-                <SelectTrigger>
+                <SelectTrigger className="max-md:h-8 w-fit text-xs px-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {paginationOptions.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
+                    <SelectItem
+                      key={option}
+                      value={String(option)}
+                      className="text-xs"
+                    >
                       {option === "all" ? "All" : option}
                     </SelectItem>
                   ))}
@@ -169,12 +188,14 @@ function GenericDataTable({
           )}
 
           {Math.ceil((totalCount || data.length || 0) / limit) > 1 && (
-            <Pagination
-              total={totalCount || data.length || 0}
-              limit={limit}
-              currentPage={page}
-              handlePageChange={handlePageChange}
-            />
+            <div className="scale-90 origin-center md:scale-100 md:origin-right">
+              <Pagination
+                total={totalCount || data.length || 0}
+                limit={limit}
+                currentPage={page}
+                handlePageChange={handlePageChange}
+              />
+            </div>
           )}
         </div>
       </CardContent>

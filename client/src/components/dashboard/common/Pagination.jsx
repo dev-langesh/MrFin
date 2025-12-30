@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Pagination as UIPagination,
   PaginationContent,
@@ -19,16 +19,32 @@ export default function Pagination({
   handlePageChange,
   maxVisiblePages = 5,
 }) {
+  const [visiblePagesCount, setVisiblePagesCount] = useState(maxVisiblePages);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setVisiblePagesCount(3);
+      } else {
+        setVisiblePagesCount(maxVisiblePages);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [maxVisiblePages]);
+
   const totalPages = Math.ceil(total / limit);
 
   if (totalPages === 0) return null;
 
   // Compute visible page numbers
-  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  let startPage = Math.max(1, currentPage - Math.floor(visiblePagesCount / 2));
+  let endPage = Math.min(totalPages, startPage + visiblePagesCount - 1);
 
-  if (endPage - startPage + 1 < maxVisiblePages) {
-    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  if (endPage - startPage + 1 < visiblePagesCount) {
+    startPage = Math.max(1, endPage - visiblePagesCount + 1);
   }
 
   const pageNumbers = [];
@@ -43,6 +59,8 @@ export default function Pagination({
         <PaginationItem>
           <PaginationPrevious
             href="#"
+            size="icon"
+            className="h-8 w-8 md:h-9 md:w-9"
             onClick={(e) => {
               e.preventDefault();
               if (currentPage > 1) handlePageChange(currentPage - 1);
@@ -58,11 +76,12 @@ export default function Pagination({
             <PaginationLink
               href="#"
               isActive={pageNum === currentPage}
+              size="icon"
+              className="h-8 w-8 md:h-9 md:w-9 text-xs md:text-sm"
               onClick={(e) => {
                 e.preventDefault();
                 handlePageChange(pageNum);
               }}
-                    className=""
             >
               {pageNum}
             </PaginationLink>
@@ -72,7 +91,7 @@ export default function Pagination({
         {/* Ellipsis if needed */}
         {endPage < totalPages && (
           <PaginationItem>
-            <PaginationEllipsis />
+            <PaginationEllipsis className="h-8 w-8 md:h-9 md:w-9 flex items-center justify-center" />
           </PaginationItem>
         )}
 
@@ -80,6 +99,8 @@ export default function Pagination({
         <PaginationItem>
           <PaginationNext
             href="#"
+            size="icon"
+            className="h-8 w-8 md:h-9 md:w-9"
             onClick={(e) => {
               e.preventDefault();
               if (currentPage < totalPages) handlePageChange(currentPage + 1);

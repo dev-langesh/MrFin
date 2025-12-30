@@ -34,9 +34,9 @@ export default function Layout({ children }) {
       </Sheet>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-64 p-2 max-lg:pt-10 h-screen overflow-hidden">
-        <main className="flex-1 overflow-y-auto p-4">{children}</main>
-      </div>
+      <main className="flex-1 lg:ml-64 p-2 md:p-4 max-lg:pt-10 h-screen overflow-y-auto overflow-x-hidden">
+        {children}
+      </main>
     </div>
   );
 }

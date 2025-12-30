@@ -11,15 +11,20 @@ export default function TransactionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-row items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-          <p className="text-gray-600">
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">
+            Transactions
+          </h1>
+          <p className="text-gray-600 max-md:text-sm">
             Manage and track your financial transactions
           </p>
         </div>
-        <Button onClick={() => router.push("/dashboard/import-transactions")}>
-          Import
+        <Button
+          className="max-md:hidden max-md:self-end"
+          onClick={() => router.push("/dashboard/import-transactions")}
+        >
+          <span>Import</span>
           <Upload className="ml-1" />
         </Button>
       </div>

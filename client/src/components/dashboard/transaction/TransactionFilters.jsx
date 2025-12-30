@@ -49,9 +49,8 @@ const defaultFilters = {
   dateRange: "all",
   startDate: null,
   endDate: null,
-  txnType: [],
   category: [],
-  description: "",
+  description: null,
   sort: "desc",
   limit: 10,
   page: 1,
@@ -62,7 +61,6 @@ function TransactionFilters({
   onApply,
   isOpen,
   categories = [],
-  txnTypes = [],
 }) {
   const [localFilters, setLocalFilters] = useState({
     ...defaultFilters,
@@ -113,7 +111,13 @@ function TransactionFilters({
   }
 
   const handleApply = () => {
-    onApply(localFilters);
+    const payload = {};
+    Object.entries(localFilters).forEach(([key, value]) => {
+      if (Array.isArray(value) && value.length === 0) return;
+      if (value === null || value === undefined || value === "" || value === "all") return;
+      payload[key] = value;
+    });
+    onApply(payload);
   };
 
   const handleClear = () => {
@@ -133,8 +137,10 @@ function TransactionFilters({
     return uniqueNames.map((c) => ({ label: c, value: c }));
   }, [categories, localFilters.txnType]);
 
+  console.log(localFilters);
+
   return (
-    <div className="space-y-4 p-4 min-w-[320px]">
+    <div className="space-y-4 w-full">
       <div className="grid grid-cols-1 gap-4">
         {/* Date Range Pre-select */}
         <div className="space-y-2">

@@ -149,14 +149,14 @@ function TransformedDataTable({ ...props }) {
             <DialogTrigger asChild>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => {
                   setEditingIndex(globalIndex);
                   setIsDialogOpen(true);
                 }}
-                className="text-black hover:text-black/80 rounded-[2px]"
+                className="h-8 w-8 md:h-9 md:w-9 text-black hover:text-black/80 rounded-[2px]"
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -173,10 +173,10 @@ function TransformedDataTable({ ...props }) {
             trigger={
               <Button
                 variant="ghost"
-                size="sm"
-                className="text-red-600 hover:bg-red-50 hover:text-red-700 rounded-[2px]"
+                size="icon"
+                className="h-8 w-8 md:h-9 md:w-9 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-[2px]"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
               </Button>
             }
             title="Delete Entry"

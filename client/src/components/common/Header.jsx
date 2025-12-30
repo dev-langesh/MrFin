@@ -23,7 +23,7 @@ export default function Header() {
   return (
     <nav className="bg-white w-full h-[45px] flex items-center justify-between px-4 md:px-6 shadow-sm">
       <Link href="/" className="font-semibold">
-        DIM
+        Fman
       </Link>
 
       {!isAuthenticated && (

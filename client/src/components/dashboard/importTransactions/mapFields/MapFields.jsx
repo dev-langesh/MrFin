@@ -9,7 +9,7 @@ import {
   selectMappedFields,
   selectValidationAttempt,
   selectMappedData,
-  selectErrorIndices,
+  selectErrorUids,
 } from "@/redux/slices/importTransactionsSlice";
 import { useEffect } from "react";
 
@@ -19,17 +19,17 @@ export default function MapFields({}) {
   const validationAttempt = useSelector(selectValidationAttempt);
 
   const mappedData = useSelector(selectMappedData);
-  const errorIndices = useSelector(selectErrorIndices);
+  const errorUids = useSelector(selectErrorUids);
 
   useEffect(() => {
     if (validationAttempt > 0) {
-      if (errorIndices?.length > 0) {
+      if (errorUids?.length > 0) {
         setActiveTab("errors");
       } else {
         setActiveTab("mappedData");
       }
     }
-  }, [validationAttempt, errorIndices?.length]);
+  }, [validationAttempt, errorUids?.length]);
 
   const handleApply = (hasError) => {
     setActiveTab(hasError ? "errors" : "mappedData");
@@ -43,9 +43,11 @@ export default function MapFields({}) {
           <CardHeader className="px-0 ">
             <CardTitle className="flex items-center justify-between">
               <TabsList>
-                <TabsTrigger value="importedData">Imported Data</TabsTrigger>
+                <TabsTrigger value="preProcessedData">
+                  Pre-Processed Data
+                </TabsTrigger>
                 <TabsTrigger value="mappedData">Mapped Data</TabsTrigger>
-                {errorIndices?.length > 0 && (
+                {errorUids?.length > 0 && (
                   <TabsTrigger value="errors" className="text-red-500">
                     Errors
                   </TabsTrigger>
@@ -54,7 +56,7 @@ export default function MapFields({}) {
               {/* Delete button is now handled within MappedDataTable via GenericDataTable */}
             </CardTitle>
           </CardHeader>
-          <TabsContent value="importedData" className="w-full">
+          <TabsContent value="preProcessedData" className="w-full">
             <ImportedDataTable />
           </TabsContent>
           <TabsContent value="mappedData">

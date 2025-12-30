@@ -28,17 +28,18 @@ export const saveSettings = createAsyncThunk(
 
 const initialState = {
   value: {
-    files: [],
-
     step: 1,
+    files: [],
+    transformedData: [],
+    mappedData: [],
+    preProcessedData: [],
+    deletedRowUids: [], // Store hashes of deleted rows
     options: {
       delimiter: ",",
       removeCharacters: "",
       quote: '"',
+      hasHeader: true,
     },
-    mappedData: [],
-    transformedData: [],
-    importedData: [],
     mappedFields: {
       txnDate: undefined,
       credit: undefined,
@@ -53,7 +54,7 @@ const initialState = {
     isLoading: false,
     settingsStatus: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
     validationAttempt: 0,
-    errorIndices: [], // Store indices of rows with errors
+    errorUids: [], // Store UIDs of rows with errors
   },
 };
 
@@ -61,14 +62,21 @@ const importTransactionsSlice = createSlice({
   name: "importTransactions",
   initialState,
   reducers: {
-    setFiles: (state, action) => {
-      state.value.files = action.payload;
+    setImportFileData: (state, action) => {
+      // payload: [{ name, content, size, type }]
+      state.value.fileData = action.payload;
+      // Reset deletions when new file is loaded to prevent index collisions
+      state.value.deletedRowUids = [];
+    },
+    deleteFile: (state, action) => {
+      const index = action.payload;
+      state.value.fileData = state.value.fileData.filter((_, i) => i !== index);
     },
     setStep: (state, action) => {
       state.value.step = action.payload;
     },
-    setImportedData: (state, action) => {
-      state.value.importedData = action.payload;
+    setPreProcessedData: (state, action) => {
+      state.value.preProcessedData = action.payload;
     },
     setIsLoading: (state, action) => {
       state.value.isLoading = action.payload;
@@ -101,87 +109,90 @@ const importTransactionsSlice = createSlice({
       };
     },
     deleteRow: (state, action) => {
-      const index = action.payload;
-      if (state.value.importedData) {
-        state.value.importedData = state.value.importedData.filter(
-          (_, i) => i !== index
+      const uid = action.payload;
+      if (state.value.preProcessedData) {
+        state.value.preProcessedData = state.value.preProcessedData.filter(
+          (r) => r.uid !== uid
         );
       }
       if (state.value.mappedData) {
         state.value.mappedData = state.value.mappedData.filter(
-          (_, i) => i !== index
+          (r) => r.uid !== uid
+        );
+        state.value.errorUids = state.value.errorUids.filter(
+          (id) => id !== uid
         );
       }
       if (state.value.transformedData) {
         state.value.transformedData = state.value.transformedData.filter(
-          (_, i) => i !== index
+          (r) => r.uid !== uid
         );
       }
     },
     setMappedData: (state, action) => {
-      // payload: { mappedData, errorIndices } OR just mappedData
-      if (action.payload.mappedData && action.payload.errorIndices) {
+      // payload: { mappedData, errorUids } OR just mappedData
+      if (action.payload.mappedData && action.payload.errorUids) {
         state.value.mappedData = action.payload.mappedData;
-        state.value.errorIndices = action.payload.errorIndices;
+        state.value.errorUids = action.payload.errorUids;
       } else {
         // Fallback
         state.value.mappedData = action.payload;
-        state.value.errorIndices = [];
-        state.value.mappedData.forEach((row, i) => {
+        state.value.errorUids = [];
+        state.value.mappedData.forEach((row) => {
           if (row.errors && Object.keys(row.errors).length > 0) {
-            state.value.errorIndices.push(i);
+            state.value.errorUids.push(row.uid);
           }
         });
       }
     },
     updateMappedRow: (state, action) => {
-      const { index, row } = action.payload;
-      if (state.value.mappedData[index]) {
-        state.value.mappedData[index] = row;
+      const { uid, row } = action.payload;
+      const index = state.value.mappedData.findIndex((r) => r.uid === uid);
+
+      if (index !== -1) {
+        state.value.mappedData[index] = {
+          ...state.value.mappedData[index],
+          ...row,
+        };
 
         const hasError = row.errors && Object.keys(row.errors).length > 0;
-        const errIdx = state.value.errorIndices.indexOf(index);
+        const errUidIdx = state.value.errorUids.indexOf(uid);
 
-        if (hasError && errIdx === -1) {
-          state.value.errorIndices.push(index);
-          state.value.errorIndices.sort((a, b) => a - b);
-        } else if (!hasError && errIdx !== -1) {
-          state.value.errorIndices.splice(errIdx, 1);
+        if (hasError && errUidIdx === -1) {
+          state.value.errorUids.push(uid);
+        } else if (!hasError && errUidIdx !== -1) {
+          state.value.errorUids.splice(errUidIdx, 1);
         }
       }
     },
     deleteRows: (state, action) => {
-      const indices = new Set(action.payload); // Expecting array of indices
-      if (state.value.importedData) {
-        state.value.importedData = state.value.importedData.filter(
-          (_, i) => !indices.has(i)
+      // Payload: uids[] (array of strings)
+      const uids = action.payload;
+      const uidsSet = new Set(uids);
+
+      // Add UIDs to deletedRowUids for persistence
+      if (uids && uids.length > 0) {
+        const currentUids = new Set(state.value.deletedRowUids || []);
+        uids.forEach((uid) => currentUids.add(uid));
+        state.value.deletedRowUids = Array.from(currentUids);
+      }
+
+      if (state.value.preProcessedData) {
+        state.value.preProcessedData = state.value.preProcessedData.filter(
+          (r) => !uidsSet.has(r.uid)
         );
       }
       if (state.value.mappedData) {
-        // Update errorIndices
-        const oldErrorIndices = state.value.errorIndices;
-        const newErrorIndices = [];
-        const sortedDeleted = Array.from(indices).sort((a, b) => a - b);
-
-        oldErrorIndices.forEach((errIdx) => {
-          if (indices.has(errIdx)) return; // deleted
-          let shift = 0;
-          for (let d of sortedDeleted) {
-            if (d < errIdx) shift++;
-            else break;
-          }
-          newErrorIndices.push(errIdx - shift);
-        });
-
-        state.value.errorIndices = newErrorIndices;
-
         state.value.mappedData = state.value.mappedData.filter(
-          (_, i) => !indices.has(i)
+          (r) => !uidsSet.has(r.uid)
+        );
+        state.value.errorUids = state.value.errorUids.filter(
+          (uid) => !uidsSet.has(uid)
         );
       }
       if (state.value.transformedData) {
         state.value.transformedData = state.value.transformedData.filter(
-          (_, i) => !indices.has(i)
+          (r) => !uidsSet.has(r.uid)
         );
       }
     },
@@ -223,9 +234,10 @@ const importTransactionsSlice = createSlice({
 });
 
 export const {
-  setFiles,
+  setImportFileData,
+  deleteFile,
   setStep,
-  setImportedData,
+  setPreProcessedData,
   setIsLoading,
   setRules,
   nextStep,
@@ -245,11 +257,13 @@ export default importTransactionsSlice.reducer;
 
 export const selectImportTransactions = (state) =>
   state.importTransactions.value;
-export const selectImportFiles = (state) =>
-  state.importTransactions.value.files;
+export const selectImportFileData = (state) =>
+  state.importTransactions.value.fileData;
 export const selectImportStep = (state) => state.importTransactions.value.step;
-export const selectImportData = (state) =>
-  state.importTransactions.value.importedData;
+export const selectPreProcessedData = (state) =>
+  state.importTransactions.value.preProcessedData;
+export const selectDeletedRowUids = (state) =>
+  state.importTransactions.value.deletedRowUids;
 export const selectMappedFields = (state) =>
   state.importTransactions.value.mappedFields;
 export const selectOptions = (state) => state.importTransactions.value.options;
@@ -264,5 +278,5 @@ export const selectTransactionSettings = (state) =>
   state.importTransactions.value.transactionSettings;
 export const selectValidationAttempt = (state) =>
   state.importTransactions.value.validationAttempt;
-export const selectErrorIndices = (state) =>
-  state.importTransactions.value.errorIndices;
+export const selectErrorUids = (state) =>
+  state.importTransactions.value.errorUids;

@@ -10,23 +10,46 @@ import { MobileStepIndicator } from "@/components/dashboard/importTransactions/M
 import {
   nextStep,
   selectImportTransactions,
-  setFiles,
+  setImportFileData,
 } from "@/redux/slices/importTransactionsSlice";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function ImportTransactionsPage() {
-  const [readedDataFromFile, setReadedDataFromFile] = useState(false);
   const state = useSelector(selectImportTransactions);
   const dispatch = useDispatch();
 
-  function handleUpload(files) {
-    dispatch(setFiles(files));
-
-    if (files?.length) {
-      setReadedDataFromFile(false);
-      dispatch(nextStep());
+  async function handleUpload(files) {
+    if (!files || files.length === 0) {
+      dispatch(setImportFileData([]));
+      return;
     }
+
+    const file = files[0];
+    if (file.content) {
+      dispatch(setImportFileData(files));
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const content = e.target.result;
+      // Dispatching setImportFileData to store raw content
+      dispatch(
+        setImportFileData([
+          {
+            name: file.name,
+            content: content,
+            size: file.size,
+            type: file.type,
+          },
+        ])
+      );
+      dispatch(nextStep());
+    };
+
+    reader.readAsText(file);
   }
 
   let Component;
@@ -38,7 +61,7 @@ export default function ImportTransactionsPage() {
           acceptedFileTypes={[".csv"]}
           className="h-[250px]"
           onFileUpload={handleUpload}
-          value={state.files}
+          value={state.fileData}
           maxFileSize={5 * 1024 * 1024} // 5MB
         />
       );
@@ -46,8 +69,7 @@ export default function ImportTransactionsPage() {
     case 2:
       Component = (
         <PreProcessData
-          readedDataFromFile={readedDataFromFile}
-          setReadedDataFromFile={setReadedDataFromFile}
+        // readedDataFromFile prop removed as it is no longer used
         />
       );
       break;
@@ -74,7 +96,7 @@ export default function ImportTransactionsPage() {
           Import transactions from bank statements in CSV format.
         </p>
       </div>
-      
+
       {/* Mobile Step Indicator */}
       <div className="block md:hidden">
         <MobileStepIndicator

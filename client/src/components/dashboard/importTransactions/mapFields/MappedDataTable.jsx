@@ -9,7 +9,7 @@ import {
   updateMappedRow,
   deleteRows,
   selectIsLoading,
-  selectErrorIndices,
+  selectErrorUids,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
@@ -23,67 +23,71 @@ import { cn } from "@/lib/utils";
 
 function MappedDataTable({ showErrorsOnly }) {
   const mappedData = useSelector(selectMappedData);
-  const errorIndices = useSelector(selectErrorIndices);
+  const errorUids = useSelector(selectErrorUids);
   const mappedFields = useSelector(selectMappedFields);
   const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
 
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingUid, setEditingUid] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // We rely on stable UIDs now
   const displayData = useMemo(() => {
     if (showErrorsOnly) {
-      return errorIndices.map((i) => ({ ...mappedData[i], _realIndex: i }));
+      const errorSet = new Set(errorUids);
+      return mappedData.filter((r) => errorSet.has(r.uid));
     }
-    return mappedData.map((d, i) => ({ ...d, _realIndex: i }));
-  }, [mappedData, errorIndices, showErrorsOnly]);
+    return mappedData;
+  }, [mappedData, errorUids, showErrorsOnly]);
 
   const pagination = useTable({ data: displayData });
   const { selectedRows: hookSelectedRows, resetSelection } = pagination;
 
   const orderedFields = ["txnDate", "description", "credit", "debit"];
-
-  const dynamicCols = useMemo(
-    () =>
-      mappedFields
-        ? orderedFields.map((field) => mappedFields[field]).filter(Boolean)
-        : [],
-    [mappedFields]
-  );
+  const fieldLabels = {
+    txnDate: "Transaction Date",
+    description: "Description",
+    credit: "Credit",
+    debit: "Debit",
+  };
 
   const columns = useMemo(() => {
-    const cols = dynamicCols.map((key) => ({
-      header: key,
-      accessor: key,
-      className: "capitalize",
-      cellClassName: cn(
-        "min-w-[150px] whitespace-normal break-words"
-        // We can't easily access entry value here for length check unless we use render
-      ),
-      render: (entry) => {
-        const val = entry[key];
-        const isDate = key === mappedFields.txnDate;
-        const error = entry.errors && entry.errors[key];
+    const cols = orderedFields
+      .map((fieldKey) => {
+        const csvColumn = mappedFields?.[fieldKey];
+        if (!csvColumn) return null;
 
-        return (
-          <div
-            className={cn(
-              val?.length >= 20 && "min-w-[200px]",
-              val?.length >= 50 && "min-w-[300px]",
-              val?.length >= 100 && "min-w-[400px]"
-            )}
-          >
-            {error ? (
-              <span className="text-red-600 font-medium">{error}</span>
-            ) : isDate ? (
-              formatDateSafe(val, mappedFields.dateFormat)
-            ) : (
-              val
-            )}
-          </div>
-        );
-      },
-    }));
+        return {
+          header: fieldLabels[fieldKey],
+          accessor: csvColumn,
+          className: "capitalize",
+          cellClassName: cn("min-w-[150px] whitespace-normal break-words"),
+          render: (entry) => {
+            const val = entry[csvColumn];
+            const isDate = fieldKey === "txnDate";
+            const error = entry.errors && entry.errors[csvColumn];
+
+            return (
+              <div
+                className={cn(
+                  val?.length >= 20 && "w-[200px]",
+                  val?.length >= 50 && "w-[300px]",
+                  val?.length >= 100 && "w-[400px]" 
+                )}
+              >
+                {error ? (
+                  <span className="text-red-600 font-medium">{error}</span>
+                ) : isDate ? (
+                  formatDateSafe(val, mappedFields.dateFormat)
+                ) : (
+                  val
+                )}
+              </div>
+            );
+          },
+        };
+      })
+      .filter(Boolean);
 
     cols.push({
       header: "Actions",
@@ -92,10 +96,10 @@ function MappedDataTable({ showErrorsOnly }) {
       render: (entry, globalIndex) => (
         <div className="flex items-center justify-end gap-1">
           <Dialog
-            open={isDialogOpen && editingIndex === globalIndex}
+            open={isDialogOpen && editingUid === entry.uid}
             onOpenChange={(open) => {
               setIsDialogOpen(open);
-              if (!open) setEditingIndex(null);
+              if (!open) setEditingUid(null);
             }}
           >
             <DialogTrigger asChild>
@@ -103,7 +107,7 @@ function MappedDataTable({ showErrorsOnly }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setEditingIndex(globalIndex);
+                  setEditingUid(entry.uid);
                   setIsDialogOpen(true);
                 }}
                 className="text-black hover:text-black/80 rounded-[2px]"
@@ -145,7 +149,7 @@ function MappedDataTable({ showErrorsOnly }) {
             }
             title="Delete Entry"
             description="Are you sure you want to delete this entry?"
-            onConfirm={() => handleDeleteRows([globalIndex])}
+            onConfirm={() => handleDeleteRows([globalIndex])} // GenericDataTable passes visual indices
             confirmText="Delete"
           />
         </div>
@@ -153,20 +157,20 @@ function MappedDataTable({ showErrorsOnly }) {
     });
 
     return cols;
-  }, [dynamicCols, mappedFields, isDialogOpen, editingIndex]);
+  }, [mappedFields, isDialogOpen, editingUid]);
 
-  function handleDeleteRows(rows) {
-    const realIndices = rows.map((r) => displayData[r]._realIndex);
-    dispatch(deleteRows(realIndices));
+  function handleDeleteRows(rowIndices) {
+    // Convert visual indices to UIDs
+    const uids = rowIndices.map((i) => displayData[i].uid);
+    dispatch(deleteRows(uids));
     resetSelection();
   }
 
   function handleUpdateEntry(updatedEntry) {
-    const realIndex = displayData[editingIndex]._realIndex;
-    const { _realIndex, ...rest } = updatedEntry;
-    dispatch(updateMappedRow({ index: realIndex, row: rest }));
+    const { _realIndex, ...rest } = updatedEntry; // Remove legacy props if any
+    dispatch(updateMappedRow({ uid: editingUid, row: rest }));
     setIsDialogOpen(false);
-    setEditingIndex(null);
+    setEditingUid(null);
   }
 
   return (

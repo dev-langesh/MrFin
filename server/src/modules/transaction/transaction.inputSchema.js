@@ -35,7 +35,7 @@ const createTransactionSchema = z.object({
       txnType: z.enum(config.txnTypes, {
         required_error: "Transaction type is required",
       }),
-      description: z.string().trim().max(100).optional(),
+      description: z.string().trim().max(200).optional(),
       category: categoryString(30).optional(),
       amount: z
         .number({ required_error: "Amount is required" })
@@ -52,7 +52,7 @@ const createTransactionsSchema = z.object({
       txnType: z.enum(config.txnTypes, {
         required_error: "Transaction type is required",
       }),
-      description: z.string().trim().max(100).optional(),
+      description: z.string().trim().max(200).optional(),
       category: categoryString(30).optional(),
       amount: z
         .number({ required_error: "Amount is required" })
@@ -79,7 +79,7 @@ const getTransactionsSchema = z.object({
         .string()
         .refine((val) => !isNaN(Date.parse(val)))
         .optional(),
-      description: z.string().max(50).optional(),
+      description: z.string().max(25).optional(),
       // sortBy: z.enum(["date", "amount"]).optional(),
       // sortOrder: z.enum(["asc", "desc"]).optional(),
       sort: z.enum(["asc", "desc"]).optional(),
@@ -92,7 +92,7 @@ const updateTransactionSchema = z.object({
     .object({
       txnDate: dateSchema.optional(),
       txnType: z.enum(config.txnTypes).optional(),
-      description: z.string().trim().max(100).optional(),
+      description: z.string().trim().max(200).optional(),
       category: categoryString(30).optional(),
       amount: z
         .number()

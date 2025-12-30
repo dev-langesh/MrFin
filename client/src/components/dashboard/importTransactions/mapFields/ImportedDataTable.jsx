@@ -1,21 +1,23 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { selectImportData } from "@/redux/slices/importTransactionsSlice";
+import { selectPreProcessedData } from "@/redux/slices/importTransactionsSlice";
 import { useSelector } from "react-redux";
 import { cn } from "@/lib/utils";
 import GenericDataTable from "../GenericDataTable";
 import { useTable } from "@/hooks/useTable";
 
 function ImportedDataTable() {
-  const importData = useSelector(selectImportData);
-  const pagination = useTable({ data: importData });
+  const preProcessedData = useSelector(selectPreProcessedData);
+  const pagination = useTable({ data: preProcessedData });
 
   const keys = useMemo(() => {
-    return importData && importData.length > 0
-      ? Object.keys(importData[0])
+    return preProcessedData && preProcessedData.length > 0
+      ? Object.keys(preProcessedData[0]).filter(
+          (k) => k !== "uid" && !k.startsWith("_")
+        )
       : [];
-  }, [importData]);
+  }, [preProcessedData]);
 
   const columns = useMemo(() => {
     return keys.map((key) => ({
@@ -38,7 +40,7 @@ function ImportedDataTable() {
 
   return (
     <GenericDataTable
-      data={importData}
+      data={preProcessedData}
       columns={columns}
       isLoading={false}
       title="Imported Data"

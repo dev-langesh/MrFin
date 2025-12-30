@@ -9,7 +9,7 @@ import Input from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import {
-  selectImportData,
+  selectPreProcessedData,
   selectTransactionSettings,
 } from "@/redux/slices/importTransactionsSlice";
 import {
@@ -39,9 +39,11 @@ const defaultValues = {
 };
 
 function AddRuleForm(props) {
-  const importedData = useSelector(selectImportData);
+  const preProcessedData = useSelector(selectPreProcessedData);
   const transactionSettings = useSelector(selectTransactionSettings);
-  const sourceOptions = Object.keys(importedData[0] || {});
+  const sourceOptions = Object.keys(preProcessedData[0] || {}).filter(
+    (k) => k !== "uid" && !k.startsWith("_")
+  );
 
   const {
     control,

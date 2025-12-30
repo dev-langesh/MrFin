@@ -4,7 +4,7 @@ export function validateStepData(step, state) {
   let isValid = true;
   switch (step) {
     case 1:
-      if (state.files?.length < 1) {
+      if (state.fileData?.length < 1) {
         toast.error("Please upload a file.");
         isValid = false;
       }
@@ -16,9 +16,9 @@ export function validateStepData(step, state) {
         toast.error("No valid data to import. Please check the mapped fields.");
         isValid = false;
       }
-      if (state.errorIndices && state.errorIndices.length > 0) {
+      if (state.errorUids && state.errorUids.length > 0) {
         toast.error(
-          `Please fix ${state.errorIndices.length} errors before proceeding.`
+          `Please fix ${state.errorUids.length} errors before proceeding.`
         );
         isValid = false;
       }

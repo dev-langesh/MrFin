@@ -1,5 +1,5 @@
 import {
-  selectImportFiles,
+  selectImportFileData,
   updateState,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useEffect } from "react";
@@ -9,15 +9,15 @@ import PreProcessOptions from "./PreProcessOptions";
 import { toast } from "sonner";
 
 export default function PreProcessData() {
-  const files = useSelector(selectImportFiles);
+  const fileData = useSelector(selectImportFileData);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (!files || files.length === 0) {
+    if (!fileData || fileData.length === 0) {
       toast.error("No files to preprocess");
       dispatch(updateState({ step: 1 }));
     }
-  }, [files]);
+  }, [fileData]);
 
   return (
     <div className="space-y-6">

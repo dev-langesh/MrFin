@@ -25,11 +25,7 @@ export const transactionSchema = z.object({
   description: z
     .string()
     .trim()
-    .max(100, "Description must be 100 characters or less")
-    .regex(
-      /^$|^[a-zA-Z0-9\s\-_]+$/, // Allows empty string or the specified characters
-      "Only alphanumeric characters, spaces, hyphens and underscores are allowed"
-    )
+    .max(200, "Description must be 200 characters or less")
     .optional(),
   category: z
     .string()

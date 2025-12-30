@@ -1,5 +1,5 @@
 import {
-  selectImportData,
+  selectPreProcessedData,
   selectMappedFields,
   updateMappedFields,
   updateState,
@@ -46,7 +46,7 @@ export default function MapFieldsOptions({ onApply }) {
   const [keys, setKeys] = useState([]);
   const [state, setState] = useState({});
 
-  const importedData = useSelector(selectImportData);
+  const preProcessedData = useSelector(selectPreProcessedData);
   const reduxMappedFields = useSelector(selectMappedFields);
   const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
@@ -81,8 +81,10 @@ export default function MapFieldsOptions({ onApply }) {
   }, []);
 
   useEffect(() => {
-    if (!importedData?.length) return;
-    const keys = Object.keys(importedData[0]);
+    if (!preProcessedData?.length) return;
+    const keys = Object.keys(preProcessedData[0]).filter(
+      (k) => k !== "uid" && !k.startsWith("_")
+    );
     setKeys(keys);
 
     // 1. Regex Guesses
@@ -98,7 +100,9 @@ export default function MapFieldsOptions({ onApply }) {
     const savedSettings = {};
     if (reduxMappedFields) {
       Object.entries(reduxMappedFields).forEach(([key, value]) => {
-        if (value && keys.includes(value)) {
+        if (key === "dateFormat") {
+          savedSettings[key] = value;
+        } else if (value && keys.includes(value)) {
           savedSettings[key] = value;
         }
       });
@@ -109,7 +113,7 @@ export default function MapFieldsOptions({ onApply }) {
       ...guesses,
       ...savedSettings,
     }));
-  }, [importedData, reduxMappedFields]);
+  }, [preProcessedData, reduxMappedFields]);
 
   const handleApply = useCallback(async () => {
     dispatch(setIsLoading(true));
@@ -117,11 +121,15 @@ export default function MapFieldsOptions({ onApply }) {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     try {
-      const errorIndices = [];
-      const validatedData = importedData.map((data, index) => {
+      const errorUids = [];
+      const validatedData = preProcessedData.map((data) => {
         const val = validateEntry(data, state, state.dateFormat);
+        // Ensure UID is preserved if validateEntry returns a new object without it
+        // Check if val has uid, if not add it from data
+        if (!val.uid) val.uid = data.uid;
+
         if (Object.keys(val.errors).length > 0) {
-          errorIndices.push(index);
+          errorUids.push(data.uid);
         }
         return val;
       });
@@ -130,17 +138,17 @@ export default function MapFieldsOptions({ onApply }) {
       dispatch(
         setMappedData({
           mappedData: validatedData,
-          errorIndices,
+          errorUids,
         })
       );
-      if (onApply) onApply(errorIndices.length > 0);
+      if (onApply) onApply(errorUids.length > 0);
     } catch (error) {
       console.error("Failed to apply mapping:", error);
       toast.error("Failed to apply mapping.");
     } finally {
       dispatch(setIsLoading(false));
     }
-  }, [dispatch, importedData, state, onApply]);
+  }, [dispatch, preProcessedData, state, onApply]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

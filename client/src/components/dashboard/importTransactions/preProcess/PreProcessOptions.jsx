@@ -1,13 +1,15 @@
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import {
-  selectImportFiles,
+  selectImportFileData,
   selectOptions,
   updateState,
   setIsLoading,
   selectIsLoading,
   fetchSettings,
+  selectDeletedRowUids,
 } from "@/redux/slices/importTransactionsSlice";
 import {
   Collapsible,
@@ -37,9 +39,10 @@ import {
 
 function PreProcessOptions() {
   const dispatch = useDispatch();
-  const files = useSelector(selectImportFiles);
+  const fileData = useSelector(selectImportFileData);
   const reduxOptions = useSelector(selectOptions);
   const isLoading = useSelector(selectIsLoading);
+  const deletedRowUids = useSelector(selectDeletedRowUids);
 
   const [options, setOptions] = useState(reduxOptions);
   const [isOpen, setIsOpen] = useState(true);
@@ -49,14 +52,15 @@ function PreProcessOptions() {
   }, [dispatch]);
 
   useEffect(() => {
+    console.log(reduxOptions)
     setOptions(reduxOptions);
   }, [reduxOptions]);
 
   useEffect(() => {
-    if (files.length > 0) {
-      detectAndProcess(files[0]);
+    if (fileData.length > 0) {
+      detectAndProcess(fileData[0].content);
     }
-  }, [files]);
+  }, [fileData]);
 
   const handleChange = useCallback(
     (name, value) => {
@@ -73,33 +77,44 @@ function PreProcessOptions() {
   );
 
   const handleProcessFile = useCallback(
-    async (file, currentOptions) => {
-      dispatch(setIsLoading(true));
+    async (fileContent, currentOptions) => {
+      if (!fileContent) return;
+
       try {
-        const data = await processFile(file, currentOptions);
+        dispatch(setIsLoading(true));
+        let data = await processFile(fileContent, currentOptions);
+
+        // Generate UIDs and Filter
+        const headerOffset = currentOptions.hasHeader ? 1 : 0;
+
+        data = data
+          .map((row, index) => ({
+            ...row,
+            uid: `row-${index + headerOffset}`,
+          }))
+          .filter((row) => !deletedRowUids.includes(row.uid));
 
         dispatch(
           updateState({
             options: currentOptions,
-            importedData: data,
+            preProcessedData: data,
           })
         );
       } catch (error) {
         console.error("Process file error:", error);
         toast.error(error.message || "Failed to process file.");
-        dispatch(updateState({ importedData: [] }));
+        dispatch(updateState({ preProcessedData: [] }));
       } finally {
         dispatch(setIsLoading(false));
       }
     },
-    [dispatch]
+    [dispatch, deletedRowUids]
   );
 
   const detectAndProcess = useCallback(
-    async (file) => {
+    async (content) => {
       try {
         dispatch(setIsLoading(true));
-        const content = await readFilePreview(file);
         const detectedDelimiter = detectDelimiter(content);
         const detectedQuote = detectQuote(content, detectedDelimiter);
 
@@ -111,7 +126,7 @@ function PreProcessOptions() {
 
         setOptions(newOptions);
 
-        await handleProcessFile(file, newOptions);
+        await handleProcessFile(content, newOptions);
       } catch (error) {
         console.error("Failed to auto-detect options:", error);
         toast.error("Failed to auto-detect CSV options.");
@@ -122,9 +137,11 @@ function PreProcessOptions() {
   );
 
   const applyOptions = useCallback(async () => {
-    await handleProcessFile(files[0], options);
+    if (fileData.length > 0) {
+      await handleProcessFile(fileData[0].content, options);
+    }
     // toast.success("Options applied successfully.");
-  }, [files, options, handleProcessFile]);
+  }, [fileData, options, handleProcessFile, deletedRowUids]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -140,14 +157,19 @@ function PreProcessOptions() {
               <CardTitle>Options</CardTitle>
             </CollapsibleTrigger>
 
-            <Button size="sm" onClick={applyOptions} loading={isLoading} className="min-w-[80px]">
+            <Button
+              size="sm"
+              onClick={applyOptions}
+              loading={isLoading}
+              className="min-w-[80px]"
+            >
               Apply
             </Button>
           </div>
         </CardHeader>
         <CollapsibleContent>
           <CardContent>
-            <form className="flex flex-wrap gap-4 ">
+            <form className="flex flex-wrap gap-4 items-end">
               <div className="space-y-2 w-full md:w-[calc(33.33%-1rem)]">
                 <Label
                   htmlFor="delimiter"
@@ -207,6 +229,22 @@ function PreProcessOptions() {
                   maxLength={10}
                   info="Characters to remove from the data (e.g., = \ ' )"
                 />
+              </div>
+
+              <div className="flex items-center space-x-2 w-full md:w-[calc(33.33%-1rem)] h-10 mt-2">
+                <Checkbox
+                  id="hasHeader"
+                  checked={options.hasHeader}
+                  onCheckedChange={(checked) =>
+                    handleChange("hasHeader", checked)
+                  }
+                />
+                <label
+                  htmlFor="hasHeader"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  File contains header row
+                </label>
               </div>
             </form>
           </CardContent>

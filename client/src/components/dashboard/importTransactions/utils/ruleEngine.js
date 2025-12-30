@@ -4,14 +4,14 @@
  * @param {Array} mappedData - The data with mapped fields (original keys).
  * @param {Array} rules - The list of rules to apply.
  * @param {Object} mappedFields - The mapping of standard fields to original CSV headers.
- * @param {Array} importedData - The original imported data (for fallback lookup).
+ * @param {Array} preProcessedData - The original imported data (for fallback lookup).
  * @returns {Array} - The transformed data ready for the transaction table.
  */
 export function applyRulesToData(
   mappedData,
   rules,
   mappedFields,
-  importedData
+  preProcessedData
 ) {
   if (!mappedData || mappedData.length === 0) return [];
 
@@ -35,7 +35,7 @@ export function applyRulesToData(
 
     for (let j = 0; j < rules.length; j++) {
       const rule = rules[j];
-      const matches = checkCondition(row, rule, importedData);
+      const matches = checkCondition(row, rule, preProcessedData);
 
       if (matches) {
         if (rule.action === "delete") {
@@ -71,7 +71,7 @@ export function applyRulesToData(
         amount: amount,
         txnType: row.txnType,
         category: row.category,
-        _originalIndex: row._originalIndex,
+        uid: row.uid,
         appliedRules: rowAppliedRules,
       });
     }
@@ -80,19 +80,18 @@ export function applyRulesToData(
   return finalData;
 }
 
-function checkCondition(row, rule, importedData) {
-  // If source is in row (mappedData), use it. Otherwise use importedData.
+function checkCondition(row, rule, preProcessedData) {
+  // If source is in row (mappedData), use it. Otherwise use preProcessedData.
   let value = row[rule.source];
 
   if (value === undefined || value === null) {
     // Not in mapped data, check imported data
-    const originalIndex = row._originalIndex;
-    if (
-      originalIndex !== undefined &&
-      importedData &&
-      importedData[originalIndex]
-    ) {
-      value = importedData[originalIndex][rule.source];
+    const uid = row.uid;
+    if (uid !== undefined && preProcessedData) {
+      const sourceRow = preProcessedData.find((r) => r.uid === uid);
+      if (sourceRow) {
+        value = sourceRow[rule.source];
+      }
     }
   }
 

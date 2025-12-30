@@ -1,23 +1,40 @@
+import { TXN_TYPES } from "@/components/dashboard/config";
 import { z } from "zod";
 
 export const transformedEntrySchema = z.object({
-  txnDate: z
-    .string({ required_error: "Date is required" })
-    .refine((val) => !isNaN(Date.parse(val)), { message: "Invalid date" }),
-  txnType: z
-    .string({
-      required_error: "Transaction Type is required",
+  txnDate: z.coerce
+    .date({
+      required_error: "Date is required",
+      invalid_type_error: "Invalid date format",
     })
-    .max(25, "Transaction Type must be 25 characters or less")
-    .min(2, "Transaction Type must be at least 2 characters long"),
+    .refine(
+      (val) => {
+        const date = new Date(val);
+        const now = new Date();
+        now.setHours(23, 59, 59, 999);
+        return date <= now;
+      },
+      { message: "Transaction date cannot be in the future" }
+    ),
+  txnType: z.enum(
+    TXN_TYPES.map((type) => type.value),
+    {
+      errorMap: () => ({ message: "Transaction Type is required" }),
+    }
+  ),
   description: z
     .string()
-    .max(100, "Description must be 100 characters or less")
+    .trim()
+    .max(200, "Description must be 200 characters or less")
     .optional(),
   category: z
     .string()
-    .max(25, "Category must be 25 characters or less")
-    .min(2, "Category must be at least 2 characters long")
+    .trim()
+    .max(30, "Category must be 30 characters or less")
+    .regex(
+      /^$|^[a-zA-Z0-9\s\-_]+$/, // Allows empty string or the specified characters
+      "Only alphanumeric characters, spaces, hyphens and underscores are allowed"
+    )
     .optional(),
   amount: z
     .union([z.string(), z.number()])
@@ -25,6 +42,6 @@ export const transformedEntrySchema = z.object({
       message: "Amount must be a number",
     })
     .refine((val) => val > 0, {
-      message: "Amount must be positive greater than 0",
+      message: "Amount must be greater than 0",
     }),
 });

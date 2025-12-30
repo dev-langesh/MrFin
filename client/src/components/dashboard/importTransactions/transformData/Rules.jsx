@@ -12,7 +12,7 @@ import AddRuleForm from "./AddRuleForm";
 import { useDispatch, useSelector } from "react-redux";
 import {
   selectMappedData,
-  selectImportData,
+  selectPreProcessedData,
   selectMappedFields,
   updateState,
   setIsLoading,
@@ -27,38 +27,37 @@ function Rules() {
   const [editingRuleIndex, setEditingRuleIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const mappedData = useSelector(selectMappedData);
-  const importedData = useSelector(selectImportData);
+  const preProcessedData = useSelector(selectPreProcessedData);
   const mappedFields = useSelector(selectMappedFields);
   const rules = useSelector(selectRules);
 
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (rules.length === 0 && mappedFields) {
-      dispatch(
-        setRules([
-          {
-            name: "Set Expense Type",
-            source: mappedFields.debit,
-            operation: "exists",
-            operationValue: "",
-            action: "update",
-            target: "txnType",
-            targetValue: "expense",
-          },
-          {
-            name: "Set Income Type",
-            source: mappedFields.credit,
-            operation: "exists",
-            operationValue: "",
-            action: "update",
-            target: "txnType",
-            targetValue: "income",
-          },
-        ])
-      );
-    }
-  }, [mappedFields, rules.length, dispatch]);
+    console.log(mappedFields);
+    dispatch(
+      setRules([
+        {
+          name: "Set Expense Type",
+          source: mappedFields.debit,
+          operation: "exists",
+          operationValue: "",
+          action: "update",
+          target: "txnType",
+          targetValue: "expense",
+        },
+        {
+          name: "Set Income Type",
+          source: mappedFields.credit,
+          operation: "exists",
+          operationValue: "",
+          action: "update",
+          target: "txnType",
+          targetValue: "income",
+        },
+      ])
+    );
+  }, [mappedFields]);
 
   useEffect(() => {
     const applyRules = async () => {
@@ -71,7 +70,7 @@ function Rules() {
             mappedData,
             rules,
             mappedFields,
-            importedData
+            preProcessedData
           );
           dispatch(updateState({ transformedData: finalData }));
         } catch (error) {
@@ -83,7 +82,7 @@ function Rules() {
     };
 
     applyRules();
-  }, [mappedData, rules, mappedFields, importedData, dispatch]);
+  }, [mappedData, rules, mappedFields, preProcessedData, dispatch]);
 
   const handleAddRule = useCallback(
     (rule) => {

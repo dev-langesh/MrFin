@@ -201,6 +201,10 @@ function TransactionTable() {
     },
   };
 
+  const currencyCode = settings?.general?.currency || "USD";
+  const Icon = currencyIcons[currencyCode];
+  const symbol = currencySymbols[currencyCode] || "$";
+
   const columns = useMemo(
     () => [
       {
@@ -245,29 +249,24 @@ function TransactionTable() {
       {
         header: "Description",
         accessor: "description",
-        className: "min-w-[200px]",
+        className: "w-[400px]",
+        render: (entry) => (
+          <div className="w-[400px] break-all whitespace-normal">
+            {entry.description}
+          </div>
+        ),
       },
       {
-        header: "Amount",
+        header: (
+          <div className="flex items-center justify-end gap-1">
+            <span>Amount</span>
+            {Icon ? <Icon className="w-3 h-3" /> : <span>{symbol}</span>}
+          </div>
+        ),
         accessor: "amount",
         className: "text-right",
         cellClassName: "text-right font-medium",
-        render: (entry) => {
-          const currencyCode = settings?.general?.currency || "USD";
-          const Icon = currencyIcons[currencyCode];
-          const symbol = currencySymbols[currencyCode] || "$";
-
-          return (
-            <div className="flex items-center justify-end gap-1">
-              {Icon ? (
-                <Icon className="w-3 h-3 text-muted-foreground" />
-              ) : (
-                <span className="text-muted-foreground">{symbol}</span>
-              )}
-              {entry.amount.toLocaleString()}
-            </div>
-          );
-        },
+        render: (entry) => entry.amount.toLocaleString(),
       },
       {
         header: "Actions",

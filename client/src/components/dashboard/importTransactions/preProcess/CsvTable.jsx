@@ -1,12 +1,12 @@
 "use client";
 
-import { memo, useMemo } from "react";
 import {
-  selectImportData,
+  selectPreProcessedData,
   selectIsLoading,
   deleteRows,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
+import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import GenericDataTable from "@/components/dashboard/importTransactions/GenericDataTable";
 import { useTable } from "@/hooks/useTable";
@@ -16,17 +16,19 @@ import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
 function CsvTable() {
   const isLoading = useSelector(selectIsLoading);
-  const importData = useSelector(selectImportData);
+  const preProcessedData = useSelector(selectPreProcessedData);
   const dispatch = useDispatch();
 
-  const pagination = useTable({ data: importData });
+  const pagination = useTable({ data: preProcessedData });
   const { resetSelection } = pagination;
 
   const keys = useMemo(() => {
-    return importData && importData.length > 0
-      ? Object.keys(importData[0])
+    return preProcessedData && preProcessedData.length > 0
+      ? Object.keys(preProcessedData[0]).filter(
+          (k) => k !== "uid" && !k.startsWith("_")
+        )
       : [];
-  }, [importData]);
+  }, [preProcessedData]);
 
   const columns = useMemo(() => {
     const cols = keys.map((key) => ({
@@ -35,8 +37,10 @@ function CsvTable() {
       render: (entry) => (
         <div
           className={cn(
-            " break-words min-w-[130px]",
-            entry[key]?.length > 20 && "min-w-[170px]"
+            "break-all whitespace-normal min-w-[130px]",
+            entry[key]?.length >= 20 && "w-[200px]",
+            entry[key]?.length >= 50 && "w-[300px]",
+            entry[key]?.length >= 100 && "w-[400px]"
           )}
         >
           {entry[key]}
@@ -72,14 +76,18 @@ function CsvTable() {
     return cols;
   }, [keys]);
 
-  function handleDeleteRows(rows) {
-    dispatch(deleteRows(rows));
+  function handleDeleteRows(rowIndices) {
+    const uids = rowIndices
+      .map((index) => preProcessedData[index]?.uid)
+      .filter(Boolean);
+
+    dispatch(deleteRows(uids));
     resetSelection();
   }
 
   return (
     <GenericDataTable
-      data={importData}
+      data={preProcessedData}
       columns={columns}
       isLoading={isLoading}
       title="Imported Data"

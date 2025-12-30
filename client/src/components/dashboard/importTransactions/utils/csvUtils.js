@@ -28,56 +28,52 @@ export function readFilePreview(file) {
   });
 }
 
-export async function processFile(file, options) {
-  return new Promise((resolve, reject) => {
+export async function processFile(fileContent, options) {
+  return new Promise(async (resolve, reject) => {
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        let csvData = event.target.result;
+      let csvData = fileContent;
 
-        // Safe remove logic
-        if (options.removeCharacters) {
-          // Escape special regex characters
-          const escapedChars = options.removeCharacters.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-          );
-          const regex = new RegExp(`[${escapedChars}]`, "g");
-          csvData = csvData.replace(regex, "");
+      // Safe remove logic
+      if (options.removeCharacters) {
+        // Escape special regex characters
+        const escapedChars = options.removeCharacters.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&"
+        );
+        const regex = new RegExp(`[${escapedChars}]`, "g");
+        csvData = csvData.replace(regex, "");
+      }
+
+      try {
+        const json = await csv({
+          delimiter: options.delimiter,
+          trim: true,
+          quote: options.quote,
+          checkType: true, // Auto-convert numbers/booleans
+          noheader: !options.hasHeader,
+          headers: !options.hasHeader ? undefined : undefined, // Let csvtojson handle logic or strict defined headers if needed, but for dynamic we use noheader toggle
+        }).fromString(csvData);
+
+        // Validation: Check if parsing resulted in meaningful data
+        if (json.length === 0) {
+          throw new Error("Parsed data is empty.");
         }
 
-        try {
-          const json = await csv({
-            delimiter: options.delimiter,
-            trim: true,
-            quote: options.quote,
-            checkType: true, // Auto-convert numbers/booleans
-          }).fromString(csvData);
-
-          // Validation: Check if parsing resulted in meaningful data
-          if (json.length === 0) {
-            throw new Error("Parsed data is empty.");
-          }
-
-          // Check if mostly single column (likely wrong delimiter)
+        // Check if mostly single column (likely wrong delimiter)
+        if (json.length > 0) {
           const keys = Object.keys(json[0]);
           if (
             keys.length < 2 &&
             csvData.includes(options.delimiter === "," ? ";" : ",")
           ) {
-            // Heuristic warning, handled by caller or returned as warning
-            // We can return an object { data: json, warning: "..." } if needed
-            // For now, let's just return the data and let the UI handle warnings if we want to move that logic too.
-            // The original code showed a toast. We can return a warning flag.
+            // Heuristic warning logic
           }
-
-          resolve(json);
-        } catch (parseError) {
-          reject(new Error("Failed to parse CSV. Please check your options."));
         }
-      };
-      reader.onerror = () => reject(new Error("Failed to read file."));
-      reader.readAsText(file);
+
+        resolve(json);
+      } catch (parseError) {
+        reject(new Error("Failed to parse CSV. Please check your options."));
+      }
     } catch (e) {
       reject(e);
     }

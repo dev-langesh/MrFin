@@ -65,14 +65,14 @@ function MappedDataTable({ showErrorsOnly }) {
           render: (entry) => {
             const val = entry[csvColumn];
             const isDate = fieldKey === "txnDate";
-            const error = entry.errors && entry.errors[csvColumn];
+            const error = entry.errors && entry.errors[fieldKey];
 
             return (
               <div
                 className={cn(
                   val?.length >= 20 && "w-[200px]",
                   val?.length >= 50 && "w-[300px]",
-                  val?.length >= 100 && "w-[400px]" 
+                  val?.length >= 100 && "w-[400px]"
                 )}
               >
                 {error ? (

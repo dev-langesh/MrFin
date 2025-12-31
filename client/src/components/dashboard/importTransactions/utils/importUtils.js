@@ -27,7 +27,7 @@ export function validateEntry(entry, mappedFields, dateFormat) {
     if (isoDate) {
       validatedData[mappedFields.txnDate] = isoDate;
     } else {
-      validatedData.errors[mappedFields.txnDate] = `Invalid date`;
+      validatedData.errors.txnDate = `Invalid date`;
     }
   }
 
@@ -43,7 +43,7 @@ export function validateEntry(entry, mappedFields, dateFormat) {
     }
     if (val !== "" && isNaN(Number(val))) {
       // Allow empty string for credit if debit is present, but if it has value it must be number
-      validatedData.errors[mappedFields.credit] = `Invalid number`;
+      validatedData.errors.credit = `Invalid number`;
     } else {
       validatedData[mappedFields.credit] = val;
     }
@@ -60,7 +60,7 @@ export function validateEntry(entry, mappedFields, dateFormat) {
       val = val.replace(/[^0-9.-]/g, "");
     }
     if (val !== "" && isNaN(Number(val))) {
-      validatedData.errors[mappedFields.debit] = `Invalid number`;
+      validatedData.errors.debit = `Invalid number`;
     } else {
       validatedData[mappedFields.debit] = val;
     }

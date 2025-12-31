@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
@@ -7,7 +6,6 @@ import {
   selectOptions,
   updateState,
   setIsLoading,
-  selectIsLoading,
   fetchSettings,
   selectDeletedRowUids,
 } from "@/redux/slices/importTransactionsSlice";
@@ -29,50 +27,33 @@ import {
 } from "@/components/ui/Select";
 import { delimiterOptions, quoteOptions } from "./constants";
 import { toast } from "sonner";
-import Loading from "@/components/ui/Loading";
 import {
   detectDelimiter,
   detectQuote,
-  readFilePreview,
   processFile,
 } from "@/components/dashboard/importTransactions/utils/csvUtils";
 
 function PreProcessOptions() {
   const dispatch = useDispatch();
   const fileData = useSelector(selectImportFileData);
-  const reduxOptions = useSelector(selectOptions);
-  const isLoading = useSelector(selectIsLoading);
+  const options = useSelector(selectOptions);
   const deletedRowUids = useSelector(selectDeletedRowUids);
 
-  const [options, setOptions] = useState(reduxOptions);
   const [isOpen, setIsOpen] = useState(true);
-
-  useEffect(() => {
-    dispatch(fetchSettings());
-  }, [dispatch]);
-
-  useEffect(() => {
-    setOptions(reduxOptions);
-  }, [reduxOptions]);
-
-  useEffect(() => {
-    if (fileData.length > 0) {
-      detectAndProcess(fileData[0].content);
-    }
-  }, [fileData]);
 
   const handleChange = useCallback(
     (name, value) => {
       if (
         name === "removeCharacters" &&
         value.trim().includes(options.delimiter)
-      )
+      ) {
         return toast.error(
           "Remove Characters cannot include the delimiter character"
         );
-      setOptions((prev) => ({ ...prev, [name]: value }));
+      }
+      dispatch(updateState({ options: { ...options, [name]: value } }));
     },
-    [options.delimiter]
+    [dispatch, options]
   );
 
   const handleProcessFile = useCallback(
@@ -95,14 +76,12 @@ function PreProcessOptions() {
 
         dispatch(
           updateState({
-            options: currentOptions,
             preProcessedData: data,
           })
         );
       } catch (error) {
         console.error("Process file error:", error);
         toast.error(error.message || "Failed to process file.");
-        dispatch(updateState({ preProcessedData: [] }));
       } finally {
         dispatch(setIsLoading(false));
       }
@@ -110,37 +89,30 @@ function PreProcessOptions() {
     [dispatch, deletedRowUids]
   );
 
-  const detectAndProcess = useCallback(
-    async (content) => {
-      try {
-        dispatch(setIsLoading(true));
-        const detectedDelimiter = detectDelimiter(content);
-        const detectedQuote = detectQuote(content, detectedDelimiter);
+  useEffect(() => {
+    dispatch(fetchSettings());
+  }, [dispatch]);
 
-        const newOptions = {
-          ...options,
-          delimiter: detectedDelimiter,
-          quote: detectedQuote,
-        };
-
-        setOptions(newOptions);
-
-        await handleProcessFile(content, newOptions);
-      } catch (error) {
-        console.error("Failed to auto-detect options:", error);
-        toast.error("Failed to auto-detect CSV options.");
-        dispatch(setIsLoading(false));
-      }
-    },
-    [dispatch, options, handleProcessFile]
-  );
-
-  const applyOptions = useCallback(async () => {
+  // Effect 1: Auto-process when options change
+  useEffect(() => {
     if (fileData.length > 0) {
-      await handleProcessFile(fileData[0].content, options);
+      handleProcessFile(fileData[0].content, options);
     }
-    // toast.success("Options applied successfully.");
-  }, [fileData, options, handleProcessFile, deletedRowUids]);
+  }, [fileData, options, handleProcessFile]);
+
+  // Effect 2: Initial Detection
+  useEffect(() => {
+    if (fileData.length > 0) {
+      const content = fileData[0].content;
+      const delimiter = detectDelimiter(content);
+      const quote = detectQuote(content, delimiter);
+
+      // Prevent infinite loop: Only update if different
+      if (options.delimiter !== delimiter || options.quote !== quote) {
+        dispatch(updateState({ options: { ...options, delimiter, quote } }));
+      }
+    }
+  }, [fileData, options.delimiter, options.quote, dispatch]); // Added specific option dependencies
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -155,15 +127,6 @@ function PreProcessOptions() {
               )}
               <CardTitle className="text-base font-semibold">Options</CardTitle>
             </CollapsibleTrigger>
-
-            <Button
-              size="sm"
-              onClick={applyOptions}
-              loading={isLoading}
-              className="min-w-[80px]"
-            >
-              Apply
-            </Button>
           </div>
         </CardHeader>
         <CollapsibleContent>

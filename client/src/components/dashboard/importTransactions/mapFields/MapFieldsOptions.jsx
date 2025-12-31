@@ -2,12 +2,11 @@ import {
   selectPreProcessedData,
   selectMappedFields,
   updateMappedFields,
-  updateState,
   setMappedData,
   setIsLoading,
   selectIsLoading,
 } from "@/redux/slices/importTransactionsSlice";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Select,
@@ -31,55 +30,52 @@ import {
   CollapsibleTrigger,
 } from "@radix-ui/react-collapsible";
 import { FaRegSquarePlus, FaRegSquareMinus } from "react-icons/fa6";
-import { Button } from "@/components/ui/button";
 import { dateFormatsOptions, formFields } from "./contsants";
-import { isValid, parse, parseISO, formatISO } from "date-fns";
-import Loading from "@/components/ui/Loading";
-
-import { toISODateString } from "@/utils/dateUtils";
 import { validateEntry } from "@/components/dashboard/importTransactions/utils/importUtils";
-
-// ... existing imports
 
 export default function MapFieldsOptions({ onApply }) {
   const [isOpen, setIsOpen] = useState(true);
   const [keys, setKeys] = useState([]);
-  const [state, setState] = useState({});
 
   const preProcessedData = useSelector(selectPreProcessedData);
-  const reduxMappedFields = useSelector(selectMappedFields);
-  const isLoading = useSelector(selectIsLoading);
+  const state = useSelector(selectMappedFields);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // detect local date format
-    const parts = new Intl.DateTimeFormat().formatToParts(
-      new Date(2003, 11, 22)
-    );
+    // One-time initialization of date format if not present
+    if (!state.dateFormat) {
+      const parts = new Intl.DateTimeFormat().formatToParts(
+        new Date(2003, 11, 22)
+      );
+      const localDateFormat = parts
+        .filter((p) => p.type !== "literal")
+        .map((p) => {
+          switch (p.type) {
+            case "day":
+              return "dd";
+            case "month":
+              return "MM";
+            case "year":
+              return "yyyy";
+            default:
+              return "";
+          }
+        })
+        .join("-");
+      dispatch(updateMappedFields({ dateFormat: localDateFormat }));
+    }
+  }, [dispatch]); // Run once
 
-    const localDateFormat = parts
-      .filter((p) => p.type !== "literal")
-      .map((p) => {
-        switch (p.type) {
-          case "day":
-            return "dd";
-          case "month":
-            return "MM";
-          case "year":
-            return "yyyy";
-          default:
-            return "";
-        }
-      })
-      .join("-");
+  const handleChange = useCallback(
+    (key, value) => {
+      if (state[key] !== value) {
+        dispatch(updateMappedFields({ [key]: value }));
+      }
+    },
+    [dispatch, state]
+  );
 
-    setState((p) => ({ ...p, dateFormat: localDateFormat }));
-  }, []);
-
-  const handleChange = useCallback((key, value) => {
-    setState((prev) => ({ ...prev, [key]: value }));
-  }, []);
-
+  // Effect 1: Calculate Guesses when Keys change
   useEffect(() => {
     if (!preProcessedData?.length) return;
     const keys = Object.keys(preProcessedData[0]).filter(
@@ -87,45 +83,37 @@ export default function MapFieldsOptions({ onApply }) {
     );
     setKeys(keys);
 
-    // 1. Regex Guesses
+    // Regex Guesses
     const guesses = {};
     keys.forEach((key) => {
-      if (/date/i.test(key)) guesses.txnDate = key;
-      if (/description/i.test(key)) guesses.description = key;
-      if (/credit/i.test(key)) guesses.credit = key;
-      if (/debit/i.test(key)) guesses.debit = key;
+      if (/date/i.test(key) && !state.txnDate) guesses.txnDate = key;
+      if (/description/i.test(key) && !state.description)
+        guesses.description = key;
+      if (/credit/i.test(key) && !state.credit) guesses.credit = key;
+      if (/debit/i.test(key) && !state.debit) guesses.debit = key;
     });
 
-    // 2. Apply Saved Settings (if valid for current file)
-    const savedSettings = {};
-    if (reduxMappedFields) {
-      Object.entries(reduxMappedFields).forEach(([key, value]) => {
-        if (key === "dateFormat") {
-          savedSettings[key] = value;
-        } else if (value && keys.includes(value)) {
-          savedSettings[key] = value;
-        }
-      });
+    if (Object.keys(guesses).length > 0) {
+      dispatch(updateMappedFields(guesses));
     }
+  }, [preProcessedData, dispatch]);
 
-    setState((prev) => ({
-      ...prev,
-      ...guesses,
-      ...savedSettings,
-    }));
-  }, [preProcessedData, reduxMappedFields]);
+  const onApplyRef = useRef(onApply);
 
-  const handleApply = useCallback(async () => {
+  useEffect(() => {
+    onApplyRef.current = onApply;
+  }, [onApply]);
+
+  // Effect 2: Validation and Data Mapping
+  useEffect(() => {
+    if (!preProcessedData || preProcessedData.length === 0) return;
+
     dispatch(setIsLoading(true));
-    // Allow UI to update
-    await new Promise((resolve) => setTimeout(resolve, 100));
 
     try {
       const errorUids = [];
       const validatedData = preProcessedData.map((data) => {
         const val = validateEntry(data, state, state.dateFormat);
-        // Ensure UID is preserved if validateEntry returns a new object without it
-        // Check if val has uid, if not add it from data
         if (!val.uid) val.uid = data.uid;
 
         if (Object.keys(val.errors).length > 0) {
@@ -133,22 +121,23 @@ export default function MapFieldsOptions({ onApply }) {
         }
         return val;
       });
-      // Update mapped fields without hasError
-      dispatch(updateMappedFields({ ...state }));
+
+      // Dispatch Mapped Data (Validation Results)
       dispatch(
         setMappedData({
           mappedData: validatedData,
           errorUids,
         })
       );
-      if (onApply) onApply(errorUids.length > 0);
+
+      if (onApplyRef.current) onApplyRef.current(errorUids.length > 0);
     } catch (error) {
       console.error("Failed to apply mapping:", error);
       toast.error("Failed to apply mapping.");
     } finally {
       dispatch(setIsLoading(false));
     }
-  }, [dispatch, preProcessedData, state, onApply]);
+  }, [dispatch, preProcessedData, state]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -170,9 +159,6 @@ export default function MapFieldsOptions({ onApply }) {
                 </CardDescription>
               </div>
             </CollapsibleTrigger>
-            <Button size="sm" onClick={handleApply} loading={isLoading}>
-              Apply
-            </Button>
           </div>
         </CardHeader>
         <CollapsibleContent>

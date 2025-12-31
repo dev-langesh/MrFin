@@ -52,7 +52,6 @@ function PreProcessOptions() {
   }, [dispatch]);
 
   useEffect(() => {
-    console.log(reduxOptions)
     setOptions(reduxOptions);
   }, [reduxOptions]);
 
@@ -145,8 +144,8 @@ function PreProcessOptions() {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className={`px-0 rounded-sm py-5`}>
-        <CardHeader className={"" + (!isOpen && "gap-0 ")}>
+      <Card className={`px-0 rounded-sm py-3 md:py-5 relative gap-2`}>
+        <CardHeader className={"max-md:px-3 " + (!isOpen && "gap-0 ")}>
           <div className="flex items-center justify-between">
             <CollapsibleTrigger className="flex items-center gap-2 flex-1 cursor-pointer">
               {isOpen ? (
@@ -154,7 +153,7 @@ function PreProcessOptions() {
               ) : (
                 <FaRegSquarePlus className="text-lg" />
               )}
-              <CardTitle>Options</CardTitle>
+              <CardTitle className="text-base font-semibold">Options</CardTitle>
             </CollapsibleTrigger>
 
             <Button
@@ -168,7 +167,7 @@ function PreProcessOptions() {
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent>
+          <CardContent className="max-md:px-4">
             <form className="flex flex-wrap gap-4 items-end">
               <div className="space-y-2 w-full md:w-[calc(33.33%-1rem)]">
                 <Label

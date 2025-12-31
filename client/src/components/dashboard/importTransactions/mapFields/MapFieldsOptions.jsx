@@ -152,9 +152,9 @@ export default function MapFieldsOptions({ onApply }) {
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="px-0 rounded-sm py-5">
-        <CardHeader className={" " + (!isOpen && "gap-0 ")}>
-          <div className="flex items-center justify-between">
+      <Card className="px-0 rounded-sm py-3 md:py-5 relative gap-2">
+        <CardHeader className={"max-md:px-3 " + (!isOpen && "gap-0 ")}>
+          <div className="flex items-start justify-between">
             <CollapsibleTrigger className="flex items-start gap-2 flex-1 cursor-pointer">
               {isOpen ? (
                 <FaRegSquareMinus className="text-lg flex-shrink-0" />
@@ -162,7 +162,9 @@ export default function MapFieldsOptions({ onApply }) {
                 <FaRegSquarePlus className="text-lg flex-shrink-0" />
               )}
               <div className="text-left">
-                <CardTitle>Map Fields</CardTitle>
+                <CardTitle className="text-base font-semibold">
+                  Map Fields
+                </CardTitle>
                 <CardDescription className="pt-1">
                   Assign CSV columns to matching transaction fields.
                 </CardDescription>
@@ -174,8 +176,8 @@ export default function MapFieldsOptions({ onApply }) {
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent>
-            <div className="grid grid-cols-5 max-md:grid-cols-2 gap-4">
+          <CardContent className="max-md:px-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {formFields.map((field) => (
                 <div key={field.key} className="space-y-2 w-full">
                   <Label htmlFor={field.key}>{field.label}</Label>

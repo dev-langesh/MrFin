@@ -227,7 +227,7 @@ function Rules() {
                 <DialogTrigger asChild>
                   <Button size="sm">Add Rule</Button>
                 </DialogTrigger>
-                <DialogContent className="w-full md:max-w-[720px]">
+                <DialogContent className="w-full md:max-w-[720px] max-md:px-2">
                   <AddRuleForm
                     close={() => {
                       setIsDialogOpen(false);

@@ -78,6 +78,7 @@ describe("Analytics Service", () => {
       await analyticsService.createAnalytics(userId);
 
       const lastMonth = new Date();
+      lastMonth.setDate(15); // Avoid month overflow issues on 31st
       lastMonth.setMonth(lastMonth.getMonth() - 1);
 
       await analyticsService.updateAnalyticsOnAdd(
@@ -114,6 +115,7 @@ describe("Analytics Service", () => {
         amount: 100,
         txnType: "income",
         userId,
+        // txnDate must match current period (default new Date is fine)
         txnDate: new Date(),
       };
       const newTxn = {
@@ -134,6 +136,7 @@ describe("Analytics Service", () => {
       await analyticsService.createAnalytics(userId);
 
       const oldDate = new Date();
+      oldDate.setDate(15); // Avoid month overflow
       oldDate.setMonth(oldDate.getMonth() - 1); // Last month
       const newDate = new Date(); // This month
 

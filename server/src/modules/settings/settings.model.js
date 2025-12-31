@@ -16,6 +16,7 @@ const settingsSchema = new mongoose.Schema(
       preProcess: { type: Object, default: {} },
       mapFields: { type: Object, default: {} },
       rules: { type: Array, default: [] },
+      defaultRules: { type: Array, default: [] },
     },
     transactionSettings: {
       categories: {

@@ -50,15 +50,19 @@ function AddRuleForm(props) {
     register,
     handleSubmit,
     watch,
-    formState: { errors },
+    reset,
+    formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(ruleSchema),
     defaultValues: props.initialData || defaultValues,
   });
 
+  React.useEffect(() => {
+    reset(props.initialData || defaultValues);
+  }, [props.initialData, reset]);
+
   const operation = watch("operation");
   const action = watch("action");
-  const name = watch("name");
 
   function onSubmit(data) {
     props.onSubmit?.(data);
@@ -296,8 +300,12 @@ function AddRuleForm(props) {
             Cancel
           </Button>
         </DialogClose>
-        <Button type="submit">
-          {props.index !== undefined ? "Update" : "Add"}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting
+            ? "Applying..."
+            : props.index !== undefined
+            ? "Update"
+            : "Add"}
         </Button>
       </DialogFooter>
     </form>

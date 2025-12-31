@@ -10,6 +10,7 @@ import {
   selectOptions,
   selectMappedFields,
   selectRules,
+  selectDefaultRules,
   selectTransactionSettings,
   saveSettings,
   incrementValidationAttempt,
@@ -27,6 +28,7 @@ export default function ChangeStep() {
   const options = useSelector(selectOptions);
   const mappedFields = useSelector(selectMappedFields);
   const rules = useSelector(selectRules);
+  const defaultRules = useSelector(selectDefaultRules);
   const transactionSettings = useSelector(selectTransactionSettings);
   const dispatch = useDispatch();
   const router = useRouter();
@@ -122,6 +124,7 @@ export default function ChangeStep() {
           preProcess: options,
           mapFields: mappedFields,
           rules: rules,
+          defaultRules: defaultRules,
         },
         transactionSettings: {
           // txnTypes are generally static/global config, but if we track them in settings:
@@ -157,6 +160,7 @@ export default function ChangeStep() {
     options,
     mappedFields,
     rules,
+    defaultRules,
     transactionSettings,
   ]);
 

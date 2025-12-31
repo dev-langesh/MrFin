@@ -47,6 +47,7 @@ const initialState = {
       description: undefined,
     },
     rules: [],
+    defaultRules: [],
     transactionSettings: {
       txnTypes: ["expense", "income"],
       categories: [],
@@ -83,6 +84,9 @@ const importTransactionsSlice = createSlice({
     },
     setRules: (state, action) => {
       state.value.rules = action.payload;
+    },
+    setDefaultRules: (state, action) => {
+      state.value.defaultRules = action.payload;
     },
     nextStep: (state) => {
       state.value.step += 1;
@@ -219,6 +223,8 @@ const importTransactionsSlice = createSlice({
             ...importTransactionSettings.mapFields,
           };
           state.value.rules = importTransactionSettings.rules || [];
+          state.value.defaultRules =
+            importTransactionSettings.defaultRules || [];
         }
         if (transactionSettings) {
           state.value.transactionSettings = transactionSettings;
@@ -240,6 +246,7 @@ export const {
   setPreProcessedData,
   setIsLoading,
   setRules,
+  setDefaultRules,
   nextStep,
   previousStep,
   reset,
@@ -274,6 +281,8 @@ export const selectTransformedData = (state) =>
 export const selectIsLoading = (state) =>
   state.importTransactions.value.isLoading;
 export const selectRules = (state) => state.importTransactions.value.rules;
+export const selectDefaultRules = (state) =>
+  state.importTransactions.value.defaultRules;
 export const selectTransactionSettings = (state) =>
   state.importTransactions.value.transactionSettings;
 export const selectValidationAttempt = (state) =>

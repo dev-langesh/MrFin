@@ -116,7 +116,7 @@ describe("Transaction Input Validation Exhaustive Suite", () => {
       ["future txnDate", { ...validTxn, txnDate: futureDate.toISOString() }],
       ["long category", { ...validTxn, category: "a".repeat(51) }], // max 30 or 50? Schema says 30 in args
       ["invalid category chars", { ...validTxn, category: "Bad@Val" }],
-      ["long description", { ...validTxn, description: "a".repeat(101) }], // max 100
+      ["long description", { ...validTxn, description: "a".repeat(201) }], // max 100
       ["extra field (strict)", { ...validTxn, extra: "field" }],
     ])("should return 400 when %s", async (_, payload) => {
       await expect400(

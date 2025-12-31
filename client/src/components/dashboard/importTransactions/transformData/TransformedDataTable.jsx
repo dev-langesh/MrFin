@@ -127,7 +127,7 @@ function TransformedDataTable({ ...props }) {
             entry.appliedRules.map((rule, idx) => (
               <TooltipProvider key={idx}>
                 <Tooltip>
-                  <TooltipTrigger  className="flex items-center justify-end w-full">
+                  <TooltipTrigger >
                     <span className="font-mono text-xs text-muted-foreground bg-muted w-5 h-5 flex items-center justify-center rounded-[2px] shrink-0 cursor-help">
                       {rule.index}
                     </span>

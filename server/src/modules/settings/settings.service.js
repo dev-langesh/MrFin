@@ -14,6 +14,7 @@ async function getSettings(userId) {
           preProcess: {},
           mapFields: {},
           rules: [],
+          defaultRules: [],
         },
         transactionSettings: {
           categories: [],

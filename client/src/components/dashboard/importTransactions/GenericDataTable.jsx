@@ -59,7 +59,7 @@ function GenericDataTable({
       )}
       <CardHeader className="max-md:px-3">
         <CardTitle className="flex flex-row items-center justify-between gap-2">
-          <h1 className="text-base font-semibold md:text-xl">
+          <h1 className="text-base font-semibold">
             {title}{" "}
             <span className="text-muted-foreground font-normal text-xs md:text-sm">
               ({totalCount || data.length})

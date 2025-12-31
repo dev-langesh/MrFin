@@ -89,10 +89,10 @@ export default function ImportTransactionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="md:text-3xl text-xl font-bold text-gray-900">
           Import Transactions
         </h1>
-        <p className="text-gray-500">
+        <p className="text-gray-500 max-md:text-sm">
           Import transactions from bank statements in CSV format.
         </p>
       </div>

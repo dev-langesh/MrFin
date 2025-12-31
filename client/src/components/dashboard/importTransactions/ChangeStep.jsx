@@ -140,7 +140,13 @@ export default function ChangeStep() {
       router.push("/dashboard/transactions");
     } catch (error) {
       console.error("Import failed:", error);
-      toast.error("Failed to import transactions. Please try again.");
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.response?.data?.validationErrors) {
+        toast.error("Some transactions failed in validation.");
+      } else {
+        toast.error("Failed to import transactions. Please try again.");
+      }
     } finally {
       setIsImporting(false);
     }

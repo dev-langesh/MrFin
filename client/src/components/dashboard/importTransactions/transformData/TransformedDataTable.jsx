@@ -27,7 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/Tooltip";
 import { settingsService } from "@/services/settings.service";
-import { currencySymbols } from "@/constants/currencies";
+import { currencyIcons, currencySymbols } from "@/constants/currencies";
 
 function TransformedDataTable({ ...props }) {
   const transformedData = useSelector(selectTransformedData);
@@ -59,12 +59,20 @@ function TransformedDataTable({ ...props }) {
 
   const keys = ["txnDate", "txnType", "category", "description", "amount"];
 
+  const Icon = currencyIcons[currencyCode];
+  const symbol = currencySymbols[currencyCode] || "$";
+
   const columns = useMemo(() => {
     const cols = keys.map((key) => ({
       header:
-        key === "amount"
-          ? `Amount (${currencySymbols[currencyCode] || "$"})`
-          : key.replace(/([A-Z])/g, " $1").trim(),
+        key === "amount" ? (
+          <div className="flex items-center justify-end gap-1">
+            <span>Amount</span>
+            {Icon ? <Icon className="w-3 h-3" /> : <span>{symbol}</span>}
+          </div>
+        ) : (
+          key.replace(/([A-Z])/g, " $1").trim()
+        ),
       accessor: key,
       className: "capitalize",
       render: (entry) => {
@@ -74,10 +82,11 @@ function TransformedDataTable({ ...props }) {
         return (
           <div
             className={cn(
-              "whitespace-normal break-words min-w-[120px]",
-              val?.length > 20 && "min-w-[200px]",
-              val?.length > 50 && "min-w-[300px]",
-              val?.length > 100 && "min-w-[400px]"
+              "whitespace-normal break-all min-w-[120px]",
+              val?.length > 20 && "min-w-[150px]",
+              val?.length > 50 && "min-w-[200px]",
+              val?.length > 100 && "min-w-[250px]",
+              key === "amount" && "text-right"
             )}
           >
             {error ? (
@@ -113,12 +122,12 @@ function TransformedDataTable({ ...props }) {
     cols.push({
       header: "Applied Rules",
       render: (entry) => (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1 ">
           {entry.appliedRules &&
             entry.appliedRules.map((rule, idx) => (
               <TooltipProvider key={idx}>
                 <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger  className="flex items-center justify-end w-full">
                     <span className="font-mono text-xs text-muted-foreground bg-muted w-5 h-5 flex items-center justify-center rounded-[2px] shrink-0 cursor-help">
                       {rule.index}
                     </span>

@@ -39,7 +39,7 @@ function TransactionTable() {
   });
   const [data, setData] = useState([]);
   const [totalData, setTotalData] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -242,14 +242,17 @@ function TransactionTable() {
       {
         header: "Category",
         accessor: "category",
-        render: (entry) => (
-          <Badge
-            variant="secondary"
-            className={cn("capitalize", getColorForValue(entry.category))}
-          >
-            {entry.category}
-          </Badge>
-        ),
+        render: (entry) => {
+          if (!entry.category) return null;
+          return (
+            <Badge
+              variant="secondary"
+              className={cn("capitalize", getColorForValue(entry.category))}
+            >
+              {entry.category}
+            </Badge>
+          );
+        },
       },
       {
         header: "Description",

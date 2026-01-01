@@ -25,6 +25,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
 import { cn } from "@/lib/utils";
 
+import TableSkeleton from "@/components/ui/TableSkeleton";
+
 function GenericDataTable({
   data = [],
   columns = [],
@@ -38,6 +40,7 @@ function GenericDataTable({
   totalCount,
   paginationOptions = PAGINATION_OPTIONS,
   className,
+  loadingAnimationType = "skeleton", // 'circularProcess' | 'skeleton'
 }) {
   const {
     page,
@@ -51,11 +54,15 @@ function GenericDataTable({
     toggleSelectRow,
   } = pagination;
 
+  if (isLoading && loadingAnimationType === "skeleton") {
+    return <TableSkeleton />;
+  }
+
   return (
     <Card
       className={cn("px-0 rounded-sm py-3 md:py-5 relative gap-2", className)}
     >
-      {isLoading && (
+      {isLoading && loadingAnimationType === "circularProcess" && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
           <Loading variant="spinner" />
         </div>

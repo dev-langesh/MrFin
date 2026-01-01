@@ -318,6 +318,7 @@ function TransactionTable() {
         data={data}
         columns={columns}
         isLoading={isLoading}
+        loadingAnimationType="skeleton"
         title="Transactions"
         pagination={pagination}
         paginationOptions={[10, 50, 100, 150]}

@@ -43,7 +43,9 @@ function CsvTable() {
             entry[key]?.length >= 100 && "w-[400px]"
           )}
         >
-          {entry[key]}
+          {typeof entry[key] === "object" && entry[key] !== null
+            ? JSON.stringify(entry[key])
+            : entry[key]}
         </div>
       ),
     }));

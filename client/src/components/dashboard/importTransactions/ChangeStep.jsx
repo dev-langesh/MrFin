@@ -34,19 +34,26 @@ export default function ChangeStep() {
   const router = useRouter();
   const lastStep = 4;
   const [isImporting, setIsImporting] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(null);
 
   const handleChange = useCallback(
     async (action) => {
-      if (action === "next" && state.step < lastStep) {
-        const isValid = validateStepData(state.step, state);
-        if (!isValid) {
-          dispatch(incrementValidationAttempt());
-          return;
+      setLoadingAction(action);
+      // Defer execution to allow UI to show loading state
+      setTimeout(() => {
+        if (action === "next" && state.step < lastStep) {
+          const isValid = validateStepData(state.step, state);
+          if (!isValid) {
+            dispatch(incrementValidationAttempt());
+            setLoadingAction(null);
+            return;
+          }
+          dispatch(nextStep());
+        } else if (action === "back" && state.step > 1) {
+          dispatch(previousStep());
         }
-        dispatch(nextStep());
-      } else if (action === "back" && state.step > 1) {
-        dispatch(previousStep());
-      }
+        setLoadingAction(null);
+      }, 50);
     },
     [state, dispatch, lastStep]
   );
@@ -171,13 +178,19 @@ export default function ChangeStep() {
           onClick={() => handleChange("back")}
           className="px-6"
           variant="outline"
-          disabled={isImporting}
+          disabled={isImporting || loadingAction !== null}
+          loading={loadingAction === "back"}
         >
           Back
         </Button>
       )}
       {state.step < lastStep && (
-        <Button onClick={() => handleChange("next")} className="px-6">
+        <Button
+          onClick={() => handleChange("next")}
+          className="px-6"
+          loading={loadingAction === "next"}
+          disabled={loadingAction !== null}
+        >
           Next
         </Button>
       )}

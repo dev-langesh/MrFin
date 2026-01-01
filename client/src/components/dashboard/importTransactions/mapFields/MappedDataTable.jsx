@@ -28,6 +28,8 @@ function MappedDataTable({ showErrorsOnly }) {
   const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
 
+  console.log(isLoading)
+
   const [editingUid, setEditingUid] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -178,7 +180,7 @@ function MappedDataTable({ showErrorsOnly }) {
       data={displayData}
       columns={columns}
       isLoading={isLoading}
-      title="Mapped Data"
+      title={showErrorsOnly ? "Errors" : "Mapped Data"}
       pagination={pagination}
       onDelete={handleDeleteRows}
       emptyMessage="No data available. Please map the fields."

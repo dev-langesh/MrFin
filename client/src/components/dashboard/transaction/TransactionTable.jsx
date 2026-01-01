@@ -323,6 +323,7 @@ function TransactionTable() {
         paginationOptions={[10, 50, 100, 150]}
         onDelete={handleDelete}
         totalCount={totalData}
+        className="min-h-[500px]"
         actions={
           <TooltipProvider>
             <div className="flex items-center gap-1 md:gap-2">

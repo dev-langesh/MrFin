@@ -37,6 +37,7 @@ function GenericDataTable({
   emptyMessage = "No data available.",
   totalCount,
   paginationOptions = PAGINATION_OPTIONS,
+  className,
 }) {
   const {
     page,
@@ -51,41 +52,45 @@ function GenericDataTable({
   } = pagination;
 
   return (
-    <Card className="px-0 rounded-sm py-3 md:py-5 relative gap-2">
+    <Card
+      className={cn("px-0 rounded-sm py-3 md:py-5 relative gap-2", className)}
+    >
       {isLoading && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-sm">
-          <Loading variant="spinner" text="Processing..." />
+          <Loading variant="spinner" />
         </div>
       )}
       <CardHeader className="max-md:px-3">
-        <CardTitle className="flex flex-row items-center justify-between gap-2">
-          <h1 className="text-base font-semibold">
-            {title}{" "}
-            <span className="text-muted-foreground font-normal text-xs md:text-sm">
-              ({totalCount || data.length})
-            </span>
-          </h1>
-          <div className="flex items-center gap-1 md:gap-2">
-            {selectedRows.length > 0 && onDelete && (
-              <ConfirmationDialog
-                trigger={
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-8 w-8 md:h-9 md:w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  </Button>
-                }
-                title="Delete Selected Rows"
-                description="Are you sure you want to delete the selected entries? This action cannot be undone."
-                onConfirm={() => onDelete(selectedRows)}
-                confirmText="Delete"
-              />
-            )}
-            {actions}
-          </div>
-        </CardTitle>
+        {!isLoading && (
+          <CardTitle className="flex flex-row items-center justify-between gap-2">
+            <h1 className="text-base font-semibold">
+              {title}{" "}
+              <span className="text-muted-foreground font-normal text-xs md:text-sm">
+                ({totalCount || data.length})
+              </span>
+            </h1>
+            <div className="flex items-center gap-1 md:gap-2">
+              {selectedRows.length > 0 && onDelete && (
+                <ConfirmationDialog
+                  trigger={
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 md:h-9 md:w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                    </Button>
+                  }
+                  title="Delete Selected Rows"
+                  description="Are you sure you want to delete the selected entries? This action cannot be undone."
+                  onConfirm={() => onDelete(selectedRows)}
+                  confirmText="Delete"
+                />
+              )}
+              {actions}
+            </div>
+          </CardTitle>
+        )}
       </CardHeader>
       <CardContent className="max-md:px-3">
         <div className="rounded-md border overflow-x-auto">

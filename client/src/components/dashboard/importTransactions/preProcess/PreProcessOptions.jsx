@@ -34,12 +34,13 @@ import {
 } from "@/components/dashboard/importTransactions/utils/csvUtils";
 
 function PreProcessOptions() {
-  const dispatch = useDispatch();
+  const [isOpen, setIsOpen] = useState(true);
+
   const fileData = useSelector(selectImportFileData);
   const options = useSelector(selectOptions);
   const deletedRowUids = useSelector(selectDeletedRowUids);
 
-  const [isOpen, setIsOpen] = useState(true);
+  const dispatch = useDispatch();
 
   const handleChange = useCallback(
     (name, value) => {
@@ -53,15 +54,14 @@ function PreProcessOptions() {
       }
       dispatch(updateState({ options: { ...options, [name]: value } }));
     },
-    [dispatch, options]
+    [options]
   );
 
   const handleProcessFile = useCallback(
     async (fileContent, currentOptions) => {
-      if (!fileContent) return;
-
       try {
-        dispatch(setIsLoading(true));
+        if (!fileContent) return;
+        
         let data = await processFile(fileContent, currentOptions);
 
         // Generate UIDs and Filter
@@ -86,17 +86,23 @@ function PreProcessOptions() {
         dispatch(setIsLoading(false));
       }
     },
-    [dispatch, deletedRowUids]
+    [deletedRowUids]
   );
 
   useEffect(() => {
     dispatch(fetchSettings());
-  }, [dispatch]);
+  }, []);
 
   // Effect 1: Auto-process when options change
   useEffect(() => {
     if (fileData.length > 0) {
-      handleProcessFile(fileData[0].content, options);
+      const timer = setTimeout(() => {
+        dispatch(setIsLoading(true));
+
+        handleProcessFile(fileData[0].content, options);
+      }, 0);
+
+      return () => clearTimeout(timer);
     }
   }, [fileData, options, handleProcessFile]);
 
@@ -112,7 +118,7 @@ function PreProcessOptions() {
         dispatch(updateState({ options: { ...options, delimiter, quote } }));
       }
     }
-  }, [fileData, options.delimiter, options.quote, dispatch]); // Added specific option dependencies
+  }, [fileData]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

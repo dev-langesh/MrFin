@@ -64,7 +64,7 @@ export default function MapFieldsOptions({ onApply }) {
         .join("-");
       dispatch(updateMappedFields({ dateFormat: localDateFormat }));
     }
-  }, [dispatch]); // Run once
+  }, []); // Run once
 
   const handleChange = useCallback(
     (key, value) => {
@@ -72,7 +72,7 @@ export default function MapFieldsOptions({ onApply }) {
         dispatch(updateMappedFields({ [key]: value }));
       }
     },
-    [dispatch, state]
+    [state]
   );
 
   // Effect 1: Calculate Guesses when Keys change
@@ -96,7 +96,7 @@ export default function MapFieldsOptions({ onApply }) {
     if (Object.keys(guesses).length > 0) {
       dispatch(updateMappedFields(guesses));
     }
-  }, [preProcessedData, dispatch]);
+  }, [preProcessedData]);
 
   const onApplyRef = useRef(onApply);
 
@@ -108,36 +108,40 @@ export default function MapFieldsOptions({ onApply }) {
   useEffect(() => {
     if (!preProcessedData || preProcessedData.length === 0) return;
 
-    dispatch(setIsLoading(true));
+    const timer = setTimeout(() => {
+      dispatch(setIsLoading(true));
 
-    try {
-      const errorUids = [];
-      const validatedData = preProcessedData.map((data) => {
-        const val = validateEntry(data, state, state.dateFormat);
-        if (!val.uid) val.uid = data.uid;
+      try {
+        const errorUids = [];
+        const validatedData = preProcessedData.map((data) => {
+          const val = validateEntry(data, state, state.dateFormat);
+          if (!val.uid) val.uid = data.uid;
 
-        if (Object.keys(val.errors).length > 0) {
-          errorUids.push(data.uid);
-        }
-        return val;
-      });
+          if (Object.keys(val.errors).length > 0) {
+            errorUids.push(data.uid);
+          }
+          return val;
+        });
 
-      // Dispatch Mapped Data (Validation Results)
-      dispatch(
-        setMappedData({
-          mappedData: validatedData,
-          errorUids,
-        })
-      );
+        // Dispatch Mapped Data (Validation Results)
+        dispatch(
+          setMappedData({
+            mappedData: validatedData,
+            errorUids,
+          })
+        );
 
-      if (onApplyRef.current) onApplyRef.current(errorUids.length > 0);
-    } catch (error) {
-      console.error("Failed to apply mapping:", error);
-      toast.error("Failed to apply mapping.");
-    } finally {
-      dispatch(setIsLoading(false));
-    }
-  }, [dispatch, preProcessedData, state]);
+        if (onApplyRef.current) onApplyRef.current(errorUids.length > 0);
+      } catch (error) {
+        console.error("Failed to apply mapping:", error);
+        toast.error("Failed to apply mapping.");
+      } finally {
+        dispatch(setIsLoading(false));
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [preProcessedData, state]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>

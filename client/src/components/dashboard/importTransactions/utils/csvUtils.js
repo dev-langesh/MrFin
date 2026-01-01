@@ -51,7 +51,7 @@ export async function processFile(fileContent, options) {
           quote: options.quote,
           checkType: true, // Auto-convert numbers/booleans
           noheader: !options.hasHeader,
-          headers: !options.hasHeader ? undefined : undefined, // Let csvtojson handle logic or strict defined headers if needed, but for dynamic we use noheader toggle
+          headers: !options.hasHeader ? undefined : undefined,
         }).fromString(csvData);
 
         // Validation: Check if parsing resulted in meaningful data
@@ -72,6 +72,7 @@ export async function processFile(fileContent, options) {
 
         resolve(json);
       } catch (parseError) {
+        console.log(parseError);
         reject(new Error("Failed to parse CSV. Please check your options."));
       }
     } catch (e) {

@@ -10,6 +10,7 @@ import { MobileStepIndicator } from "@/components/dashboard/importTransactions/M
 import {
   nextStep,
   selectImportTransactions,
+  selectImportStep,
   setImportFileData,
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useEffect } from "react";
@@ -18,6 +19,14 @@ import { useDispatch, useSelector } from "react-redux";
 export default function ImportTransactionsPage() {
   const state = useSelector(selectImportTransactions);
   const dispatch = useDispatch();
+  const step = useSelector(selectImportStep);
+
+  useEffect(() => {
+    const mainContent = document.getElementById("dashboard-main-content");
+    if (mainContent) {
+      mainContent.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [step]);
 
   async function handleUpload(files) {
     if (!files || files.length === 0) {
@@ -87,7 +96,7 @@ export default function ImportTransactionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <div>
         <h1 className="md:text-3xl text-xl font-bold text-gray-900">
           Import Transactions
@@ -132,7 +141,9 @@ export default function ImportTransactionsPage() {
       </div>
 
       {Component}
-      <ChangeStep />
+      <div className="fixed bottom-0 right-0 left-0 lg:left-64 bg-background border-t p-2 z-50 flex justify-end gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <ChangeStep />
+      </div>
     </div>
   );
 }

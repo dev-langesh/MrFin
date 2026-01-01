@@ -34,7 +34,10 @@ export default function Layout({ children }) {
       </Sheet>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 p-2 md:p-4 max-lg:pt-10 h-screen overflow-y-auto overflow-x-hidden">
+      <main
+        id="dashboard-main-content"
+        className="flex-1 lg:ml-64 p-2 md:p-4 max-lg:pt-10 h-screen overflow-y-auto overflow-x-hidden"
+      >
         {children}
       </main>
     </div>

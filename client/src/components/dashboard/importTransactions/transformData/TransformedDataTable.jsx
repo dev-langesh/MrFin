@@ -29,12 +29,21 @@ import {
 import { settingsService } from "@/services/settings.service";
 import { currencyIcons, currencySymbols } from "@/constants/currencies";
 
-function TransformedDataTable({ ...props }) {
-  const transformedData = useSelector(selectTransformedData);
+function TransformedDataTable({ showErrorsOnly, ...props }) {
+  const transformedDataRef = useSelector(selectTransformedData);
   const mappedFields = useSelector(selectMappedFields);
   const dateFormat = mappedFields?.dateFormat || "yyyy-MM-dd";
   const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
+
+  const transformedData = useMemo(() => {
+    if (showErrorsOnly) {
+      return transformedDataRef.filter(
+        (row) => row.errors && Object.keys(row.errors).length > 0
+      );
+    }
+    return transformedDataRef;
+  }, [transformedDataRef, showErrorsOnly]);
 
   const [editingIndex, setEditingIndex] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,9 +98,7 @@ function TransformedDataTable({ ...props }) {
               key === "amount" && "text-right"
             )}
           >
-            {error ? (
-              <span className="text-red-600 font-medium">{error}</span>
-            ) : key === "amount" ? (
+            {key === "amount" ? (
               <span className="font-semibold">
                 {parseFloat(val || 0).toFixed(2)}
               </span>
@@ -114,6 +121,7 @@ function TransformedDataTable({ ...props }) {
             ) : (
               val
             )}
+            {error && <div className="text-red-600 text-xs mt-1">{error}</div>}
           </div>
         );
       },
@@ -127,7 +135,7 @@ function TransformedDataTable({ ...props }) {
             entry.appliedRules.map((rule, idx) => (
               <TooltipProvider key={idx}>
                 <Tooltip>
-                  <TooltipTrigger >
+                  <TooltipTrigger>
                     <span className="font-mono text-xs text-muted-foreground bg-muted w-5 h-5 flex items-center justify-center rounded-[2px] shrink-0 cursor-help">
                       {rule.index}
                     </span>
@@ -228,7 +236,7 @@ function TransformedDataTable({ ...props }) {
       data={transformedData}
       columns={columns}
       isLoading={isLoading}
-      title="Transformed Data"
+      title={showErrorsOnly ? "Errors" : "Transformed Data"}
       pagination={pagination}
       onDelete={handleDeleteRows}
     />

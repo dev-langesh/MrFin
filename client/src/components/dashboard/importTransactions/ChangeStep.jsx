@@ -176,7 +176,7 @@ export default function ChangeStep() {
       {state.step > 1 && (
         <Button
           onClick={() => handleChange("back")}
-          className="px-6"
+          className="px-6 w-[100px]"
           variant="outline"
           disabled={isImporting || loadingAction !== null}
           loading={loadingAction === "back"}
@@ -187,7 +187,7 @@ export default function ChangeStep() {
       {state.step < lastStep && (
         <Button
           onClick={() => handleChange("next")}
-          className="px-6"
+          className="px-6 w-[100px]"
           loading={loadingAction === "next"}
           disabled={loadingAction !== null}
         >

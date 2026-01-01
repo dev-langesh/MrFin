@@ -141,7 +141,7 @@ export default function ImportTransactionsPage() {
       </div>
 
       {Component}
-      <div className="fixed bottom-0 right-0 left-0 lg:left-64 bg-background border-t p-2 z-50 flex justify-end gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+      <div className="fixed bottom-0 right-0 left-0 lg:left-64 bg-background border-t p-2 z-50 flex justify-end gap-4 shadow-[0_-1px_6px_-1px_rgba(0,0,0,0.1)]">
         <ChangeStep />
       </div>
     </div>

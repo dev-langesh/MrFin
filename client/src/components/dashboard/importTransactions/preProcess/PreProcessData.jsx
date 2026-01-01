@@ -4,9 +4,9 @@ import {
 } from "@/redux/slices/importTransactionsSlice";
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import CsvTable from "./CsvTable";
 import PreProcessOptions from "./PreProcessOptions";
 import { toast } from "sonner";
+import PreProcessedDataTable from "./PreProcessedDataTable";
 
 export default function PreProcessData() {
   const fileData = useSelector(selectImportFileData);
@@ -22,7 +22,7 @@ export default function PreProcessData() {
   return (
     <div className="space-y-6">
       <PreProcessOptions />
-      <CsvTable />
+      <PreProcessedDataTable />
     </div>
   );
 }

@@ -83,9 +83,9 @@ function TransformedDataTable({ ...props }) {
           <div
             className={cn(
               "whitespace-normal break-all min-w-[120px]",
-              val?.length > 20 && "min-w-[150px]",
-              val?.length > 50 && "min-w-[200px]",
-              val?.length > 100 && "min-w-[250px]",
+              val?.length > 20 && "w-[150px]",
+              val?.length > 50 && "w-[200px]",
+              val?.length > 100 && "w-[250px]",
               key === "amount" && "text-right"
             )}
           >

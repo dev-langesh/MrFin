@@ -63,7 +63,7 @@ function MappedDataTable({ showErrorsOnly }) {
           header: fieldLabels[fieldKey],
           accessor: csvColumn,
           className: "capitalize",
-          cellClassName: cn("min-w-[150px] whitespace-normal break-words"),
+          cellClassName: cn("min-w-[150px] whitespace-normal break-all"),
           render: (entry) => {
             const val = entry[csvColumn];
             const isDate = fieldKey === "txnDate";
@@ -72,9 +72,9 @@ function MappedDataTable({ showErrorsOnly }) {
             return (
               <div
                 className={cn(
-                  val?.length >= 20 && "w-[200px]",
-                  val?.length >= 50 && "w-[300px]",
-                  val?.length >= 100 && "w-[400px]"
+                  val?.length >= 20 && "w-[150px]",
+                  val?.length >= 50 && "w-[200px]",
+                  val?.length >= 100 && "w-[250px]"
                 )}
               >
                 {error ? (

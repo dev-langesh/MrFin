@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 
-function CsvTable() {
+function PreProcessedDataTable() {
   const isLoading = useSelector(selectIsLoading);
   const preProcessedData = useSelector(selectPreProcessedData);
   const dispatch = useDispatch();
@@ -38,9 +38,9 @@ function CsvTable() {
         <div
           className={cn(
             "break-all whitespace-normal min-w-[130px]",
-            entry[key]?.length >= 20 && "w-[200px]",
-            entry[key]?.length >= 50 && "w-[300px]",
-            entry[key]?.length >= 100 && "w-[400px]"
+            entry[key]?.length >= 20 && "w-[150px]",
+            entry[key]?.length >= 50 && "w-[200px]",
+            entry[key]?.length >= 100 && "w-[250px]"
           )}
         >
           {typeof entry[key] === "object" && entry[key] !== null
@@ -99,4 +99,4 @@ function CsvTable() {
   );
 }
 
-export default memo(CsvTable);
+export default memo(PreProcessedDataTable);

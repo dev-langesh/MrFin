@@ -257,12 +257,7 @@ function TransactionTable() {
       {
         header: "Description",
         accessor: "description",
-        className: "w-[400px]",
-        render: (entry) => (
-          <div className="w-[400px] break-all whitespace-normal">
-            {entry.description}
-          </div>
-        ),
+        cellClassName: "w-[250px] break-all whitespace-normal",
       },
       {
         header: (

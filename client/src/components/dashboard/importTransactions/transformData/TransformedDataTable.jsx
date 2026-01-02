@@ -227,6 +227,7 @@ function TransformedDataTable({ showErrorsOnly, ...props }) {
         ...newData[editingIndex],
         ...updatedEntry,
         amount: Number(updatedEntry.amount),
+        errors: {},
       };
       dispatch(updateState({ transformedData: newData }));
       setIsDialogOpen(false);

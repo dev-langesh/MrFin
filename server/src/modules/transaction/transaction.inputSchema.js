@@ -80,9 +80,8 @@ const getTransactionsSchema = z.object({
         .refine((val) => !isNaN(Date.parse(val)))
         .optional(),
       description: z.string().max(25).optional(),
-      // sortBy: z.enum(["date", "amount"]).optional(),
-      // sortOrder: z.enum(["asc", "desc"]).optional(),
-      sort: z.enum(["asc", "desc"]).optional(),
+      sortBy: z.enum(["txnDate", "amount", "category", "txnType"]).optional(),
+      sortOrder: z.enum(["asc", "desc"]).optional(),
     })
     .strict(),
 });

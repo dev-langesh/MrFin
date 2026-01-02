@@ -244,6 +244,8 @@ function TransformedDataTable({ showErrorsOnly, ...props }) {
       title={showErrorsOnly ? "Errors" : "Transformed Data"}
       pagination={pagination}
       onDelete={handleDeleteRows}
+      sort={true}
+      sortType="local"
     />
   );
 }

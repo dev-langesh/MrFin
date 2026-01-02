@@ -71,14 +71,14 @@ async function getTransactions(filters = {}, { page = 1, limit = 10 }) {
 
   const skip = (page - 1) * limit;
 
-  // console.log(query);
-
   const totalDocuments = await Transaction.countDocuments(query);
 
   if (totalDocuments === 0) return { transactions: [], total: 0 };
 
   const txns = await Transaction.find(query)
-    .sort({ txnDate: filters.sort === "asc" ? 1 : -1 })
+    .sort({
+      [filters.sortBy || "txnDate"]: filters.sortOrder === "asc" ? 1 : -1,
+    })
     .skip(skip)
     .limit(limit)
     .lean();

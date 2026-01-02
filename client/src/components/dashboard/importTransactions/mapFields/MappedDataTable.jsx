@@ -182,6 +182,8 @@ function MappedDataTable({ showErrorsOnly }) {
       pagination={pagination}
       onDelete={handleDeleteRows}
       emptyMessage="No data available. Please map the fields."
+      sort={true}
+      sortType="local"
     />
   );
 }

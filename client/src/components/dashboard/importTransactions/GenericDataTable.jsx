@@ -1,5 +1,4 @@
-import React, { memo } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -26,6 +25,7 @@ import { PAGINATION_OPTIONS } from "@/components/dashboard/config";
 import { cn } from "@/lib/utils";
 
 import TableSkeleton from "@/components/ui/TableSkeleton";
+import { useState, useMemo, memo } from "react";
 
 function GenericDataTable({
   data = [],
@@ -41,6 +41,11 @@ function GenericDataTable({
   paginationOptions = PAGINATION_OPTIONS,
   className,
   loadingAnimationType = "skeleton", // 'circularProcess' | 'skeleton'
+  sort = false,
+  sortType = "local", // 'local' | 'api'
+  onSort, // callback for api sort: (sortBy, sortOrder) => void
+  initialSortBy = null,
+  initialSortOrder = "asc", // 'asc' | 'desc'
 }) {
   const {
     page,
@@ -53,6 +58,42 @@ function GenericDataTable({
     toggleSelectAll,
     toggleSelectRow,
   } = pagination;
+
+  const [sortBy, setSortBy] = useState(initialSortBy);
+  const [sortOrder, setSortOrder] = useState(initialSortOrder);
+
+  const handleSort = (accessor) => {
+    if (!accessor) return;
+
+    let newSortOrder = "asc";
+    if (sortBy === accessor && sortOrder === "asc") {
+      newSortOrder = "desc";
+    }
+
+    setSortBy(accessor);
+    setSortOrder(newSortOrder);
+
+    if (sortType === "api" && onSort) {
+      onSort(accessor, newSortOrder);
+    }
+  };
+
+  const sortedData = useMemo(() => {
+    if (sortType === "local" && sortBy && paginatedData) {
+      return [...paginatedData].sort((a, b) => {
+        const aVal = a[sortBy];
+        const bVal = b[sortBy];
+
+        if (aVal === bVal) return 0;
+        if (aVal === null || aVal === undefined) return 1;
+        if (bVal === null || bVal === undefined) return -1;
+
+        const compareResult = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        return sortOrder === "asc" ? compareResult : -compareResult;
+      });
+    }
+    return paginatedData;
+  }, [paginatedData, sortType, sortBy, sortOrder]);
 
   if (isLoading && loadingAnimationType === "skeleton") {
     return <TableSkeleton />;
@@ -113,15 +154,39 @@ function GenericDataTable({
                   </TableHead>
                   <TableHead>ID</TableHead>
                   {columns.map((col) => (
-                    <TableHead key={col.header} className={col.className}>
-                      {col.header}
+                    <TableHead
+                      key={col.header}
+                      className={cn(col.className, "whitespace-nowrap")}
+                      onClick={() =>
+                        sort && col.accessor ? handleSort(col.accessor) : null
+                      }
+                      style={{
+                        cursor: sort && col.accessor ? "pointer" : "default",
+                      }}
+                    >
+                      <div className="flex items-center gap-1">
+                        {col.header}
+                        {sort && col.accessor && (
+                          <span className="ml-1">
+                            {sortBy === col.accessor ? (
+                              sortOrder === "asc" ? (
+                                <ArrowUp className="w-3 h-3" />
+                              ) : (
+                                <ArrowDown className="w-3 h-3" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />
+                            )}
+                          </span>
+                        )}
+                      </div>
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
             )}
             <TableBody>
-              {!isLoading && paginatedData.length === 0 ? (
+              {!isLoading && sortedData.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={columns.length + 2}
@@ -131,7 +196,7 @@ function GenericDataTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData.map((entry, i) => {
+                sortedData.map((entry, i) => {
                   const globalIndex = (page - 1) * limit + i;
                   return (
                     <TableRow

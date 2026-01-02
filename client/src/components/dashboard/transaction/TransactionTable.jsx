@@ -33,7 +33,8 @@ import { currencySymbols, currencyIcons } from "@/constants/currencies";
 function TransactionTable() {
   const [filters, setFilters] = useState({
     dateRange: "all",
-    sort: "desc",
+    sortOrder: "desc",
+    sortBy: "txnDate",
     limit: 10,
     page: 1,
   });
@@ -320,6 +321,17 @@ function TransactionTable() {
         onDelete={handleDelete}
         totalCount={totalData}
         className="min-h-[500px]"
+        sort={true}
+        sortType="api"
+        onSort={(sortBy, sortOrder) => {
+          setFilters((prev) => ({
+            ...prev,
+            sortBy,
+            sortOrder,
+          }));
+        }}
+        initialSortBy={filters.sortBy}
+        initialSortOrder={filters.sortOrder}
         actions={
           <TooltipProvider>
             <div className="flex items-center gap-1 md:gap-2">

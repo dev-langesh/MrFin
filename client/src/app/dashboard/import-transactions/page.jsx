@@ -95,14 +95,40 @@ export default function ImportTransactionsPage() {
       Component = null;
   }
 
+  /* eslint-disable react/no-unescaped-entities */
+  const stepHeaders = {
+    1: {
+      title: "Upload Bank Statement",
+      description:
+        "Upload your transaction history file in CSV format to get started.",
+    },
+    2: {
+      title: "Pre-Process Data",
+      description:
+        "Clean and prepare your data.",
+    },
+    3: {
+      title: "Map Fields",
+      description:
+        "Map the columns from your CSV to the system's transaction fields.",
+    },
+    4: {
+      title: "Review & Transform",
+      description:
+        "Review the transformed data, fix any errors, and verify the final import.",
+    },
+  };
+
+  const currentHeader = stepHeaders[state.step] || stepHeaders[1];
+
   return (
     <div className="space-y-6 pb-20">
       <div>
         <h1 className="md:text-3xl text-xl font-bold text-gray-900">
-          Import Transactions
+          {currentHeader.title}
         </h1>
         <p className="text-gray-500 max-md:text-sm">
-          Import transactions from bank statements in CSV format.
+          {currentHeader.description}
         </p>
       </div>
 

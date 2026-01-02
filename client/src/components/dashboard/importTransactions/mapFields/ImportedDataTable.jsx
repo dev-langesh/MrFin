@@ -26,10 +26,10 @@ function ImportedDataTable() {
       render: (entry) => (
         <div
           className={cn(
-            "whitespace-normal break-words min-w-[150px]",
-            entry[key]?.length > 20 && "min-w-[200px]",
-            entry[key]?.length > 50 && "min-w-[300px]",
-            entry[key]?.length > 100 && "min-w-[400px]"
+            "whitespace-normal break-all min-w-[130px]",
+            entry[key]?.length > 20 && "w-[150px]",
+            entry[key]?.length > 50 && "w-[200px]",
+            entry[key]?.length > 100 && "w-[250px]"
           )}
         >
           {entry[key]}

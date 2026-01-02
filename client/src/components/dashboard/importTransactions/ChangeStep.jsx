@@ -96,7 +96,9 @@ export default function ChangeStep() {
         });
 
         if (hasErrors) {
-          dispatch(updateState({ transformedData: newTransformedData }));
+          dispatch(
+            updateState({ transformedData: newTransformedData, errorStep: 4 })
+          );
           toast.error("Validation failed. Please check the highlighted rows.");
           setIsImporting(false);
           return;

@@ -121,7 +121,11 @@ function TransformedDataTable({ showErrorsOnly, ...props }) {
             ) : (
               val
             )}
-            {error && <div className="text-red-600 text-xs mt-1">{error}</div>}
+            {error && (
+              <div className="text-red-600 font-medium text-xs mt-1">
+                {error}
+              </div>
+            )}
           </div>
         );
       },

@@ -55,7 +55,7 @@ const initialState = {
     isLoading: false,
     settingsStatus: "idle", // 'idle' | 'loading' | 'succeeded' | 'failed'
     validationAttempt: 0,
-    errorUids: [], // Store UIDs of rows with errors
+    errorStep: null, // Indicates which step has validation errors (e.g., 3 for Map Fields). null if no errors.
   },
 };
 
@@ -123,9 +123,10 @@ const importTransactionsSlice = createSlice({
         state.value.mappedData = state.value.mappedData.filter(
           (r) => r.uid !== uid
         );
-        state.value.errorUids = state.value.errorUids.filter(
-          (id) => id !== uid
+        const hasErrors = state.value.mappedData.some(
+          (row) => row.errors && Object.keys(row.errors).length > 0
         );
+        state.value.errorStep = hasErrors ? 3 : null;
       }
       if (state.value.transformedData) {
         state.value.transformedData = state.value.transformedData.filter(
@@ -134,20 +135,13 @@ const importTransactionsSlice = createSlice({
       }
     },
     setMappedData: (state, action) => {
-      // payload: { mappedData, errorUids } OR just mappedData
-      if (action.payload.mappedData && action.payload.errorUids) {
-        state.value.mappedData = action.payload.mappedData;
-        state.value.errorUids = action.payload.errorUids;
-      } else {
-        // Fallback
-        state.value.mappedData = action.payload;
-        state.value.errorUids = [];
-        state.value.mappedData.forEach((row) => {
-          if (row.errors && Object.keys(row.errors).length > 0) {
-            state.value.errorUids.push(row.uid);
-          }
-        });
-      }
+      // payload: { mappedData } OR just mappedData array
+      const data = action.payload.mappedData || action.payload;
+      state.value.mappedData = data;
+      const hasErrors = data.some(
+        (row) => row.errors && Object.keys(row.errors).length > 0
+      );
+      state.value.errorStep = hasErrors ? 3 : null;
     },
     updateMappedRow: (state, action) => {
       const { uid, row } = action.payload;
@@ -159,14 +153,10 @@ const importTransactionsSlice = createSlice({
           ...row,
         };
 
-        const hasError = row.errors && Object.keys(row.errors).length > 0;
-        const errUidIdx = state.value.errorUids.indexOf(uid);
-
-        if (hasError && errUidIdx === -1) {
-          state.value.errorUids.push(uid);
-        } else if (!hasError && errUidIdx !== -1) {
-          state.value.errorUids.splice(errUidIdx, 1);
-        }
+        const hasErrors = state.value.mappedData.some(
+          (r) => r.errors && Object.keys(r.errors).length > 0
+        );
+        state.value.errorStep = hasErrors ? 3 : null;
       }
     },
     deleteRows: (state, action) => {
@@ -190,9 +180,10 @@ const importTransactionsSlice = createSlice({
         state.value.mappedData = state.value.mappedData.filter(
           (r) => !uidsSet.has(r.uid)
         );
-        state.value.errorUids = state.value.errorUids.filter(
-          (uid) => !uidsSet.has(uid)
+        const hasErrors = state.value.mappedData.some(
+          (row) => row.errors && Object.keys(row.errors).length > 0
         );
+        state.value.errorStep = hasErrors ? 3 : null;
       }
       if (state.value.transformedData) {
         state.value.transformedData = state.value.transformedData.filter(
@@ -287,5 +278,5 @@ export const selectTransactionSettings = (state) =>
   state.importTransactions.value.transactionSettings;
 export const selectValidationAttempt = (state) =>
   state.importTransactions.value.validationAttempt;
-export const selectErrorUids = (state) =>
-  state.importTransactions.value.errorUids;
+export const selectErrorStep = (state) =>
+  state.importTransactions.value.errorStep;

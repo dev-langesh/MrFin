@@ -9,7 +9,6 @@ import {
   updateMappedRow,
   deleteRows,
   selectIsLoading,
-  selectErrorUids,
 } from "@/redux/slices/importTransactionsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
@@ -23,12 +22,11 @@ import { cn } from "@/lib/utils";
 
 function MappedDataTable({ showErrorsOnly }) {
   const mappedData = useSelector(selectMappedData);
-  const errorUids = useSelector(selectErrorUids);
   const mappedFields = useSelector(selectMappedFields);
   const isLoading = useSelector(selectIsLoading);
   const dispatch = useDispatch();
 
-  console.log(isLoading)
+  console.log(isLoading);
 
   const [editingUid, setEditingUid] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -36,11 +34,12 @@ function MappedDataTable({ showErrorsOnly }) {
   // We rely on stable UIDs now
   const displayData = useMemo(() => {
     if (showErrorsOnly) {
-      const errorSet = new Set(errorUids);
-      return mappedData.filter((r) => errorSet.has(r.uid));
+      return mappedData.filter(
+        (r) => r.errors && Object.keys(r.errors).length > 0
+      );
     }
     return mappedData;
-  }, [mappedData, errorUids, showErrorsOnly]);
+  }, [mappedData, showErrorsOnly]);
 
   const pagination = useTable({ data: displayData });
   const { selectedRows: hookSelectedRows, resetSelection } = pagination;
@@ -77,12 +76,11 @@ function MappedDataTable({ showErrorsOnly }) {
                   val?.length >= 100 && "w-[250px]"
                 )}
               >
-                {error ? (
-                  <span className="text-red-600 font-medium">{error}</span>
-                ) : isDate ? (
-                  formatDateSafe(val, mappedFields.dateFormat)
-                ) : (
-                  val
+                {isDate ? formatDateSafe(val, mappedFields.dateFormat) : val}
+                {error && (
+                  <div className="text-red-600 font-medium text-xs mt-1">
+                    {error}
+                  </div>
                 )}
               </div>
             );

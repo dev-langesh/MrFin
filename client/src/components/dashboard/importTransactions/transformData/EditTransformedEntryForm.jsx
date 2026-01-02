@@ -55,7 +55,14 @@ function EditTransformedEntryForm({
   }, [initialData, reset]);
 
   const handleFormSubmit = (data) => {
-    onSubmit(data);
+    const formattedData = {
+      ...data,
+      txnDate:
+        data.txnDate instanceof Date
+          ? data.txnDate.toISOString()
+          : data.txnDate,
+    };
+    onSubmit(formattedData);
   };
 
   return (

@@ -112,13 +112,13 @@ export default function MapFieldsOptions({ onApply }) {
       dispatch(setIsLoading(true));
 
       try {
-        const errorUids = [];
+        let hasError = false;
         const validatedData = preProcessedData.map((data) => {
           const val = validateEntry(data, state, state.dateFormat);
           if (!val.uid) val.uid = data.uid;
 
           if (Object.keys(val.errors).length > 0) {
-            errorUids.push(data.uid);
+            hasError = true;
           }
           return val;
         });
@@ -127,11 +127,10 @@ export default function MapFieldsOptions({ onApply }) {
         dispatch(
           setMappedData({
             mappedData: validatedData,
-            errorUids,
           })
         );
 
-        if (onApplyRef.current) onApplyRef.current(errorUids.length > 0);
+        if (onApplyRef.current) onApplyRef.current(hasError);
       } catch (error) {
         console.error("Failed to apply mapping:", error);
         toast.error("Failed to apply mapping.");

@@ -9,7 +9,7 @@ import {
   selectMappedFields,
   selectValidationAttempt,
   selectMappedData,
-  selectErrorUids,
+  selectErrorStep,
 } from "@/redux/slices/importTransactionsSlice";
 import { useEffect } from "react";
 
@@ -19,17 +19,17 @@ export default function MapFields({}) {
   const validationAttempt = useSelector(selectValidationAttempt);
 
   const mappedData = useSelector(selectMappedData);
-  const errorUids = useSelector(selectErrorUids);
+  const errorStep = useSelector(selectErrorStep);
 
   useEffect(() => {
     if (validationAttempt > 0) {
-      if (errorUids?.length > 0) {
+      if (errorStep) {
         setActiveTab("errors");
       } else {
         setActiveTab("mappedData");
       }
     }
-  }, [validationAttempt, errorUids?.length]);
+  }, [validationAttempt, errorStep]);
 
   const handleApply = (hasError) => {
     setActiveTab(hasError ? "errors" : "mappedData");
@@ -47,7 +47,7 @@ export default function MapFields({}) {
                   Pre-Processed Data
                 </TabsTrigger>
                 <TabsTrigger value="mappedData">Mapped Data</TabsTrigger>
-                {errorUids?.length > 0 && (
+                {errorStep && (
                   <TabsTrigger value="errors" className="text-red-500">
                     Errors
                   </TabsTrigger>

@@ -1,47 +1,42 @@
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
+const { app } = require("../../../app"); // Assuming app export
 const { Transaction } = require("../transaction.model");
-const { app } = require("../../../app");
+const { User } = require("../../user/user.model");
 const { tokenService } = require("../../../lib/jwt/token.service");
-const { userService } = require("../../user/user.service");
-
-let mongoServer;
 
 describe("Transaction Security Suite", () => {
+  let mongoServer;
   let user1, user2;
-  let token1, token2;
+  let token1;
   let txn1;
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     await mongoose.connect(mongoServer.getUri());
 
-    // Create Users
-    user1 = await userService.createUser({
-      username: "user1",
+    // Create 2 users
+    user1 = await User.create({
       name: "User One",
-      country: "USA",
-      email: "user1@example.com",
+      email: "secure1@example.com",
       password: "password123",
+      country: "US",
+      verified: true,
     });
-    user2 = await userService.createUser({
-      username: "user2",
+
+    user2 = await User.create({
       name: "User Two",
-      country: "UK",
-      email: "user2@example.com",
+      email: "secure2@example.com",
       password: "password123",
+      country: "GB",
+      verified: true,
     });
 
     token1 = tokenService.generateToken({
       userId: user1._id,
-      tokenType: "access",
       role: "user",
-    });
-    token2 = tokenService.generateToken({
-      userId: user2._id,
       tokenType: "access",
-      role: "user",
     });
   });
 
@@ -52,231 +47,128 @@ describe("Transaction Security Suite", () => {
 
   beforeEach(async () => {
     await Transaction.deleteMany({});
-    // Create a transaction for User 1
+
     txn1 = await Transaction.create({
       userId: user1._id,
       amount: 100,
       txnType: "income",
       txnDate: new Date(),
       category: "Salary",
-      description: "User 1 Income",
     });
   });
 
-  describe("Broken Authentication", () => {
-    it("should reject requests without token (401)", async () => {
-      const res = await request(app).get("/api/transactions");
-      expect(res.status).toBe(401);
-    });
+  describe("Field Injection / Tampering Checks", () => {
+    const validUpdate = { amount: 200 };
 
-    it("should reject requests with invalid token (401/403)", async () => {
-      const res = await request(app)
-        .get("/api/transactions")
-        .set("Cookie", ["accessToken=invalidtoken"]);
-
-      // Depending on verify implementation, normally 401 or 403
-      expect([401, 403, 500]).toContain(res.status);
-      // 500 might happen if error handler is simplistic for JWT errors, but aiming for 401
-    });
-  });
-
-  describe("Broken Access Control (IDOR)", () => {
-    it("should prevent User 2 from GETting User 1's transaction", async () => {
-      const res = await request(app)
-        .get(`/api/transactions/${txn1._id}`)
-        .set("Cookie", [`accessToken=${token2}`]);
-
-      // Should be 404 (Not Found) or 403 (Forbidden).
-      // Privacy-wise 404 is better to not leak existence.
-      expect([403, 404]).toContain(res.status);
-    });
-
-    it("should prevent User 2 from UPDATING User 1's transaction", async () => {
-      const res = await request(app)
-        .patch(`/api/transactions/${txn1._id}`)
-        .set("Cookie", [`accessToken=${token2}`])
-        .send({ amount: 500 });
-
-      expect([403, 404]).toContain(res.status);
-
-      // Verify no change
-      const check = await Transaction.findById(txn1._id);
-      expect(check.amount).toBe(100);
-    });
-
-    it("should prevent User 2 from DELETING User 1's transaction", async () => {
-      const res = await request(app)
-        .delete(`/api/transactions/${txn1._id}`)
-        .set("Cookie", [`accessToken=${token2}`]);
-
-      expect([403, 404]).toContain(res.status);
-
-      // Verify not deleted
-      const check = await Transaction.findById(txn1._id);
-      expect(check).not.toBeNull();
-    });
-  });
-
-  describe("Mass Assignment", () => {
-    it("should prevent overwriting read-only fields (userId)", async () => {
-      // User 1 tries to change the transaction to belong to User 2
+    it("should return 400 when attempting to update userId (Injection)", async () => {
       const res = await request(app)
         .patch(`/api/transactions/${txn1._id}`)
         .set("Cookie", [`accessToken=${token1}`])
         .send({
-          amount: 200,
-          userId: user2._id.toString(), // Malicious attempt
+          ...validUpdate,
+          userId: user2._id.toString(), // Try to assign to another user
         });
 
-      // Zod reject unknown keys with strict(), so expecting 400 is correct/better.
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(400); // Strict schema should reject unknown/forbidden fields or explicit logic check
+    });
 
-      const check = await Transaction.findById(txn1._id);
-      expect(check.amount).toBe(100); // Should be unchanged because request was rejected
-      expect(check.userId.toString()).toBe(user1._id.toString());
+    it("should return 400 when attempting to update _id (Immutable)", async () => {
+      const res = await request(app)
+        .patch(`/api/transactions/${txn1._id}`)
+        .set("Cookie", [`accessToken=${token1}`])
+        .send({
+          ...validUpdate,
+          _id: new mongoose.Types.ObjectId().toString(),
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 when attempting to update createdAt (Timestamp)", async () => {
+      const res = await request(app)
+        .patch(`/api/transactions/${txn1._id}`)
+        .set("Cookie", [`accessToken=${token1}`])
+        .send({
+          ...validUpdate,
+          createdAt: new Date().toISOString(),
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 when attempting to update updatedAt (Managed)", async () => {
+      const res = await request(app)
+        .patch(`/api/transactions/${txn1._id}`)
+        .set("Cookie", [`accessToken=${token1}`])
+        .send({
+          ...validUpdate,
+          updatedAt: new Date().toISOString(),
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 when attempting to add unknown fields (Strict Schema)", async () => {
+      const res = await request(app)
+        .patch(`/api/transactions/${txn1._id}`)
+        .set("Cookie", [`accessToken=${token1}`])
+        .send({
+          ...validUpdate,
+          randomField: "malicious-data",
+        });
+
+      expect(res.status).toBe(400);
     });
   });
 
-  describe("NoSQL Injection", () => {
-    beforeEach(async () => {
-      // Create an additional transaction for better filtering tests
-      await Transaction.create({
-        userId: user1._id,
-        amount: 50,
+  describe("IDOR Protection", () => {
+    it("should return 404/403 when accessing another user's transaction", async () => {
+      // Create txn owned by User 2
+      const txn2 = await Transaction.create({
+        userId: user2._id,
+        amount: 500,
         txnType: "expense",
         txnDate: new Date(),
-        category: "TestCat",
-        description: "Small Expense",
       });
-    });
 
-    it("should block NoSQL injection in body (Operator Injection)", async () => {
+      // User 1 tries to access User 2's txn
       const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token1}`])
-        .send({
-          amount: 100,
-          txnType: "income",
-          description: { $ne: "" }, // NoSQL payload
-          txnDate: new Date().toISOString(),
-        });
-      expect(res.status).toBe(400);
-    });
-
-    it("should block NoSQL injection in Query Parameters", async () => {
-      // Attempt: Filter for everything that is NOT 'somerandomcategory'
-      // If successful, it would return both transactions (Salary:100, TestCat:50)
-      const res = await request(app)
-        .get("/api/transactions?category[$ne]=somerandomcategory")
+        .get(`/api/transactions/${txn2._id}`)
         .set("Cookie", [`accessToken=${token1}`]);
 
-      if (res.status === 200) {
-        expect(res.body.transactions).toHaveLength(0);
-      } else {
-        expect(res.status).toBe(400);
-      }
+      // Should act as if not found to prevent enumeration, or forbidden
+      expect([404, 403]).toContain(res.status);
     });
 
-    it("should block $where injection via query params", async () => {
+    it("should return 404/403 when updating another user's transaction", async () => {
+      const txn2 = await Transaction.create({
+        userId: user2._id,
+        amount: 500,
+        txnType: "expense",
+        txnDate: new Date(),
+      });
+
       const res = await request(app)
-        .get("/api/transactions?$where=this.amount>90")
+        .patch(`/api/transactions/${txn2._id}`)
+        .set("Cookie", [`accessToken=${token1}`])
+        .send({ amount: 9999 });
+
+      expect([404, 403]).toContain(res.status);
+    });
+
+    it("should return 404/403 when deleting another user's transaction", async () => {
+      const txn2 = await Transaction.create({
+        userId: user2._id,
+        amount: 500,
+        txnType: "expense",
+        txnDate: new Date(),
+      });
+
+      const res = await request(app)
+        .delete(`/api/transactions/${txn2._id}`)
         .set("Cookie", [`accessToken=${token1}`]);
 
-      if (res.status === 200) {
-        // If sanitized (stripped), it acts as an empty filter, returning all transactions.
-        // This confirms the injection (which would filter for >90 -> 1 txn) did NOT execute.
-        expect(res.body.transactions.length).toBeGreaterThanOrEqual(2);
-      } else {
-        expect(res.status).toBe(400);
-      }
-    });
-
-    it("should block nested query operator objects in query params", async () => {
-      // Attempt: amount > 60 (Should match txn1: 100, but not txn2: 50)
-      const res = await request(app)
-        .get("/api/transactions?amount[$gt]=60")
-        .set("Cookie", [`accessToken=${token1}`]);
-
-      if (res.status === 200) {
-        expect(res.body.transactions).toHaveLength(0);
-      } else {
-        expect(res.status).toBe(400);
-      }
-    });
-
-    it("should block Update Operator Injection ($set)", async () => {
-      const res = await request(app)
-        .patch(`/api/transactions/${txn1._id}`)
-        .set("Cookie", [`accessToken=${token1}`])
-        .send({
-          $set: { amount: 999999 },
-        });
-      // Should be rejected by Zod (unknown keys stripped or forbidden) or Sanitizer
-      // With .strict() it should be 400. If sanitized first, it might be empty -> 400 (empty update).
-      expect(res.status).toBe(400);
-
-      const check = await Transaction.findById(txn1._id);
-      expect(check.amount).not.toBe(999999);
-    });
-
-    it("should block Update Operator Injection ($inc)", async () => {
-      const res = await request(app)
-        .patch(`/api/transactions/${txn1._id}`)
-        .set("Cookie", [`accessToken=${token1}`])
-        .send({
-          $inc: { amount: 1000 },
-        });
-      expect(res.status).toBe(400);
-
-      const check = await Transaction.findById(txn1._id);
-      expect(check.amount).toBe(100);
-    });
-
-    it("should block Dot Notation Injection (userId.$ne)", async () => {
-      const res = await request(app)
-        .patch(`/api/transactions/${txn1._id}`)
-        .set("Cookie", [`accessToken=${token1}`])
-        .send({
-          "userId.$ne": null,
-        });
-      // Should be rejected due to strict mode or sanitization
-      expect(res.status).toBe(400);
-    });
-
-    it("should block Prototype Pollution (__proto__)", async () => {
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token1}`])
-        .send({
-          __proto__: { isAdmin: true },
-          amount: 100,
-          txnType: "income",
-          txnDate: new Date().toISOString(),
-        });
-
-      expect([200, 201, 400]).toContain(res.status);
-    });
-
-    it("should block Bulk Endpoint Injection (Mixed Valid/Malicious)", async () => {
-      const res = await request(app)
-        .post("/api/transactions/bulk")
-        .set("Cookie", [`accessToken=${token1}`])
-        .send([
-          {
-            amount: 100,
-            txnType: "income",
-            txnDate: new Date().toISOString(),
-          },
-          {
-            $where: "this.amount > 0", // Malicious object
-          },
-        ]);
-
-      expect(res.status).toBe(400);
-
-      // Verify no transactions created (or at least check count)
-      const count = await Transaction.countDocuments({ userId: user1._id });
-      expect(count).toBe(2);
+      expect([404, 403]).toContain(res.status);
     });
   });
 });

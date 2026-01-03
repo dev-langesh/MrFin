@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Menu } from "lucide-react";
+import { LogOut, User, Menu, Settings } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -46,9 +46,9 @@ export function AppBar() {
             key={item.name}
             href={item.href}
             onClick={() => mobile && setIsMobileMenuOpen(false)}
-            className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors text-sm font-medium ${
+            className={`flex items-center space-x-2 px-3 py-2 rounded-sm transition-colors text-sm font-medium ${
               isActive
-                ? "bg-zinc-200 text-zinc-700"
+                ? "bg-zinc-200/75 text-black"
                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
@@ -80,7 +80,6 @@ export function AppBar() {
                 className="rounded-full h-8 w-8 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <User className="h-4 w-4" />
-                <span className="sr-only">Toggle user menu</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-56 p-2">
@@ -93,14 +92,25 @@ export function AppBar() {
                 </p>
               </div>
               <Separator className="my-2" />
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={logout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Log out
-              </Button>
+              <div className="flex flex-col space-y-1">
+                <Link href="/dashboard/settings" passHref>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Account Settings
+                  </Button>
+                </Link>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={logout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </Button>
+              </div>
             </PopoverContent>
           </Popover>
         </nav>

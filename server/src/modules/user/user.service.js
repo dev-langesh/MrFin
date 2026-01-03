@@ -50,12 +50,39 @@ async function resetPassword(userId, password) {
   return await user.save();
 }
 
+async function updateUser(userId, data) {
+  const allowedUpdates = ["name", "country"];
+  const updates = {};
+
+  Object.keys(data).forEach((key) => {
+    if (allowedUpdates.includes(key)) {
+      updates[key] = data[key];
+    }
+  });
+
+  if (Object.keys(updates).length === 0) {
+    return await findUserById(userId);
+  }
+
+  const user = await User.findByIdAndUpdate(userId, updates, {
+    new: true,
+    runValidators: true,
+  }).select("-password");
+
+  if (!user) {
+    throw new AppError(AuthErrors.USER_NOT_FOUND);
+  }
+
+  return user;
+}
+
 const userService = {
   createUser,
   findUserByEmail,
   findUserById,
   verifyUserByEmail,
   resetPassword,
+  updateUser,
 };
 
 module.exports = { userService };

@@ -4,15 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { authApi } from "../../../api/authApi";
-import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
-import OtpInput from "@/components/ui/OtpInput";
+import { otpApi } from "../../../api/otpApi";
 import { Card } from "@/components/ui/Card";
+import OtpInput from "@/components/ui/OtpInput";
 
 export default function OtpVerification() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
+  const module = searchParams.get("module"); // verify_user_email | reset_password
 
   const [otp, setOtp] = useState("");
   const [timer, setTimer] = useState(60);
@@ -23,16 +23,19 @@ export default function OtpVerification() {
   const isExecuted = useRef(false);
 
   useEffect(() => {
-    if (!email) {
-      toast.error("No email provided.");
+    if (!email || !module) {
+      toast.error("Invalid verification request.");
       router.push("/auth/login");
       return;
     }
 
     if (isExecuted.current) return;
     isExecuted.current = true;
-    sendOtp();
-  }, [email]);
+
+    if (module === "verify_user_email") {
+      sendOtpAndToast();
+    }
+  }, [email, module]);
 
   useEffect(() => {
     let countdown;
@@ -44,15 +47,20 @@ export default function OtpVerification() {
     return () => clearInterval(countdown);
   }, [timer]);
 
+  const sendOtpAndToast = async () => {
+    await sendOtp(false);
+    toast.success("OTP sent to your email.");
+  };
+
   const sendOtp = async (resend) => {
     try {
       if (resend) setIsResending(true);
-      await authApi.sendOtp({
+      await otpApi.sendOtp({
         to: email,
         template: "auth/otp",
         notificationType: "email",
       });
-      toast.success("OTP sent to your email.");
+      if (resend) toast.success("OTP sent to your email.");
       setTimer(60);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to send OTP.");
@@ -71,11 +79,22 @@ export default function OtpVerification() {
     e.preventDefault();
     try {
       setLoading(true);
-      const res = await authApi.verifyOtp({ to: email, otp });
-      toast.success("OTP verified");
-      window.location.href = "/";
+      // 1. Verify OTP generically
+      const res = await otpApi.verifyOtp({ to: email, otp });
+      const otpToken = res.data.token;
+
+      // 2. Perform module specific action
+      if (module === "verify_user_email") {
+        await authApi.verifyEmail({ otpToken });
+        toast.success("Email verified successfully");
+        window.location.href = "/dashboard";
+      } else if (module === "reset_password") {
+        router.push(`/auth/reset-password?token=${otpToken}`);
+      } else {
+        toast.error("Unknown module");
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Invalid OTP.");
+      toast.error(err.response?.data?.message || "Verification failed");
     } finally {
       setLoading(false);
       setOtp("");
@@ -87,7 +106,7 @@ export default function OtpVerification() {
       <Card className="w-full max-w-sm p-8">
         <div className="flex flex-col space-y-1 text-center ">
           <h1 className="text-2xl font-semibold tracking-tight">
-            Verify your email
+            Verification
           </h1>
           <p className="text-sm text-muted-foreground">
             Enter the 6-digit code sent to

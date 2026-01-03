@@ -1,5 +1,8 @@
 const { validateInput } = require("../../middleware/validateInput.middleware");
 const { validateToken } = require("../../middleware/validateToken.middleware");
+const {
+  validateOtpToken,
+} = require("../../middleware/validateOtpToken.middleware");
 const { authController } = require("./auth.controller");
 const { authInputSchema } = require("./auth.inputSchema");
 
@@ -31,23 +34,17 @@ router.post("/rotate-tokens", authController.rotateTokens);
 router.post(
   "/reset-password",
   validateInput(authInputSchema.resetPasswordSchema),
+  validateOtpToken, // Now using OTP token directly
   authController.resetPassword
 );
+
 router.post(
-  "/send-otp",
-  validateInput(authInputSchema.sendOtpSchema),
-  authController.sendOtp
+  "/verify-email",
+  validateInput(authInputSchema.verifyEmailSchema),
+  validateOtpToken,
+  authController.verifyEmail
 );
-router.post(
-  "/verify-otp",
-  validateInput(authInputSchema.verifyOtpSchema),
-  authController.verifyOtp
-);
-router.post(
-  "/verify-otp-reset-password",
-  validateInput(authInputSchema.verifyOtpToResetPasswordSchema),
-  authController.verifyOtpToResetPassword
-);
+
 router.post("/logout", authController.logoutUser);
 
 module.exports = { authRouter: router };

@@ -80,52 +80,22 @@ const googleCompleteSchema = z.object({
   }),
 });
 
-const sendOtpSchema = z.object({
+// Used for endpoints that just require the verified OTP token
+const verifyEmailSchema = z.object({
   body: z.object({
-    notificationType: z.enum(["email", "sms"], {
-      required_error: "Notification type is required",
-      invalid_type_error: "Notification type must be either 'email' or 'sms'",
-    }),
-    to: z
-      .string({ required_error: "'To' field is required" })
+    otpToken: z
+      .string({ required_error: "OTP Token is required" })
       .trim()
-      .min(1, { message: "'To' field cannot be empty" }),
-    template: z.string().trim().optional(),
-  }),
-});
-
-const verifyOtpSchema = z.object({
-  body: z.object({
-    otp: z
-      .string({ required_error: "OTP is required" })
-      .trim()
-      .length(6, { message: "OTP must be exactly 6 digits" }),
-    to: z
-      .string({ required_error: "'To' field is required" })
-      .trim()
-      .min(1, { message: "'To' field cannot be empty" }),
-  }),
-});
-
-const verifyOtpToResetPasswordSchema = z.object({
-  body: z.object({
-    otp: z
-      .string({ required_error: "OTP is required" })
-      .trim()
-      .length(6, { message: "OTP must be exactly 6 digits" }),
-    to: z
-      .string({ required_error: "'To' field is required" })
-      .trim()
-      .min(1, { message: "'To' field cannot be empty" }),
+      .min(1, { message: "OTP Token cannot be empty" }),
   }),
 });
 
 const resetPasswordSchema = z.object({
   body: z.object({
-    token: z
-      .string({ required_error: "Reset token is required" })
+    otpToken: z
+      .string({ required_error: "OTP Check Token is required" })
       .trim()
-      .min(1, { message: "Reset token cannot be empty" }),
+      .min(1, { message: "Token cannot be empty" }),
     password: z
       .string({ required_error: "New password is required" })
       .min(8, { message: "Password must be at least 8 characters" })
@@ -144,9 +114,7 @@ const authInputSchema = {
   loginSchema,
   googleLoginSchema,
   googleCompleteSchema,
-  sendOtpSchema,
-  verifyOtpSchema,
-  verifyOtpToResetPasswordSchema,
+  verifyEmailSchema,
   resetPasswordSchema,
 };
 

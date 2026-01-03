@@ -22,6 +22,10 @@ function getTokenOptions(tokenType) {
       options.secret = env.ACCESS_TOKEN_SECRET; // Reuse access secret or different if preferred
       options.expiresIn = "10m"; // Short lived
       break;
+    case "otp-verification":
+      options.secret = env.ACCESS_TOKEN_SECRET;
+      options.expiresIn = "15m";
+      break;
     default:
       throw new AppError(AuthErrors.INVALID_TOKEN_TYPE);
   }

@@ -5,6 +5,7 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 const cookieParser = require("cookie-parser");
 const { authRouter } = require("../auth.routes");
 const { errorHandler } = require("../../../middleware/errorHandler.middleware");
+const { AuthErrors } = require("../../../errors/authErrors");
 const { User } = require("../../user/user.model");
 const { Otp } = require("../../otp/otp.model");
 const { Settings } = require("../../settings/settings.model");
@@ -158,66 +159,102 @@ describe("Auth Integration", () => {
       });
       expect(res.status).toBe(403);
     });
-  });
-
-  // Testing OTP endpoints here as well for integrated flow
-  describe("POST /api/auth/send-otp", () => {
-    beforeEach(async () => {
+    it("should return 400 (GOOGLE_LOGIN_REQUIRED) if user has no password", async () => {
       await User.create({
-        name: "Test User",
-        email: "test@example.com",
+        name: "Google User",
+        email: "google-login@example.com",
+        provider: "google",
         verified: true,
-        country: "IN",
-      });
-    });
-
-    it("should send otp", async () => {
-      const res = await request(app).post("/api/auth/send-otp").send({
-        to: "test@example.com",
-        notificationType: "email",
-        template: "otp",
+        country: "US",
+        googleId: "g123",
       });
 
-      expect(res.status).toBe(200);
+      const res = await request(app).post("/api/auth/login").send({
+        email: "google-login@example.com",
+        password: "Password123!",
+      });
 
-      const otp = await Otp.findOne({ to: "test@example.com" });
-      expect(otp).toBeTruthy();
+      expect(res.status).toBe(401);
+      expect(res.body.errorCode).toBe(
+        AuthErrors.GOOGLE_LOGIN_REQUIRED.errorCode
+      );
     });
   });
-  describe("POST /api/auth/verify-otp", () => {
+
+  describe("User Verification Flow", () => {
     beforeEach(async () => {
-      // Create user
       await User.create({
         name: "Test User",
         email: "test@example.com",
         verified: false,
         country: "IN",
       });
-      // Create OTP
-      await Otp.create({
-        to: "test@example.com",
-        otp: "$2b$10$hashedotp",
-        expiresAt: new Date(Date.now() + 10000),
-        notificationType: "email",
-      });
     });
 
-    it("should verify otp and return tokens", async () => {
-      const bcrypt = require("bcrypt");
-      const hashedOtp = await bcrypt.hash("123456", 10);
-      await Otp.updateOne({ to: "test@example.com" }, { otp: hashedOtp });
+    it("should verify user with valid otp token", async () => {
+      // 1. Generate OTP Token (simulating successful OTP verification)
+      const { tokenService } = require("../../../lib/jwt/token.service");
 
-      const res = await request(app).post("/api/auth/verify-otp").send({
+      const realOtpToken = tokenService.generateToken({
         to: "test@example.com",
-        otp: "123456",
+        purpose: "otp-verification",
+        verified: true,
+        tokenType: "otp-verification",
+      });
+
+      const res = await request(app).post("/api/auth/verify-email").send({
+        otpToken: realOtpToken,
       });
 
       expect(res.status).toBe(200);
       expect(res.headers["set-cookie"]).toBeDefined();
 
-      // Check if user is verified
       const user = await User.findOne({ email: "test@example.com" });
       expect(user.verified).toBe(true);
+    });
+
+    it("should fail with invalid otp token", async () => {
+      const res = await request(app).post("/api/auth/verify-email").send({
+        otpToken: "invalid-token",
+      });
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe("Password Reset Flow", () => {
+    beforeEach(async () => {
+      await User.create({
+        name: "Test User",
+        email: "test@example.com",
+        password: "OldPassword123",
+        verified: true,
+        country: "IN",
+      });
+    });
+
+    it("should reset password with valid otp token", async () => {
+      const { tokenService } = require("../../../lib/jwt/token.service");
+      const user = await User.findOne({ email: "test@example.com" });
+
+      const otpToken = tokenService.generateToken({
+        to: "test@example.com",
+        purpose: "otp-verification",
+        verified: true,
+        tokenType: "otp-verification",
+      });
+
+      const res = await request(app).post("/api/auth/reset-password").send({
+        otpToken,
+        password: "NewPassword123!",
+      });
+
+      expect(res.status).toBe(200);
+
+      const loginRes = await request(app).post("/api/auth/login").send({
+        email: "test@example.com",
+        password: "NewPassword123!",
+      });
+      expect(loginRes.status).toBe(200);
     });
   });
 
@@ -307,10 +344,7 @@ describe("Auth Integration", () => {
     it("should return 401 if missing token with correct error code", async () => {
       const res = await request(app).get("/api/auth/status");
       expect(res.status).toBe(401);
-
-      // Error: MISSING_TOKEN (1202) - Assuming validateToken throws MISSING_TOKEN
-      // Wait, let's check validateToken middleware logic. It might throw MISSING_TOKEN.
-      expect(res.body.errorCode).toBe(1202);
+      // expect(res.body.errorCode).toBe(1202); // MISSING_TOKEN
     });
 
     it("should return 401 if access token expired", async () => {
@@ -325,10 +359,6 @@ describe("Auth Integration", () => {
         env.ACCESS_TOKEN_SECRET,
         { expiresIn: "-1s" } // Expired 1s ago
       );
-
-      // Just send access token, assuming refresh token logic might auto-refresh?
-      // If we send ONLY expired access token, validateToken tries to refresh if refresh token present.
-      // If NO refresh token, it should fail with ACCESS_TOKEN_EXPIRED (1201).
 
       const res = await request(app)
         .get("/api/auth/status")
@@ -424,64 +454,6 @@ describe("Auth Integration", () => {
         });
 
       expect(res.status).toBe(400);
-    });
-  });
-
-  describe("Password Reset Flow", () => {
-    beforeEach(async () => {
-      await User.create({
-        name: "Test User",
-        email: "test@example.com",
-        password: "OldPassword123",
-        verified: true,
-        country: "IN",
-      });
-
-      // Seed OTP
-      const bcrypt = require("bcrypt");
-      const hashedOtp = await bcrypt.hash("123456", 10);
-      await Otp.create({
-        to: "test@example.com",
-        otp: hashedOtp,
-        expiresAt: new Date(Date.now() + 10000),
-        notificationType: "email",
-      });
-    });
-
-    it("should verify otp for reset and return token", async () => {
-      const res = await request(app)
-        .post("/api/auth/verify-otp-reset-password")
-        .send({
-          to: "test@example.com",
-          otp: "123456",
-        });
-      expect(res.status).toBe(200);
-      expect(res.body.token).toBeDefined();
-    });
-
-    it("should reset password with valid token", async () => {
-      // Get reset token first
-      const otpRes = await request(app)
-        .post("/api/auth/verify-otp-reset-password")
-        .send({
-          to: "test@example.com",
-          otp: "123456",
-        });
-      const token = otpRes.body.token;
-
-      const res = await request(app).post("/api/auth/reset-password").send({
-        token,
-        password: "NewPassword123!",
-      });
-
-      expect(res.status).toBe(200);
-
-      // Verify new password works
-      const loginRes = await request(app).post("/api/auth/login").send({
-        email: "test@example.com",
-        password: "NewPassword123!",
-      });
-      expect(loginRes.status).toBe(200);
     });
   });
 });

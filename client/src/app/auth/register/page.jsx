@@ -68,7 +68,9 @@ export default function Register() {
     try {
       await authApi.register(formData);
       toast.success("Registration successful");
-      router.push(`/auth/verify-email?email=${formData.email}`);
+      router.push(
+        `/otp/verify?module=verify_user_email&email=${formData.email}`
+      );
     } catch (err) {
       toast.error(err.response?.data?.message || "Registration failed");
     }

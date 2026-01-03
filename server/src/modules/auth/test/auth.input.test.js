@@ -188,71 +188,9 @@ describe("Auth Input Validation Exhaustive Suite", () => {
     });
   });
 
-  describe("POST /api/auth/send-otp", () => {
-    const validOtp = {
-      notificationType: "email",
-      to: "test@example.com",
-    };
-
-    const withoutKey = (obj, key) => {
-      const newObj = { ...obj };
-      delete newObj[key];
-      return newObj;
-    };
-
-    test.each([
-      ["missing type", withoutKey(validOtp, "notificationType")],
-      ["invalid type", { ...validOtp, notificationType: "push" }], // enum: email, sms
-      ["missing to", withoutKey(validOtp, "to")],
-      ["empty to", { ...validOtp, to: "" }],
-    ])("should return 400 when %s", async (_, payload) => {
-      const res = await request(app).post("/api/auth/send-otp").send(payload);
-      expectValidationError(res, _);
-    });
-
-    it("should accept valid payload", async () => {
-      const res = await request(app).post("/api/auth/send-otp").send(validOtp);
-      expect(res.status).toBe(200);
-    });
-  });
-
-  describe("POST /api/auth/verify-otp", () => {
-    const validVerify = {
-      otp: "123456",
-      to: "test@example.com",
-    };
-
-    const withoutKey = (obj, key) => {
-      const newObj = { ...obj };
-      delete newObj[key];
-      return newObj;
-    };
-
-    test.each([
-      ["missing otp", withoutKey(validVerify, "otp")],
-      ["short otp", { ...validVerify, otp: "12345" }],
-      ["long otp", { ...validVerify, otp: "1234567" }],
-      ["missing to", withoutKey(validVerify, "to")],
-    ])("should return 400 when %s", async (_, payload) => {
-      const res = await request(app).post("/api/auth/verify-otp").send(payload);
-      expectValidationError(res, _);
-    });
-
-    it("should trim inputs", async () => {
-      const res = await request(app).post("/api/auth/verify-otp").send({
-        otp: " 123456 ",
-        to: " test@example.com ",
-      });
-      // Assuming service mock accepts any 6 digits
-      if (res.status === 400 && res.body.validationErrors) {
-        fail("Validation should pass after trim");
-      }
-    });
-  });
-
   describe("POST /api/auth/reset-password", () => {
     const validReset = {
-      token: "reset-token-123",
+      otpToken: "otp-token-123",
       password: "Password123!",
     };
 
@@ -263,8 +201,8 @@ describe("Auth Input Validation Exhaustive Suite", () => {
     };
 
     test.each([
-      ["missing token", withoutKey(validReset, "token")],
-      ["empty token", { ...validReset, token: "" }],
+      ["missing token", withoutKey(validReset, "otpToken")],
+      ["empty token", { ...validReset, otpToken: "" }],
       ["missing password", withoutKey(validReset, "password")],
       ["weak password", { ...validReset, password: "weak" }],
     ])("should return 400 when %s", async (_, payload) => {

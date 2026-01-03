@@ -138,32 +138,24 @@ describe("Auth Service Integration", () => {
         })
       ).rejects.toThrow(AuthErrors.USER_NOT_VERIFIED.message);
     });
-  });
 
-  describe("verifyOtp", () => {
-    it("should verify otp, mark user verified, and return tokens", async () => {
-      otpService.verifyOtp.mockResolvedValue(true);
-
-      const user = await User.create({
-        name: "Otp User",
-        email: "otp@example.com",
+    it("should throw GOOGLE_LOGIN_REQUIRED if user has no password (google provider)", async () => {
+      // Create google user directly
+      await User.create({
+        name: "Google User",
+        email: "google-only@example.com",
         country: "US",
-        verified: false,
+        provider: "google",
+        verified: true,
+        googleId: "g123",
       });
 
-      const result = await authService.verifyOtp({
-        to: "otp@example.com",
-        otp: "123456",
-      });
-
-      expect(otpService.verifyOtp).toHaveBeenCalledWith({
-        to: "otp@example.com",
-        otp: "123456",
-      });
-
-      const updatedUser = await User.findOne({ email: "otp@example.com" });
-      expect(updatedUser.verified).toBe(true);
-      expect(result.tokens).toBeDefined();
+      await expect(
+        authService.loginUser({
+          email: "google-only@example.com",
+          password: "anypassword",
+        })
+      ).rejects.toThrow(AuthErrors.GOOGLE_LOGIN_REQUIRED.message);
     });
   });
 
@@ -257,6 +249,33 @@ describe("Auth Service Integration", () => {
 
       const dbUser = await User.findOne({ email: "google@complete.com" });
       expect(dbUser).toBeDefined();
+    });
+
+    it("should throw USER_ALREADY_EXISTS if user already exists during completion", async () => {
+      const regToken = tokenService.generateToken({
+        googleId: "g4",
+        email: "google@duplicate.com", // Will be created before completion
+        name: "Google Duplicate",
+        picture: "pic.jpg",
+        tokenType: "registration",
+      });
+
+      // Create user beforehand to simulate race condition or duplicate request
+      await User.create({
+        name: "Existing User",
+        email: "google@duplicate.com",
+        verified: true,
+        country: "US",
+        provider: "email", // Ensure provider is set to simulate conflict correctly if needed
+      });
+
+      await expect(
+        authService.completeGoogleLogin({
+          registrationToken: regToken,
+          country: "GB",
+          currency: "GBP",
+        })
+      ).rejects.toThrow(AuthErrors.USER_ALREADY_EXISTS.message);
     });
   });
 });

@@ -8,9 +8,9 @@ export const authApi = {
   register: (body) => api.post("/auth/register", body),
   status: () => api.get("/auth/status"),
   rotateTokens: () => api.post("/auth/rotate-tokens"),
-  sendOtp: (body) => api.post("/auth/send-otp", body),
-  verifyOtp: (body) => api.post("/auth/verify-otp", body),
-  verifyOtpToResetPassword: (body) =>
-    api.post("/auth/verify-otp-reset-password", body),
+
+  // Auth specific verification using OTP token
+  verifyEmail: (body) => api.post("/auth/verify-email", body),
+
   resetPassword: (body) => api.post("/auth/reset-password", body),
 };

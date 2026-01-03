@@ -6,6 +6,8 @@ const { generateHash, compareHash } = require("../auth/utils/hash");
 const { AppError } = require("../../utils/error");
 const { userService } = require("../user/user.service");
 const { Otp } = require("./otp.model");
+// We need to require tokenService. Since it's in lib, we can access it.
+const { tokenService } = require("../../lib/jwt/token.service");
 
 async function createOtp({ to, otp, notificationType }) {
   const expiresAt = new Date(Date.now() + config.otp.expirationTime);
@@ -13,6 +15,7 @@ async function createOtp({ to, otp, notificationType }) {
 }
 
 async function sendEmail(to, otp, template) {
+  console.log(otp);
   await emailService.sendEmailWithHtml({
     to,
     subject: "Your OTP Code",
@@ -28,6 +31,9 @@ async function sendOTP({ notificationType, to, template }) {
   const otpRecord = await Otp.findOne({ to });
   const now = Date.now();
 
+  // If email, we might want to check if user exists depending on the flow.
+  // But for generic OTP, we might relax this or keep it.
+  // The original code checked user existence for email.
   if (notificationType === "email") await userService.findUserByEmail(to);
 
   if (otpRecord) {
@@ -84,6 +90,17 @@ async function verifyOtp({ to, otp }) {
   }
 
   await Otp.deleteOne({ to });
+
+  // Generate a short-lived token to prove OTP was verified
+  // This token will be sent to other APIs (like verify-email, reset-password)
+  const otpToken = tokenService.generateToken({
+    to,
+    purpose: "otp-verification",
+    verified: true,
+    tokenType: "otp-verification",
+  });
+
+  return { token: otpToken };
 }
 
 const otpService = {

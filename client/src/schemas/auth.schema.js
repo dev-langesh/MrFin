@@ -6,7 +6,10 @@ const registerSchema = z.object({
       required_error: "Name is required",
     })
     .min(2, { message: "Name must be at least 2 characters" })
-    .max(50, { message: "Name must be at most 50 characters" }),
+    .max(50, { message: "Name must be at most 50 characters" })
+    .regex(/^[a-zA-Z ]+$/, {
+      message: "Name must contain only letters and spaces",
+    }),
 
   email: z
     .string({ required_error: "Email is required" })

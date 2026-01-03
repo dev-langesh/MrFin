@@ -206,7 +206,7 @@ describe("Transaction Input Validation Exhaustive Suite", () => {
       const res = await request(app)
         .get("/api/transactions")
         .set("Cookie", [`accessToken=${token}`])
-        .query({ page: "1", limit: "10", sort: "desc" });
+        .query({ page: "1", limit: "10", sortOrder: "desc", sortBy: "amount" });
       expect(res.status).toBe(200);
     });
   });

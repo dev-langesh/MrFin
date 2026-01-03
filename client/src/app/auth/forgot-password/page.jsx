@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import Input from "@/components/ui/Input";
 import { Button } from "@/components/ui/button";
-import { authApi } from "../../../api/authApi";
+import { otpApi } from "../../../api/otpApi";
 import { AuthErrorCodes } from "@/config/errorCodes/authErrorCodes";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
@@ -25,14 +25,14 @@ export default function ForgotPassword() {
     try {
       setLoading(true);
 
-      await authApi.sendOtp({
+      await otpApi.sendOtp({
         to: email,
         template: "auth/otp",
         notificationType: "email",
       });
 
       toast.success("OTP sent to your email.");
-      router.push(`/auth/forgot-password/verify-email?email=${email}`);
+      router.push(`/otp/verify?module=reset_password&email=${email}`);
     } catch (err) {
       const errorCode = err.response?.data?.errorCode;
       toast.error(err.response?.data?.message || "Failed to send OTP.");

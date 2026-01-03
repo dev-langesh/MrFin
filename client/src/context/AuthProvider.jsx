@@ -4,7 +4,7 @@ import React from "react";
 
 export const AuthContext = React.createContext();
 
-export default function AuthProvider({children}) {
+export default function AuthProvider({ children }) {
   const [auth, setAuth] = React.useState({
     user: null,
     isAuthenticated: false,
@@ -38,8 +38,12 @@ export default function AuthProvider({children}) {
     localStorage.setItem("auth", JSON.stringify(auth));
   }, [auth]);
 
+  const updateAuthUser = (user) => {
+    setAuth((prev) => ({ ...prev, user }));
+  };
+
   return (
-    <AuthContext.Provider value={{ auth, setAuth }}>
+    <AuthContext.Provider value={{ auth, setAuth, updateAuthUser }}>
       {children}
     </AuthContext.Provider>
   );

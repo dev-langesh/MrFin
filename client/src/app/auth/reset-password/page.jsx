@@ -30,7 +30,7 @@ export default function ResetPassword() {
     }
 
     try {
-      await authApi.resetPassword({ token, password: data.password });
+      await authApi.resetPassword({ otpToken: token, password: data.password });
       toast.success("Password reset successful.");
       router.push("/auth/login");
     } catch (err) {

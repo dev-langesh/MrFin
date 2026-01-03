@@ -4,7 +4,6 @@ const { tokenService } = require("../../lib/jwt/token.service");
 const { AppError } = require("../../utils/error");
 const { userService } = require("../user/user.service");
 const bcrypt = require("bcrypt");
-const { otpService } = require("../otp/otp.service");
 const { generateHash } = require("./utils/hash");
 const { settingsService } = require("../settings/settings.service");
 const { analyticsService } = require("../analytics/analytics.service");
@@ -15,12 +14,10 @@ async function registerUser(data) {
 
   payload.password = await bcrypt.hash(payload.password, 10);
 
-  // createUser will now accept country if we updated user service or if it just passes payload through (checking user.service next)
   const user = await userService.createUser(payload);
 
   await analyticsService.createAnalytics(user._id);
 
-  // Initialize settings with currency if provided
   if (data.currency) {
     await settingsService.updateSettings(user._id, {
       general: { currency: data.currency },
@@ -64,8 +61,8 @@ async function loginUser(data) {
   return { user: userObj, tokens };
 }
 
-async function verifyOtp({ to, otp }) {
-  await otpService.verifyOtp({ to, otp });
+async function verifyEmail(otpPayload) {
+  const { to } = otpPayload;
 
   const user = await userService.verifyUserByEmail(to);
 
@@ -95,10 +92,6 @@ async function loginWithGoogle(code) {
   const { googleId, email, name, picture } = await getGoogleUser(code);
 
   let user = await userService.findUserByEmail(email, false, false);
-  //...
-
-  // If user does not exist, create a new one
-  // If user does not exist, return isNew flag and a temporary token
   if (!user) {
     const registrationToken = tokenService.generateToken({
       googleId,
@@ -147,37 +140,24 @@ async function completeGoogleLogin({ registrationToken, country, currency }) {
   return { user, tokens };
 }
 
-async function verifyOtpToResetPassword({ otp, to }) {
-  await otpService.verifyOtp({ to, otp });
+async function resetPassword({ otpPayload, password }) {
+  const { to } = otpPayload;
 
   const user = await userService.findUserByEmail(to);
 
-  const token = tokenService.generateToken({
-    userId: user._id,
-    tokenType: "reset-password",
-    role: user.role,
-  });
+  user.password = await generateHash(password);
 
-  return { token };
-}
-
-async function verifyTokenAndResetPassword({ password, token }) {
-  const decoded = tokenService.verifyToken(token, "reset-password");
-
-  const hashedPassword = await generateHash(password);
-  await userService.resetPassword(decoded.userId, hashedPassword);
+  await user.save();
 }
 
 const authService = {
   registerUser,
   loginUser,
-  verifyOtp,
   rotateTokens,
-  verifyIdToken: getGoogleUser,
   loginWithGoogle,
   completeGoogleLogin,
-  verifyOtpToResetPassword,
-  verifyTokenAndResetPassword,
+  verifyEmail,
+  resetPassword,
 };
 
 module.exports = { authService };

@@ -57,9 +57,6 @@ export default function TransactionPage() {
     startDate: null,
     endDate: null,
   });
-  const [incomeDir, setIncomeDir] = useState("up");
-  const [expenseDir, setExpenseDir] = useState("up");
-  const [investmentDir, setInvestmentDir] = useState("up");
   // Hover states for synchronized highlighting
   const [hoveredIncomeCategory, setHoveredIncomeCategory] = useState(null);
   const [hoveredExpenseCategory, setHoveredExpenseCategory] = useState(null);
@@ -135,10 +132,6 @@ export default function TransactionPage() {
           setDir("up");
         }
       };
-
-      checkDir(incomeData, setIncomeDir);
-      checkDir(expenseData, setExpenseDir);
-      checkDir(investmentData, setInvestmentDir);
     } catch (e) {
       toast.error("Error fetching Income Data");
     } finally {

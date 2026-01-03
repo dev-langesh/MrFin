@@ -1,42 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/Sheet";
-import { Menu } from "lucide-react";
-import { toast } from "sonner";
-import { Sidebar } from "@/components/common/Sidebar";
+import { AppBar } from "@/components/common/AppBar";
 
 export default function Layout({ children }) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-gray-200">
-        <Sidebar />
-      </div>
-
-      {/* Mobile Sidebar */}
-      <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="lg:hidden fixed top-4 right-4 z-50"
-          >
-            <Menu className="size-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="right" className="w-64 p-0">
-          <Sidebar mobile />
-        </SheetContent>
-      </Sheet>
-
-      {/* Main Content */}
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <AppBar />
       <main
         id="dashboard-main-content"
-        className="flex-1 lg:ml-64 p-2 md:p-4 max-lg:pt-10 h-screen overflow-y-auto overflow-x-hidden"
+        className="flex-1 p-4 md:p-6 overflow-y-auto"
       >
         {children}
       </main>

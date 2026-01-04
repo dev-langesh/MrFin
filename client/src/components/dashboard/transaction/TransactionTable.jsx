@@ -6,7 +6,7 @@ import { Download, Plus, Edit2, Trash2, Edit, ListFilter } from "lucide-react";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/Dialog";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import TransactionEntryForm from "./TransactionEntryForm";
+import TransactionForm from "./TransactionForm";
 import { transactionService } from "@/services/transactions.service";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import GenericDataTable from "../importTransactions/GenericDataTable";
@@ -419,7 +419,7 @@ function TransactionTable() {
                   <TooltipContent>Add Transaction</TooltipContent>
                 </Tooltip>
                 <DialogContent className="lg:max-w-2xl">
-                  <TransactionEntryForm
+                  <TransactionForm
                     setData={setData}
                     filters={filters}
                     setTotalData={setTotalData}
@@ -451,7 +451,7 @@ function TransactionTable() {
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="lg:max-w-2xl">
-          <TransactionEntryForm
+          <TransactionForm
             editingEntry={editingEntry}
             setData={setData}
             close={() => setIsEditDialogOpen(false)}

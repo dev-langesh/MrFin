@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { otpApi } from "../../../api/otpApi";
 import { Card } from "@/components/ui/Card";
 import OtpInput from "@/components/ui/OtpInput";
+import { authApi } from "@/api/authApi";
 
 export default function OtpVerification() {
   const router = useRouter();
@@ -94,7 +95,6 @@ export default function OtpVerification() {
         toast.error("Unknown module");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Verification failed");
     } finally {
       setLoading(false);
       setOtp("");

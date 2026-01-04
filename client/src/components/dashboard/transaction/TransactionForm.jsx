@@ -37,7 +37,7 @@ import {
 import { TXN_TYPES } from "../config";
 import { currencySymbols } from "@/constants/currencies";
 
-function TransactionEntryForm({
+function TransactionForm({
   editingEntry = null,
   setData,
   close,
@@ -322,4 +322,4 @@ function TransactionEntryForm({
   );
 }
 
-export default memo(TransactionEntryForm);
+export default memo(TransactionForm);

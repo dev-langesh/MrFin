@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const { otpRouter } = require("../otp.routes");
 const { errorHandler } = require("../../../middleware/errorHandler.middleware");
-const { Otp } = require("../otp.model");
+const { redisService } = require("../../../lib/redis/redis.service");
 const { config } = require("../../../config/constants");
 
 // Mock email service
@@ -14,13 +14,26 @@ jest.mock("../../../lib/notification/email/email.service", () => ({
   },
 }));
 
+// Mock Redis Service
+jest.mock("../../../lib/redis/redis.service", () => ({
+  redisService: {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    connect: jest.fn(),
+  },
+}));
+
 const app = express();
 app.use(express.json());
 app.use("/api/otp", otpRouter);
 app.use(errorHandler);
 
+const OTP_PREFIX = "otp:";
+
 describe("OTP Integration", () => {
   let mongoServer;
+  let redisStore = {};
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -35,13 +48,27 @@ describe("OTP Integration", () => {
 
   beforeEach(async () => {
     const { User } = require("../../user/user.model");
-    await Otp.deleteMany({});
+
+    redisStore = {};
+    jest.clearAllMocks();
+
+    redisService.get.mockImplementation((key) =>
+      Promise.resolve(redisStore[key] || null)
+    );
+    redisService.set.mockImplementation((key, val) => {
+      redisStore[key] = val;
+      return Promise.resolve("OK");
+    });
+    redisService.del.mockImplementation((key) => {
+      delete redisStore[key];
+      return Promise.resolve(1);
+    });
+
     await User.deleteMany({});
   });
 
   describe("POST /api/otp/send", () => {
     beforeEach(async () => {
-      // Create user for email check
       const { User } = require("../../user/user.model");
       await User.create({
         name: "Test User",
@@ -61,8 +88,8 @@ describe("OTP Integration", () => {
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("OTP sent successfully");
 
-      const otp = await Otp.findOne({ to: "test@example.com" });
-      expect(otp).toBeTruthy();
+      const otpVal = redisStore[`${OTP_PREFIX}test@example.com`];
+      expect(otpVal).toBeDefined();
     });
 
     it("should fail with invalid input", async () => {
@@ -78,12 +105,11 @@ describe("OTP Integration", () => {
     beforeEach(async () => {
       const bcrypt = require("bcrypt");
       const hashedOtp = await bcrypt.hash("123456", 10);
-      await Otp.create({
-        to: "test@example.com",
+
+      redisStore[`${OTP_PREFIX}test@example.com`] = {
         otp: hashedOtp,
-        expiresAt: new Date(Date.now() + 10000),
         notificationType: "email",
-      });
+      };
     });
 
     it("should verify otp and return verification token", async () => {
@@ -96,7 +122,6 @@ describe("OTP Integration", () => {
       expect(res.body.message).toBe("OTP verified successfully");
       expect(res.body.token).toBeDefined();
 
-      // Verify token structure/validity if possible, or assume tokenService works
       const jwt = require("jsonwebtoken");
       const decoded = jwt.decode(res.body.token);
       expect(decoded.purpose).toBe("otp-verification");
@@ -109,7 +134,7 @@ describe("OTP Integration", () => {
         to: "test@example.com",
         otp: "654321",
       });
-      expect(res.status).toBe(400); // 400 or 401 depending on error mapping, AppError usually maps specific codes
+      expect(res.status).toBe(400);
     });
   });
 });

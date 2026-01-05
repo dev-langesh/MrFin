@@ -7,7 +7,6 @@ const { authRouter } = require("../auth.routes");
 const { errorHandler } = require("../../../middleware/errorHandler.middleware");
 const { AuthErrors } = require("../../../errors/authErrors");
 const { User } = require("../../user/user.model");
-const { Otp } = require("../../otp/otp.model");
 const { Settings } = require("../../settings/settings.model");
 const { getGoogleUser } = require("../utils/googleAuth");
 
@@ -49,7 +48,8 @@ describe("Auth Integration", () => {
 
   beforeEach(async () => {
     await User.deleteMany({});
-    await Otp.deleteMany({});
+    // OTPs are now in Redis, managed by TTL or manually cleared if needed.
+    // Assuming redis-mock or fresh instance per test run if we mock redisClient properly.
     await Settings.deleteMany({});
 
     getGoogleUser.mockResolvedValue({

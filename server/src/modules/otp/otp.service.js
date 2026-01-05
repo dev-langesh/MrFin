@@ -5,13 +5,35 @@ const { generateOtp } = require("../auth/utils/generateOtp");
 const { generateHash, compareHash } = require("../auth/utils/hash");
 const { AppError } = require("../../utils/error");
 const { userService } = require("../user/user.service");
-const { Otp } = require("./otp.model");
-// We need to require tokenService. Since it's in lib, we can access it.
+const { redisService } = require("../../lib/redis/redis.service");
 const { tokenService } = require("../../lib/jwt/token.service");
 
-async function createOtp({ to, otp, notificationType }) {
-  const expiresAt = new Date(Date.now() + config.otp.expirationTime);
-  return await Otp.create({ to, otp, expiresAt, notificationType });
+const OTP_PREFIX = "otp:";
+const OTP_ATTEMPTS_PREFIX = "otp_attempts:";
+
+const getOtpKey = (to) => `${OTP_PREFIX}${to}`;
+const getAttemptsKey = (to) => `${OTP_ATTEMPTS_PREFIX}${to}`;
+
+// Updated to use redisService's built-in stringify/parse
+async function saveOtp(to, otpData, duration) {
+  await redisService.set(getOtpKey(to), otpData, duration, true);
+}
+
+async function saveAttempts(to, attemptsData, duration) {
+  await redisService.set(getAttemptsKey(to), attemptsData, duration, true);
+}
+
+async function getOtp(to) {
+  return await redisService.get(getOtpKey(to), true);
+}
+
+async function getAttempts(to) {
+  return await redisService.get(getAttemptsKey(to), true);
+}
+
+async function clearOtpData(to) {
+  await redisService.del(getOtpKey(to));
+  await redisService.del(getAttemptsKey(to));
 }
 
 async function sendEmail(to, otp, template) {
@@ -27,59 +49,48 @@ async function sendEmail(to, otp, template) {
 }
 
 async function sendOTP({ notificationType, to, template }) {
-  const otpRecord = await Otp.findOne({ to });
+  const attemptsRecord = await getAttempts(to);
   const now = Date.now();
 
-  // If email, we might want to check if user exists depending on the flow.
-  // But for generic OTP, we might relax this or keep it.
-  // The original code checked user existence for email.
   if (notificationType === "email") await userService.findUserByEmail(to);
 
-  if (otpRecord) {
-    if (now - otpRecord.lastAttempt > config.otp.attemptsExpiry) {
-      otpRecord.attempts = 0;
-      otpRecord.lastAttempt = new Date(now - config.otp.attemptsExpiry);
-      await otpRecord.save();
-    }
-    if (otpRecord.attempts >= config.otp.maxAttempts) {
+  let updatedAttempts = { attempts: 1, lastAttempt: now };
+
+  if (attemptsRecord) {
+    if (attemptsRecord.attempts >= config.otp.maxAttempts) {
       throw new AppError(AuthErrors.MAX_OTP_ATTEMPTS_REACHED);
     }
 
-    if (now - otpRecord.lastAttempt < config.otp.resendCooldown) {
+    if (now - attemptsRecord.lastAttempt < config.otp.resendCooldown) {
       throw new AppError(AuthErrors.OTP_RESEND_COOLDOWN);
     }
-    const otp = generateOtp();
-    const hashedOtp = await generateHash(otp);
 
-    otpRecord.otp = hashedOtp;
-    otpRecord.expiresAt = new Date(now + config.otp.expirationTime);
-    otpRecord.attempts += 1;
-    otpRecord.lastAttempt = now;
-    await otpRecord.save();
+    updatedAttempts = {
+      attempts: attemptsRecord.attempts + 1,
+      lastAttempt: now,
+    };
+  }
 
-    if (notificationType === "email") {
-      await sendEmail(to, otp, template);
-    }
-  } else {
-    const otp = generateOtp();
-    const hashedOtp = await generateHash(otp);
-    await createOtp({ to, otp: hashedOtp, notificationType });
+  const otp = generateOtp();
+  const hashedOtp = await generateHash(otp);
 
-    if (notificationType === "email") {
-      await sendEmail(to, otp, template);
-    }
+  await saveOtp(
+    to,
+    { otp: hashedOtp, notificationType },
+    config.otp.expirationTime
+  );
+  await saveAttempts(to, updatedAttempts, config.otp.expirationTime);
+
+  if (notificationType === "email") {
+    await sendEmail(to, otp, template);
   }
 }
 
 async function verifyOtp({ to, otp }) {
-  const otpRecord = await Otp.findOne({ to });
+  const otpRecord = await getOtp(to);
 
   if (!otpRecord) {
     throw new AppError(AuthErrors.OTP_INVALID);
-  }
-
-  if (otpRecord.expiresAt < new Date()) {
-    throw new AppError(AuthErrors.OTP_EXPIRED);
   }
 
   const isValid = await compareHash(otp, otpRecord.otp);
@@ -88,10 +99,8 @@ async function verifyOtp({ to, otp }) {
     throw new AppError(AuthErrors.OTP_INVALID);
   }
 
-  await Otp.deleteOne({ to });
+  await clearOtpData(to);
 
-  // Generate a short-lived token to prove OTP was verified
-  // This token will be sent to other APIs (like verify-email, reset-password)
   const otpToken = tokenService.generateToken({
     to,
     purpose: "otp-verification",

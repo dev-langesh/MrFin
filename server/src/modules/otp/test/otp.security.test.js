@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const { otpRouter } = require("../otp.routes");
 const { errorHandler } = require("../../../middleware/errorHandler.middleware");
-const { Otp } = require("../otp.model");
+const { redisService } = require("../../../lib/redis/redis.service");
 const { config } = require("../../../config/constants");
 const { AuthErrors } = require("../../../errors/authErrors");
 
@@ -15,13 +15,27 @@ jest.mock("../../../lib/notification/email/email.service", () => ({
   },
 }));
 
+// Mock Redis Service
+jest.mock("../../../lib/redis/redis.service", () => ({
+  redisService: {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+    connect: jest.fn(),
+  },
+}));
+
 const app = express();
 app.use(express.json());
 app.use("/api/otp", otpRouter);
 app.use(errorHandler);
 
+const OTP_PREFIX = "otp:";
+const OTP_ATTEMPTS_PREFIX = "otp_attempts:";
+
 describe("OTP Security & Logic Tests", () => {
   let mongoServer;
+  let redisStore = {};
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -35,8 +49,23 @@ describe("OTP Security & Logic Tests", () => {
 
   beforeEach(async () => {
     const { User } = require("../../user/user.model");
-    await Otp.deleteMany({});
-    await User.deleteMany({}); // Clear users before creating new one
+
+    redisStore = {};
+    jest.clearAllMocks();
+
+    redisService.get.mockImplementation((key) =>
+      Promise.resolve(redisStore[key] || null)
+    );
+    redisService.set.mockImplementation((key, val) => {
+      redisStore[key] = val;
+      return Promise.resolve("OK");
+    });
+    redisService.del.mockImplementation((key) => {
+      delete redisStore[key];
+      return Promise.resolve(1);
+    });
+
+    await User.deleteMany({});
 
     await User.create({
       name: "Test User",
@@ -63,29 +92,39 @@ describe("OTP Security & Logic Tests", () => {
         notificationType: "email",
       });
 
-      expect(res.status).toBe(429); // Assuming mapError maps OTP_RESEND_COOLDOWN to 429, otherwise check error message
+      expect(res.status).toBe(429);
       expect(res.body.message).toContain(
         AuthErrors.OTP_RESEND_COOLDOWN.message
       );
     });
 
-    it("should enforce max attempts limit", async () => {
-      // Manually create record near limit
-      await Otp.create({
-        to: "security@example.com",
-        otp: "hashed",
-        attempts: config.otp.maxAttempts,
-        lastAttempt: new Date(),
-        expiresAt: new Date(Date.now() + 60000),
-        notificationType: "email",
-      });
+    it("should allow request after cooldown period", async () => {
+      redisStore[`${OTP_ATTEMPTS_PREFIX}security@example.com`] = {
+        attempts: 1,
+        lastAttempt: Date.now() - config.otp.resendCooldown - 5000,
+      };
 
       const res = await request(app).post("/api/otp/send").send({
         to: "security@example.com",
         notificationType: "email",
       });
 
-      expect(res.status).toBe(429); // Or 400 depending on mapping
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe("OTP sent successfully");
+    });
+
+    it("should enforce max attempts limit", async () => {
+      redisStore[`${OTP_ATTEMPTS_PREFIX}security@example.com`] = {
+        attempts: config.otp.maxAttempts,
+        lastAttempt: Date.now(),
+      };
+
+      const res = await request(app).post("/api/otp/send").send({
+        to: "security@example.com",
+        notificationType: "email",
+      });
+
+      expect(res.status).toBe(429);
       expect(res.body.message).toContain(
         AuthErrors.MAX_OTP_ATTEMPTS_REACHED.message
       );
@@ -93,35 +132,24 @@ describe("OTP Security & Logic Tests", () => {
   });
 
   describe("Verification Security", () => {
-    it("should reject expired OTP", async () => {
-      const bcrypt = require("bcrypt");
-      const hashedOtp = await bcrypt.hash("123456", 10);
-
-      await Otp.create({
-        to: "security@example.com",
-        otp: hashedOtp,
-        expiresAt: new Date(Date.now() - 5000), // Expired
-        notificationType: "email",
-      });
-
+    it("should reject expired OTP (key missing)", async () => {
       const res = await request(app).post("/api/otp/verify").send({
         to: "security@example.com",
         otp: "123456",
       });
 
-      expect(res.status).toBe(410); // OTP_EXPIRED is 410
-      expect(res.body.message).toBe(AuthErrors.OTP_EXPIRED.message);
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe(AuthErrors.OTP_INVALID.message);
     });
 
     it("should reject bruteforce attempts/invalid OTP", async () => {
       const bcrypt = require("bcrypt");
       const hashedOtp = await bcrypt.hash("123456", 10);
-      await Otp.create({
-        to: "security@example.com",
+
+      redisStore[`${OTP_PREFIX}security@example.com`] = {
         otp: hashedOtp,
-        expiresAt: new Date(Date.now() + 60000),
         notificationType: "email",
-      });
+      };
 
       const res = await request(app).post("/api/otp/verify").send({
         to: "security@example.com",

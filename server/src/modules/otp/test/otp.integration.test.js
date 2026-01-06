@@ -14,15 +14,8 @@ jest.mock("../../../lib/notification/email/email.service", () => ({
   },
 }));
 
-// Mock Redis Service
-jest.mock("../../../lib/redis/redis.service", () => ({
-  redisService: {
-    get: jest.fn(),
-    set: jest.fn(),
-    del: jest.fn(),
-    connect: jest.fn(),
-  },
-}));
+// Mock ioredis
+jest.mock("ioredis", () => require("ioredis-mock"));
 
 const app = express();
 app.use(express.json());
@@ -49,20 +42,9 @@ describe("OTP Integration", () => {
   beforeEach(async () => {
     const { User } = require("../../user/user.model");
 
-    redisStore = {};
     jest.clearAllMocks();
-
-    redisService.get.mockImplementation((key) =>
-      Promise.resolve(redisStore[key] || null)
-    );
-    redisService.set.mockImplementation((key, val) => {
-      redisStore[key] = val;
-      return Promise.resolve("OK");
-    });
-    redisService.del.mockImplementation((key) => {
-      delete redisStore[key];
-      return Promise.resolve(1);
-    });
+    const Redis = require("ioredis-mock");
+    new Redis().flushall();
 
     await User.deleteMany({});
   });
@@ -88,7 +70,9 @@ describe("OTP Integration", () => {
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("OTP sent successfully");
 
-      const otpVal = redisStore[`${OTP_PREFIX}test@example.com`];
+      const Redis = require("ioredis-mock");
+      const client = new Redis();
+      const otpVal = await client.get(`${OTP_PREFIX}test@example.com`);
       expect(otpVal).toBeDefined();
     });
 
@@ -106,10 +90,25 @@ describe("OTP Integration", () => {
       const bcrypt = require("bcrypt");
       const hashedOtp = await bcrypt.hash("123456", 10);
 
-      redisStore[`${OTP_PREFIX}test@example.com`] = {
-        otp: hashedOtp,
-        notificationType: "email",
-      };
+      const Redis = require("ioredis-mock");
+      const client = new Redis();
+      // redisService stringifies objects, so we should store it properly if we were using it directly
+      // But here we want to PRE-POPULATE redis. Since we are using ioredis-mock, we can verify by using the service or client.
+      // But to populate, we can use the client.
+
+      // IMPORTANT: The real service stringifies values unless raw.
+      // The service method 'saveOtp' calls set with stringify=true.
+      // So to match what verifyOtp expects, we should store a JSON string?
+      // verifyOtp calls getOtp(..., true) which parses it.
+      // So yes, we should store JSON string.
+
+      await client.set(
+        `${OTP_PREFIX}test@example.com`,
+        JSON.stringify({
+          otp: hashedOtp,
+          notificationType: "email",
+        })
+      );
     });
 
     it("should verify otp and return verification token", async () => {

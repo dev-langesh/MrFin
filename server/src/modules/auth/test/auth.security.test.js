@@ -5,6 +5,21 @@ const { app } = require("../../../app");
 const { User } = require("../../user/user.model");
 const { tokenService } = require("../../../lib/jwt/token.service");
 
+// 1. Mock env to force NODE_ENV=development (so rate limiting works)
+jest.mock("../../../config/env", () => {
+  const original = jest.requireActual("../../../config/env");
+  return {
+    ...original,
+    env: {
+      ...original.env,
+      NODE_ENV: "development",
+    },
+  };
+});
+
+// 2. Mock ioredis
+jest.mock("ioredis", () => require("ioredis-mock"));
+
 // Mock otp service
 jest.mock("../../otp/otp.service", () => ({
   otpService: {
@@ -28,6 +43,10 @@ describe("Auth Module Security Tests (OWASP)", () => {
 
   beforeEach(async () => {
     await User.deleteMany({});
+
+    // Clear redis mock
+    const Redis = require("ioredis-mock");
+    new Redis().flushall();
   });
 
   describe("Injection Attacks", () => {
@@ -192,6 +211,30 @@ describe("Auth Module Security Tests (OWASP)", () => {
 
       expect(res.status).toBe(401);
       expect(res.body.message).toMatch(/Check your credentials/i);
+    });
+  });
+
+  describe("Rate Limiting", () => {
+    it("should limit login attempts after threshold exceeded", async () => {
+      const email = "rate-limit@example.com";
+      const password = "Password123!";
+
+      // Consume 20 attempts
+      const attempts = [];
+      for (let i = 0; i < 20; i++) {
+        attempts.push(
+          request(app).post("/api/auth/login").send({ email, password })
+        );
+      }
+      await Promise.all(attempts);
+
+      // 21st attempt should fail with 429
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email, password });
+
+      expect(res.status).toBe(429);
+      expect(res.body.message).toMatch(/Too many login\/register attempts/i);
     });
   });
 });

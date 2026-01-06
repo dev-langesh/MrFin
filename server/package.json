@@ -30,6 +30,7 @@
     "ms": "^2.1.3",
     "multer": "^2.0.1",
     "nodemailer": "^7.0.3",
+    "rate-limiter-flexible": "^9.0.1",
     "socket.io": "^4.8.1",
     "ssh2": "^1.16.0",
     "winston": "^3.17.0",
@@ -43,6 +44,7 @@
   "description": "",
   "devDependencies": {
     "cross-env": "^10.1.0",
+    "ioredis-mock": "^8.13.1",
     "jest": "^30.2.0",
     "mongodb-memory-server": "^10.4.1",
     "node-mocks-http": "^1.17.2",

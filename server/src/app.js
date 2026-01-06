@@ -8,6 +8,7 @@ const { apiRouter } = require("./routes");
 const cookieParser = require("cookie-parser");
 const { errorHandler } = require("./middleware/errorHandler.middleware");
 const mongoSanitize = require("express-mongo-sanitize");
+const { globalLimiter } = require("./middleware/rateLimiter.middleware");
 
 const app = express();
 
@@ -41,7 +42,7 @@ app.get("/", (req, res) => {
   res.send("Server is running!");
 });
 
-app.use("/api", apiRouter);
+app.use("/api", globalLimiter, apiRouter);
 
 app.use(errorHandler);
 

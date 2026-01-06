@@ -4,9 +4,22 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 const { otpRouter } = require("../otp.routes");
 const { errorHandler } = require("../../../middleware/errorHandler.middleware");
-const { redisService } = require("../../../lib/redis/redis.service");
-const { config } = require("../../../config/constants");
 const { AuthErrors } = require("../../../errors/authErrors");
+
+// 1. Mock env to force NODE_ENV=development BEFORE importing routes
+jest.mock("../../../config/env", () => {
+  const original = jest.requireActual("../../../config/env");
+  return {
+    ...original,
+    env: {
+      ...original.env,
+      NODE_ENV: "development",
+    },
+  };
+});
+
+// Mock ioredis
+jest.mock("ioredis", () => require("ioredis-mock"));
 
 // Mock email service
 jest.mock("../../../lib/notification/email/email.service", () => ({
@@ -15,15 +28,6 @@ jest.mock("../../../lib/notification/email/email.service", () => ({
   },
 }));
 
-// Mock Redis Service
-jest.mock("../../../lib/redis/redis.service", () => ({
-  redisService: {
-    get: jest.fn(),
-    set: jest.fn(),
-    del: jest.fn(),
-    connect: jest.fn(),
-  },
-}));
 
 const app = express();
 app.use(express.json());
@@ -31,11 +35,9 @@ app.use("/api/otp", otpRouter);
 app.use(errorHandler);
 
 const OTP_PREFIX = "otp:";
-const OTP_ATTEMPTS_PREFIX = "otp_attempts:";
 
 describe("OTP Security & Logic Tests", () => {
   let mongoServer;
-  let redisStore = {};
 
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -50,20 +52,9 @@ describe("OTP Security & Logic Tests", () => {
   beforeEach(async () => {
     const { User } = require("../../user/user.model");
 
-    redisStore = {};
     jest.clearAllMocks();
-
-    redisService.get.mockImplementation((key) =>
-      Promise.resolve(redisStore[key] || null)
-    );
-    redisService.set.mockImplementation((key, val) => {
-      redisStore[key] = val;
-      return Promise.resolve("OK");
-    });
-    redisService.del.mockImplementation((key) => {
-      delete redisStore[key];
-      return Promise.resolve(1);
-    });
+    const Redis = require("ioredis-mock");
+    new Redis().flushall();
 
     await User.deleteMany({});
 
@@ -72,62 +63,6 @@ describe("OTP Security & Logic Tests", () => {
       email: "security@example.com",
       verified: false,
       country: "IN",
-    });
-  });
-
-  describe("Rate Limiting & Cooldowns", () => {
-    it("should prevent excessive resends (Cooldown)", async () => {
-      // 1. First Send
-      await request(app)
-        .post("/api/otp/send")
-        .send({
-          to: "security@example.com",
-          notificationType: "email",
-        })
-        .expect(200);
-
-      // 2. Immediate Second Send (Should fail)
-      const res = await request(app).post("/api/otp/send").send({
-        to: "security@example.com",
-        notificationType: "email",
-      });
-
-      expect(res.status).toBe(429);
-      expect(res.body.message).toContain(
-        AuthErrors.OTP_RESEND_COOLDOWN.message
-      );
-    });
-
-    it("should allow request after cooldown period", async () => {
-      redisStore[`${OTP_ATTEMPTS_PREFIX}security@example.com`] = {
-        attempts: 1,
-        lastAttempt: Date.now() - config.otp.resendCooldown - 5000,
-      };
-
-      const res = await request(app).post("/api/otp/send").send({
-        to: "security@example.com",
-        notificationType: "email",
-      });
-
-      expect(res.status).toBe(200);
-      expect(res.body.message).toBe("OTP sent successfully");
-    });
-
-    it("should enforce max attempts limit", async () => {
-      redisStore[`${OTP_ATTEMPTS_PREFIX}security@example.com`] = {
-        attempts: config.otp.maxAttempts,
-        lastAttempt: Date.now(),
-      };
-
-      const res = await request(app).post("/api/otp/send").send({
-        to: "security@example.com",
-        notificationType: "email",
-      });
-
-      expect(res.status).toBe(429);
-      expect(res.body.message).toContain(
-        AuthErrors.MAX_OTP_ATTEMPTS_REACHED.message
-      );
     });
   });
 
@@ -142,14 +77,19 @@ describe("OTP Security & Logic Tests", () => {
       expect(res.body.message).toBe(AuthErrors.OTP_INVALID.message);
     });
 
-    it("should reject bruteforce attempts/invalid OTP", async () => {
+    it("should reject invalid OTP", async () => {
       const bcrypt = require("bcrypt");
       const hashedOtp = await bcrypt.hash("123456", 10);
 
-      redisStore[`${OTP_PREFIX}security@example.com`] = {
-        otp: hashedOtp,
-        notificationType: "email",
-      };
+      const Redis = require("ioredis-mock");
+      const client = new Redis();
+      await client.set(
+        `${OTP_PREFIX}security@example.com`,
+        JSON.stringify({
+          otp: hashedOtp,
+          notificationType: "email",
+        })
+      );
 
       const res = await request(app).post("/api/otp/verify").send({
         to: "security@example.com",
@@ -158,6 +98,30 @@ describe("OTP Security & Logic Tests", () => {
 
       expect(res.status).toBe(400);
       expect(res.body.message).toBe(AuthErrors.OTP_INVALID.message);
+    });
+  });
+
+  describe("Rate Limiting", () => {
+    it("should limit OTP requests after threshold", async () => {
+      const to = "security@example.com";
+      const notificationType = "email";
+
+      // Limit is 3 requests per hour
+      // Send 3 requests
+      for (let i = 0; i < 3; i++) {
+        await request(app)
+          .post("/api/otp/send")
+          .send({ to, notificationType })
+          .expect(200);
+      }
+
+      // 4th request should fail
+      const res = await request(app)
+        .post("/api/otp/send")
+        .send({ to, notificationType });
+
+      expect(res.status).toBe(429);
+      expect(res.body.message).toMatch(/Too many OTP requests/i);
     });
   });
 });

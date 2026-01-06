@@ -30,7 +30,7 @@ const defaultCategories = [
 ];
 
 const otp = {
-  expirationTime: 5 * 60 * 1000, // 5 minutes
+  expirationTime: 10 * 60 * 1000, // 10 minutes
   maxAttempts: 3,
   length: 6,
   attemptsExpiry: 2 * 60 * 60 * 1000, // 2 hours

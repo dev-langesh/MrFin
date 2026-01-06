@@ -1,15 +1,19 @@
-const { createClient } = require("redis");
+const Redis = require("ioredis");
 const { env } = require("../../config/env");
 
-const redisClient = createClient({
-  url: env.REDIS_URL,
+const redisClient = new Redis(env.REDIS_URL, {
+  lazyConnect: true,
 });
 
 redisClient.on("error", (err) => console.log("Redis Client Error", err));
 redisClient.on("connect", () => console.log("Redis Client Connected"));
 
 async function connectRedis() {
-  if (!redisClient.isOpen) {
+  if (
+    redisClient.status === "wait" ||
+    redisClient.status === "close" ||
+    redisClient.status === "end"
+  ) {
     await redisClient.connect();
   }
 }
@@ -25,7 +29,7 @@ async function set(key, value, ttl, stringify = false) {
   const finalValue = stringify ? JSON.stringify(value) : value;
 
   if (ttl) {
-    return await redisClient.set(key, finalValue, { PX: ttl });
+    return await redisClient.set(key, finalValue, "PX", ttl);
   }
   return await redisClient.set(key, finalValue);
 }

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  prometheus:
+    build:
+      context: ./prometheus
+      dockerfile: Dockerfile
+    container_name: prometheus
+    image: prometheus
+    ports:
+      - "9091:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus:/prometheus
+
+volumes:
+  prometheus:
+    name: prometheus
+
+networks:
+  default:
+    name: MrFin
+    driver: bridge
+

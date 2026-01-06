@@ -9,11 +9,14 @@ const cookieParser = require("cookie-parser");
 const { errorHandler } = require("./middleware/errorHandler.middleware");
 const mongoSanitize = require("express-mongo-sanitize");
 const { globalLimiter } = require("./middleware/rateLimiter.middleware");
+const { metricsMiddleware } = require("./middleware/metrics.middleware");
+const { register } = require("./lib/metrics/metrics.service");
 
 const app = express();
 
 app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(helmet());
+app.use(metricsMiddleware);
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -40,6 +43,15 @@ app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.send("Server is running!");
+});
+
+app.get("/metrics", async (req, res) => {
+  try {
+    res.set("Content-Type", register.contentType);
+    res.end(await register.metrics());
+  } catch (ex) {
+    res.status(500).send(ex);
+  }
 });
 
 app.use("/api", globalLimiter, apiRouter);

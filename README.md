@@ -1,2 +1,3 @@
-# fman
+# MrFin
+
 Finance Manager

@@ -1,0 +1,30 @@
+const client = require("prom-client");
+
+// Create a Registry which registers the metrics
+const register = new client.Registry();
+
+// Add a default label which is added to all metrics
+register.setDefaultLabels({
+  app: "MrFin-server",
+});
+
+// Enable the collection of default metrics
+client.collectDefaultMetrics({ register });
+
+// Define custom metrics
+
+// HTTP Request Duration Histogram
+const httpRequestDurationMicroseconds = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "status_code"],
+  buckets: [0.1, 0.5, 1, 1.5, 2, 5], // Define buckets for duration in seconds
+});
+
+// Register the custom metrics
+register.registerMetric(httpRequestDurationMicroseconds);
+
+module.exports = {
+  register,
+  httpRequestDurationMicroseconds,
+};

@@ -1,6 +1,7 @@
 const responseTime = require("response-time");
 const {
   httpRequestDurationMicroseconds,
+  httpRequestsActive,
 } = require("../lib/metrics/metrics.service");
 
 // Middleware to normalize routes to avoid high cardinality
@@ -36,4 +37,19 @@ const metricsMiddleware = responseTime((req, res, time) => {
   );
 });
 
-module.exports = { metricsMiddleware };
+// Wrap responseTime with active request tracking
+const wrappedMetricsMiddleware = (req, res, next) => {
+  const normalizePath = normalizeRoute(req);
+
+  // Increment active requests
+  httpRequestsActive.inc({ method: req.method, route: normalizePath });
+
+  // Decrement on finish
+  res.on("finish", () => {
+    httpRequestsActive.dec({ method: req.method, route: normalizePath });
+  });
+
+  metricsMiddleware(req, res, next);
+};
+
+module.exports = { metricsMiddleware: wrappedMetricsMiddleware };

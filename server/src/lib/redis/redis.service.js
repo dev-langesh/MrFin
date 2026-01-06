@@ -1,12 +1,20 @@
 const Redis = require("ioredis");
 const { env } = require("../../config/env");
 
+const { dbConnectionStatus } = require("../metrics/metrics.service");
+
 const redisClient = new Redis(env.REDIS_URL, {
   lazyConnect: true,
 });
 
-redisClient.on("error", (err) => console.log("Redis Client Error", err));
-redisClient.on("connect", () => console.log("Redis Client Connected"));
+redisClient.on("error", (err) => {
+  dbConnectionStatus.set({ type: "redis" }, 0);
+  console.log("Redis Client Error", err);
+});
+redisClient.on("connect", () => {
+  dbConnectionStatus.set({ type: "redis" }, 1);
+  console.log("Redis Client Connected");
+});
 
 async function connectRedis() {
   if (

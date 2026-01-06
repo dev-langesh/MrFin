@@ -9,56 +9,70 @@ const { settingsService } = require("../settings/settings.service");
 const { analyticsService } = require("../analytics/analytics.service");
 const { getGoogleUser } = require("./utils/googleAuth");
 
+const { authEventsTotal } = require("../../lib/metrics/metrics.service");
+
 async function registerUser(data) {
-  const payload = { ...data };
+  try {
+    const payload = { ...data };
 
-  payload.password = await bcrypt.hash(payload.password, 10);
+    payload.password = await bcrypt.hash(payload.password, 10);
 
-  const user = await userService.createUser(payload);
+    const user = await userService.createUser(payload);
 
-  await analyticsService.createAnalytics(user._id);
+    await analyticsService.createAnalytics(user._id);
 
-  if (data.currency) {
-    await settingsService.updateSettings(user._id, {
-      general: { currency: data.currency },
-    });
+    if (data.currency) {
+      await settingsService.updateSettings(user._id, {
+        general: { currency: data.currency },
+      });
+    }
+
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    authEventsTotal.inc({ event: "register", status: "success" });
+    return { user: userObj };
+  } catch (error) {
+    authEventsTotal.inc({ event: "register", status: "failure" });
+    throw error;
   }
-
-  const userObj = user.toObject();
-  delete userObj.password;
-
-  return { user: userObj };
 }
 
 async function loginUser(data) {
-  const { email, password } = data;
-  let user;
-
   try {
-    user = await userService.findUserByEmail(email, true);
+    const { email, password } = data;
+    let user;
+
+    try {
+      user = await userService.findUserByEmail(email, true);
+    } catch (error) {
+      throw new AppError(AuthErrors.INVALID_CREDENTIALS);
+    }
+
+    if (!user.password && user.provider === "google") {
+      throw new AppError(AuthErrors.GOOGLE_LOGIN_REQUIRED);
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new AppError(AuthErrors.INVALID_CREDENTIALS);
+    }
+
+    if (!user.verified) {
+      throw new AppError(AuthErrors.USER_NOT_VERIFIED);
+    }
+
+    const tokens = tokenService.generateTokens(user);
+
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    authEventsTotal.inc({ event: "login", status: "success" });
+    return { user: userObj, tokens };
   } catch (error) {
-    throw new AppError(AuthErrors.INVALID_CREDENTIALS);
+    authEventsTotal.inc({ event: "login", status: "failure" });
+    throw error;
   }
-
-  if (!user.password && user.provider === "google") {
-    throw new AppError(AuthErrors.GOOGLE_LOGIN_REQUIRED);
-  }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    throw new AppError(AuthErrors.INVALID_CREDENTIALS);
-  }
-
-  if (!user.verified) {
-    throw new AppError(AuthErrors.USER_NOT_VERIFIED);
-  }
-
-  const tokens = tokenService.generateTokens(user);
-
-  const userObj = user.toObject();
-  delete userObj.password;
-
-  return { user: userObj, tokens };
 }
 
 async function verifyEmail(otpPayload) {
@@ -106,38 +120,46 @@ async function loginWithGoogle(code) {
 
   const tokens = tokenService.generateTokens(user);
 
+  authEventsTotal.inc({ event: "login", status: "success" });
   return { user, tokens };
 }
 
 async function completeGoogleLogin({ registrationToken, country, currency }) {
-  const decoded = tokenService.verifyToken(registrationToken, "registration");
-  const { googleId, email, name, picture } = decoded;
+  try {
+    const decoded = tokenService.verifyToken(registrationToken, "registration");
+    const { googleId, email, name, picture } = decoded;
 
-  let user = await userService.findUserByEmail(email, false, false);
-  if (user) {
-    throw new AppError(AuthErrors.USER_ALREADY_EXISTS);
-  }
+    let user = await userService.findUserByEmail(email, false, false);
+    if (user) {
+      throw new AppError(AuthErrors.USER_ALREADY_EXISTS);
+    }
 
-  user = await userService.createUser({
-    googleId,
-    email,
-    name,
-    picture,
-    country,
-    provider: "google",
-    verified: true,
-  });
-
-  await analyticsService.createAnalytics(user._id);
-
-  if (currency) {
-    await settingsService.updateSettings(user._id, {
-      general: { currency },
+    user = await userService.createUser({
+      googleId,
+      email,
+      name,
+      picture,
+      country,
+      provider: "google",
+      verified: true,
     });
-  }
 
-  const tokens = tokenService.generateTokens(user);
-  return { user, tokens };
+    await analyticsService.createAnalytics(user._id);
+
+    if (currency) {
+      await settingsService.updateSettings(user._id, {
+        general: { currency },
+      });
+    }
+
+    const tokens = tokenService.generateTokens(user);
+
+    authEventsTotal.inc({ event: "register", status: "success" });
+    return { user, tokens };
+  } catch (error) {
+    authEventsTotal.inc({ event: "register", status: "failure" });
+    throw error;
+  }
 }
 
 async function resetPassword({ otpPayload, password }) {

@@ -88,8 +88,11 @@ async function rotateTokens(refreshToken) {
   }
 }
 
-async function loginWithGoogle(code) {
-  const { googleId, email, name, picture } = await getGoogleUser(code);
+async function loginWithGoogle(code, codeVerifier) {
+  const { googleId, email, name, picture } = await getGoogleUser(
+    code,
+    codeVerifier
+  );
 
   let user = await userService.findUserByEmail(email, false, false);
   if (!user) {

@@ -36,6 +36,11 @@ const AuthErrors = {
     message: "Google login required. Please log in with Google.",
     statusCode: 401,
   },
+  GOOGLE_AUTH_FAILED: {
+    errorCode: 1013,
+    message: "Google authentication failed",
+    statusCode: 401,
+  },
 
   // OTP Errors
   MAX_OTP_ATTEMPTS_REACHED: {

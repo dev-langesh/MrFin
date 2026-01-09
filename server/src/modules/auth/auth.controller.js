@@ -54,8 +54,8 @@ async function rotateTokens(req, res) {
 }
 
 async function loginUserWithGoogle(req, res) {
-  const { code } = req.body;
-  const sres = await authService.loginWithGoogle(code);
+  const { code, codeVerifier } = req.body;
+  const sres = await authService.loginWithGoogle(code, codeVerifier);
 
   if (sres.isNew) {
     return res.json({

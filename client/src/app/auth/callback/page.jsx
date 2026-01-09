@@ -100,7 +100,9 @@ export default function AuthCallback() {
 
     const loginWithGoogle = async () => {
       try {
-        const res = await authApi.googleLogin({ code });
+        const codeVerifier = sessionStorage.getItem("google_code_verifier");
+        const res = await authApi.googleLogin({ code, codeVerifier });
+        sessionStorage.removeItem("google_code_verifier");
 
         if (res.data.isNew) {
           setIsNewUser(true);

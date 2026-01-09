@@ -58,6 +58,10 @@ const googleLoginSchema = z.object({
       .string({ required_error: "Authorization code is required" })
       .trim()
       .min(1, { message: "Authorization code cannot be empty" }),
+    codeVerifier: z
+      .string({ required_error: "Code verifier is required" })
+      .trim()
+      .min(1, { message: "Code verifier cannot be empty" }),
   }),
 });
 

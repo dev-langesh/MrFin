@@ -1,6 +1,51 @@
 version: '3.8'
 
 services:
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: fman-api
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=production
+      - PORT=8000
+      - MONGODB_URI=mongodb://mongo:27017/fman
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ./server/.env
+    depends_on:
+      - mongo
+      - redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    networks:
+      - default
+
+  mongo:
+    image: mongo:latest
+    container_name: fman-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - default
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: fman-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - default
+    restart: unless-stopped
+
   prometheus:
     build:
       context: ./prometheus
@@ -14,7 +59,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus:/prometheus
+      - prometheus_data:/prometheus
 
   grafana:
     image: grafana/grafana:latest
@@ -33,10 +78,14 @@ services:
     restart: unless-stopped
 
 volumes:
-  prometheus:
-    name: prometheus
+  prometheus_data:
+    name: prometheus_data
   grafana_data:
     name: grafana_data
+  mongo_data:
+    name: mongo_data
+  redis_data:
+    name: redis_data
 
 networks:
   default:

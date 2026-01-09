@@ -105,9 +105,20 @@
                     "legendFormat": "RPS",
                     "range": true,
                     "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(http_request_duration_seconds_count{status_code=~\"2.*\"}[1m]))",
+                    "legendFormat": "2xx Success",
+                    "range": true,
+                    "refId": "B"
                 }
             ],
-            "title": "Requests Per Second (RPS)",
+            "title": "Throughput (RPS)",
             "type": "timeseries"
         },
         {
@@ -194,9 +205,20 @@
                     "legendFormat": "P95 Latency",
                     "range": true,
                     "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+                    "legendFormat": "P99 Latency",
+                    "range": true,
+                    "refId": "B"
                 }
             ],
-            "title": "95th Percentile Latency",
+            "title": "Latency (P95 / P99)",
             "type": "timeseries"
         },
         {
@@ -282,191 +304,13 @@
                         "uid": "Prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(http_request_duration_seconds_count{status_code=~\"5.*\"}[1m]))",
-                    "legendFormat": "5xx Errors",
+                    "expr": "sum(rate(http_request_duration_seconds_count{status_code!~\"2.*\"}[1m])) by (status_code)",
+                    "legendFormat": "{{status_code}}",
                     "range": true,
                     "refId": "A"
                 }
             ],
-            "title": "Error Rate (5xx)",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "Prometheus"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "auto",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
-                    },
-                    "unit": "percentunit"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 6,
-                "x": 12,
-                "y": 8
-            },
-            "id": 4,
-            "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                }
-            },
-            "targets": [
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "Prometheus"
-                    },
-                    "editorMode": "code",
-                    "expr": "rate(process_cpu_user_seconds_total[1m])",
-                    "legendFormat": "CPU Usage",
-                    "range": true,
-                    "refId": "A"
-                }
-            ],
-            "title": "CPU Usage",
-            "type": "timeseries"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "Prometheus"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "auto",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "green",
-                                "value": null
-                            }
-                        ]
-                    },
-                    "unit": "bytes"
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 6,
-                "x": 18,
-                "y": 8
-            },
-            "id": 5,
-            "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                }
-            },
-            "targets": [
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "Prometheus"
-                    },
-                    "editorMode": "code",
-                    "expr": "process_resident_memory_bytes",
-                    "legendFormat": "Memory",
-                    "range": true,
-                    "refId": "A"
-                }
-            ],
-            "title": "Memory Usage",
+            "title": "Error Rate (All Non-2xx)",
             "type": "timeseries"
         },
         {
@@ -526,10 +370,10 @@
             "gridPos": {
                 "h": 8,
                 "w": 6,
-                "x": 0,
-                "y": 16
+                "x": 12,
+                "y": 8
             },
-            "id": 6,
+            "id": 4,
             "options": {
                 "legend": {
                     "calcs": [],
@@ -557,114 +401,6 @@
             ],
             "title": "Active Requests",
             "type": "stat"
-        },
-        {
-            "datasource": {
-                "type": "prometheus",
-                "uid": "Prometheus"
-            },
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "thresholds"
-                    },
-                    "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "auto",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [
-                        {
-                            "options": {
-                                "0": {
-                                    "color": "red",
-                                    "index": 1,
-                                    "text": "DOWN"
-                                },
-                                "1": {
-                                    "color": "green",
-                                    "index": 0,
-                                    "text": "UP"
-                                }
-                            },
-                            "type": "value"
-                        }
-                    ],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [
-                            {
-                                "color": "red",
-                                "value": null
-                            },
-                            {
-                                "color": "green",
-                                "value": 1
-                            }
-                        ]
-                    }
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 8,
-                "w": 6,
-                "x": 6,
-                "y": 16
-            },
-            "id": 7,
-            "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom",
-                    "showLegend": true
-                },
-                "tooltip": {
-                    "mode": "single",
-                    "sort": "none"
-                }
-            },
-            "targets": [
-                {
-                    "datasource": {
-                        "type": "prometheus",
-                        "uid": "Prometheus"
-                    },
-                    "editorMode": "code",
-                    "expr": "db_connection_status",
-                    "legendFormat": "{{type}}",
-                    "range": true,
-                    "refId": "A"
-                }
-            ],
-            "title": "DB Connection Status",
-            "type": "state-timeline"
         },
         {
             "datasource": {
@@ -715,14 +451,315 @@
                                 "value": null
                             }
                         ]
-                    }
+                    },
+                    "unit": "s"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 8
+            },
+            "id": 5,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "nodejs_eventloop_lag_seconds",
+                    "legendFormat": "Event Loop Lag",
+                    "range": true,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "nodejs_eventloop_lag_mean_seconds",
+                    "legendFormat": "Event Loop Mean Lag",
+                    "range": true,
+                    "refId": "B"
+                }
+            ],
+            "title": "Event Loop Lag",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "Prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "bytes"
                 },
                 "overrides": []
             },
             "gridPos": {
                 "h": 8,
                 "w": 12,
+                "x": 0,
+                "y": 16
+            },
+            "id": 6,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "nodejs_heap_size_used_bytes",
+                    "legendFormat": "Heap Used",
+                    "range": true,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "nodejs_heap_size_total_bytes",
+                    "legendFormat": "Heap Total",
+                    "range": true,
+                    "refId": "B"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "nodejs_external_memory_bytes",
+                    "legendFormat": "External Memory",
+                    "range": true,
+                    "refId": "C"
+                }
+            ],
+            "title": "Memory Usage (Heap/External)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "Prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "s"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 6,
                 "x": 12,
+                "y": 16
+            },
+            "id": 7,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "single",
+                    "sort": "none"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "Prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "rate(nodejs_gc_duration_seconds_sum[1m])",
+                    "legendFormat": "GC Duration (1m rate)",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
+            "title": "GC Duration",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "Prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "percentunit"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
                 "y": 16
             },
             "id": 8,
@@ -745,14 +782,14 @@
                         "uid": "Prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(increase(auth_events_total[1h])) by (event, status)",
-                    "legendFormat": "{{event}} - {{status}}",
+                    "expr": "rate(process_cpu_user_seconds_total[1m])",
+                    "legendFormat": "CPU Usage",
                     "range": true,
                     "refId": "A"
                 }
             ],
-            "title": "Auth Events (Last 1h)",
-            "type": "barchart"
+            "title": "CPU Usage",
+            "type": "timeseries"
         }
     ],
     "refresh": "5s",

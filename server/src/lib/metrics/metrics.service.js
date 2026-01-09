@@ -28,30 +28,12 @@ const httpRequestsActive = new client.Gauge({
   labelNames: ["method", "route"],
 });
 
-// Database Connection Status Gauge
-const dbConnectionStatus = new client.Gauge({
-  name: "db_connection_status",
-  help: "Status of database connection (1 = connected, 0 = disconnected)",
-  labelNames: ["type"], // 'mongo', 'redis'
-});
-
-// Auth Events Counter
-const authEventsTotal = new client.Counter({
-  name: "auth_events_total",
-  help: "Total number of authentication events",
-  labelNames: ["event", "status"], // event: login, register; status: success, failure
-});
-
 // Register the custom metrics
 register.registerMetric(httpRequestDurationMicroseconds);
 register.registerMetric(httpRequestsActive);
-register.registerMetric(dbConnectionStatus);
-register.registerMetric(authEventsTotal);
 
 module.exports = {
   register,
   httpRequestDurationMicroseconds,
   httpRequestsActive,
-  dbConnectionStatus,
-  authEventsTotal,
 };

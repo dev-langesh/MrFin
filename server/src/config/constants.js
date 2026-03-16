@@ -6,7 +6,7 @@ const roles = {
   GUEST: "guest",
 };
 
-const txnTypes = ["income", "expense", "investment", "transfer"];
+const txnTypes = ["income", "expense", "transfer"];
 
 const defaultCategories = [
   { txnType: "income", category: "Salary" },
@@ -21,12 +21,7 @@ const defaultCategories = [
   { txnType: "expense", category: "Bills" },
   { txnType: "expense", category: "Shopping" },
   { txnType: "expense", category: "Others" },
-  { txnType: "investment", category: "Stocks" },
-  { txnType: "investment", category: "Mutual Funds" },
-  { txnType: "investment", category: "Real Estate" },
-  { txnType: "investment", category: "Gold" },
-  { txnType: "investment", category: "Crypto" },
-  { txnType: "investment", category: "Others" },
+
 ];
 
 const otp = {

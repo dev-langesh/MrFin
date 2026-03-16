@@ -92,13 +92,13 @@ describe("Analytics Integration", () => {
         {
           userId: user._id,
           date: today,
-          totals: { income: 100, expense: 50, investment: 20 },
+          totals: { income: 100, expense: 50 },
           incomeCategories: { Salary: 100 },
         },
         {
           userId: user._id,
           date: yesterday,
-          totals: { income: 200, expense: 100, investment: 0 },
+          totals: { income: 200, expense: 100 },
           expenseCategories: { Food: 100 },
         },
       ]);
@@ -108,7 +108,7 @@ describe("Analytics Integration", () => {
         userId: user._id,
         year: today.getFullYear(),
         month: today.getMonth() + 1,
-        totals: { income: 500, expense: 200, investment: 50 },
+        totals: { income: 500, expense: 200 },
       });
     });
 

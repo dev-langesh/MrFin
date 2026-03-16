@@ -121,7 +121,6 @@ describe("Analytics Security Suite", () => {
         totals: {
           income: victimData.income,
           expense: victimData.expense,
-          investment: 0,
         },
         incomeCategories: { Salary: victimData.income },
       });

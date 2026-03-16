@@ -110,24 +110,6 @@ describe("Transaction Integration", () => {
       expect(analytics.expenses.total).toBe(50);
     });
 
-    it("should create an investment transaction", async () => {
-      const payload = {
-        amount: 500,
-        txnType: "investment",
-        category: "Stocks",
-        txnDate: new Date().toISOString(),
-        description: "Stock Purchase",
-      };
-
-      const res = await request(app)
-        .post("/api/transactions")
-        .set("Cookie", [`accessToken=${token}`])
-        .send(payload);
-      expect(res.status).toBe(201);
-
-      const analytics = await Analytics.findOne({ userId });
-      expect(analytics.investments.total).toBe(500);
-    });
 
     it("should create a transfer transaction and NOT update analytics", async () => {
       const payload = {
@@ -154,7 +136,6 @@ describe("Transaction Integration", () => {
 
       expect(analytics.income.total).toBe(0);
       expect(analytics.expenses.total).toBe(0);
-      expect(analytics.investments.total).toBe(0);
       expect(analytics.cashFlow.total).toBe(0);
 
       const daily = await DailyAnalytics.findOne({ userId });

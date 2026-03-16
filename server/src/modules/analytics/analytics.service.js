@@ -56,12 +56,10 @@ function rolloverPeriods(analytics, date) {
   ) {
     analytics.previousIncome.month = analytics.income.month;
     analytics.previousExpenses.month = analytics.expenses.month;
-    analytics.previousInvestments.month = analytics.investments.month;
 
     analytics.income.month = 0;
     analytics.expenses.month = 0;
     analytics.cashFlow.month = 0;
-    analytics.investments.month = 0;
 
     analytics.lastUpdated.month = now;
   }
@@ -74,12 +72,10 @@ function rolloverPeriods(analytics, date) {
     analytics.previousIncome.quarter = analytics.income.quarter;
     analytics.previousExpenses.quarter = analytics.expenses.quarter;
     analytics.previousCashFlow.quarter = analytics.cashFlow.quarter;
-    analytics.previousInvestments.quarter = analytics.investments.quarter;
 
     analytics.income.quarter = 0;
     analytics.expenses.quarter = 0;
     analytics.cashFlow.quarter = 0;
-    analytics.investments.quarter = 0;
 
     analytics.lastUpdated.quarter = now;
   }
@@ -89,12 +85,10 @@ function rolloverPeriods(analytics, date) {
     analytics.previousIncome.annual = analytics.income.annual;
     analytics.previousExpenses.annual = analytics.expenses.annual;
     analytics.previousCashFlow.annual = analytics.cashFlow.annual;
-    analytics.previousInvestments.annual = analytics.investments.annual;
 
     analytics.income.annual = 0;
     analytics.expenses.annual = 0;
     analytics.cashFlow.annual = 0;
-    analytics.investments.annual = 0;
 
     analytics.lastUpdated.year = now;
   }
@@ -146,7 +140,6 @@ async function updateTimeSeries(userId, date, type, amount, category) {
 async function updateAnalyticsOnAdd(txn, userId_manual) {
   let income = 0;
   let expenses = 0;
-  let investments = 0;
 
   const userId = txn.userId || userId_manual;
   const date = txn.txnDate || new Date();
@@ -158,7 +151,6 @@ async function updateAnalyticsOnAdd(txn, userId_manual) {
 
   if (type === "income") income = amount;
   else if (type === "expense") expenses = amount;
-  else if (type === "investment") investments = amount;
 
   // Update Time Series
   await updateTimeSeries(userId, date, type, amount, category);
@@ -208,11 +200,9 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
 
   let income = 0;
   let expenses = 0;
-  let investments = 0;
 
   if (type === "income") income = amount;
   else if (type === "expense") expenses = amount;
-  else if (type === "investment") investments = amount;
 
   const analytics = await getAnalytics(userId);
 
@@ -234,7 +224,7 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
   // Totals
   if (income) incUpdate["income.total"] = income;
   if (expenses) incUpdate["expenses.total"] = expenses;
-  if (investments) incUpdate["investments.total"] = investments;
+
   if (income || expenses) incUpdate["cashFlow.total"] = income - expenses;
 
   // Period specific logic
@@ -250,9 +240,7 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
     if (typeof expenses === "number")
       incUpdate["expenses.annual"] =
         (incUpdate["expenses.annual"] || 0) + expenses;
-    if (typeof investments === "number")
-      incUpdate["investments.annual"] =
-        (incUpdate["investments.annual"] || 0) + investments;
+
     if (income || expenses)
       incUpdate["cashFlow.annual"] =
         (incUpdate["cashFlow.annual"] || 0) + (income - expenses);
@@ -264,9 +252,7 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
       if (typeof expenses === "number")
         incUpdate["expenses.quarter"] =
           (incUpdate["expenses.quarter"] || 0) + expenses;
-      if (typeof investments === "number")
-        incUpdate["investments.quarter"] =
-          (incUpdate["investments.quarter"] || 0) + investments;
+
       if (income || expenses)
         incUpdate["cashFlow.quarter"] =
           (incUpdate["cashFlow.quarter"] || 0) + (income - expenses);
@@ -278,9 +264,7 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
       if (typeof expenses === "number")
         incUpdate["expenses.month"] =
           (incUpdate["expenses.month"] || 0) + expenses;
-      if (typeof investments === "number")
-        incUpdate["investments.month"] =
-          (incUpdate["investments.month"] || 0) + investments;
+
       if (income || expenses)
         incUpdate["cashFlow.month"] =
           (incUpdate["cashFlow.month"] || 0) + (income - expenses);
@@ -300,9 +284,7 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
     if (income || expenses)
       incUpdate["previousCashFlow.annual"] =
         (incUpdate["previousCashFlow.annual"] || 0) + (income - expenses);
-    if (typeof investments === "number")
-      incUpdate["previousInvestments.annual"] =
-        (incUpdate["previousInvestments.annual"] || 0) + investments;
+
   }
 
   // Previous Quarter Check (Handles year rollover)
@@ -322,9 +304,7 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
     if (income || expenses)
       incUpdate["previousCashFlow.quarter"] =
         (incUpdate["previousCashFlow.quarter"] || 0) + (income - expenses);
-    if (typeof investments === "number")
-      incUpdate["previousInvestments.quarter"] =
-        (incUpdate["previousInvestments.quarter"] || 0) + investments;
+
   }
 
   // Previous Month Check (Handles year rollover)
@@ -344,9 +324,7 @@ async function updateAnalyticsOnAdd_SummaryOnly(txn) {
     if (income || expenses)
       incUpdate["previousCashFlow.month"] =
         (incUpdate["previousCashFlow.month"] || 0) + (income - expenses);
-    if (typeof investments === "number")
-      incUpdate["previousInvestments.month"] =
-        (incUpdate["previousInvestments.month"] || 0) + investments;
+
   }
 
   const updatedAnalytics = await Analytics.findOneAndUpdate(
@@ -403,18 +381,7 @@ function updateCalculatedChanges(analytics) {
     analytics.previousCashFlow.annual
   );
 
-  analytics.investmentsChange.month = calcChange(
-    analytics.investments.month,
-    analytics.previousInvestments.month
-  );
-  analytics.investmentsChange.quarter = calcChange(
-    analytics.investments.quarter,
-    analytics.previousInvestments.quarter
-  );
-  analytics.investmentsChange.annual = calcChange(
-    analytics.investments.annual,
-    analytics.previousInvestments.annual
-  );
+
 }
 
 /**
@@ -446,7 +413,6 @@ async function updateAnalyticsBatch(transactions, userId) {
   // Aggregate totals by period
   let totalIncome = 0;
   let totalExpenses = 0;
-  let totalInvestments = 0;
 
   // Track changes for current periods
   let monthIncome = 0;
@@ -455,9 +421,7 @@ async function updateAnalyticsBatch(transactions, userId) {
   let quarterExpenses = 0;
   let annualIncome = 0;
   let annualExpenses = 0;
-  let annualInvestments = 0;
-  let monthInvestments = 0;
-  let quarterInvestments = 0;
+
 
   // Track changes for previous periods (if transactions are backdated)
   let prevMonthIncome = 0;
@@ -466,16 +430,14 @@ async function updateAnalyticsBatch(transactions, userId) {
   let prevQuarterExpenses = 0;
   let prevAnnualIncome = 0;
   let prevAnnualExpenses = 0;
-  let prevAnnualInvestments = 0;
-  let prevMonthInvestments = 0;
-  let prevQuarterInvestments = 0;
+
 
   // Ensure periods are rolled over to current time
   rolloverPeriods(analytics, new Date());
 
   // Prepare aggregations for Time Series Batch Update
-  const dailyAgg = {}; // YYYY-MM-DD -> { date, totals: {...}, incomeCategories: {...}, expenseCategories: {...}, investmentCategories: {...} }
-  const monthlyAgg = {}; // YYYY-MM -> { year, month, totals: {...}, incomeCategories: {...}, expenseCategories: {...}, investmentCategories: {...} }
+  const dailyAgg = {}; // YYYY-MM-DD -> { date, totals: {...}, incomeCategories: {...}, expenseCategories: {...} }
+  const monthlyAgg = {}; // YYYY-MM -> { year, month, totals: {...}, incomeCategories: {...}, expenseCategories: {...} }
 
   for (const txn of transactions) {
     // Skip transfer for analytics
@@ -510,16 +472,6 @@ async function updateAnalyticsBatch(transactions, userId) {
       if (year === currentYear - 1) prevAnnualExpenses += amount;
       if (month === currentMonth - 1) prevMonthExpenses += amount;
       if (quarter === currentQuarter - 1) prevQuarterExpenses += amount;
-    } else if (txn.txnType === "investment") {
-      totalInvestments += amount;
-      if (year === currentYear) {
-        annualInvestments += amount;
-        if (month === currentMonth) monthInvestments += amount;
-        if (quarter === currentQuarter) quarterInvestments += amount;
-      }
-      if (year === currentYear - 1) prevAnnualInvestments += amount;
-      if (month === currentMonth - 1) prevMonthInvestments += amount;
-      if (quarter === currentQuarter - 1) prevQuarterInvestments += amount;
     }
 
     // Time Series Aggregation
@@ -530,10 +482,9 @@ async function updateAnalyticsBatch(transactions, userId) {
     if (!dailyAgg[dayKey]) {
       dailyAgg[dayKey] = {
         date: new Date(Date.UTC(year, month, date.getDate())),
-        totals: { income: 0, expense: 0, investment: 0 },
+        totals: { income: 0, expense: 0 },
         incomeCategories: {},
         expenseCategories: {},
-        investmentCategories: {},
       };
     }
     if (txn.txnType === "income") {
@@ -548,22 +499,16 @@ async function updateAnalyticsBatch(transactions, userId) {
         dailyAgg[dayKey].expenseCategories[category] = 0;
       dailyAgg[dayKey].expenseCategories[category] += amount;
     }
-    if (txn.txnType === "investment") {
-      dailyAgg[dayKey].totals.investment += amount;
-      if (!dailyAgg[dayKey].investmentCategories[category])
-        dailyAgg[dayKey].investmentCategories[category] = 0;
-      dailyAgg[dayKey].investmentCategories[category] += amount;
-    }
+
 
     // Monthly Aggregation
     if (!monthlyAgg[monthKey]) {
       monthlyAgg[monthKey] = {
         year,
         month: month + 1,
-        totals: { income: 0, expense: 0, investment: 0 },
+        totals: { income: 0, expense: 0 },
         incomeCategories: {},
         expenseCategories: {},
-        investmentCategories: {},
       };
     }
     if (txn.txnType === "income") {
@@ -578,18 +523,12 @@ async function updateAnalyticsBatch(transactions, userId) {
         monthlyAgg[monthKey].expenseCategories[category] = 0;
       monthlyAgg[monthKey].expenseCategories[category] += amount;
     }
-    if (txn.txnType === "investment") {
-      monthlyAgg[monthKey].totals.investment += amount;
-      if (!monthlyAgg[monthKey].investmentCategories[category])
-        monthlyAgg[monthKey].investmentCategories[category] = 0;
-      monthlyAgg[monthKey].investmentCategories[category] += amount;
-    }
+
   }
 
   // Apply updates
   analytics.income.total += totalIncome;
   analytics.expenses.total += totalExpenses;
-  analytics.investments.total += totalInvestments;
 
   analytics.income.month += monthIncome;
   analytics.expenses.month += monthExpenses;
@@ -597,9 +536,7 @@ async function updateAnalyticsBatch(transactions, userId) {
   analytics.expenses.quarter += quarterExpenses;
   analytics.income.annual += annualIncome;
   analytics.expenses.annual += annualExpenses;
-  analytics.investments.month += monthInvestments;
-  analytics.investments.quarter += quarterInvestments;
-  analytics.investments.annual += annualInvestments;
+
 
   analytics.previousIncome.month += prevMonthIncome;
   analytics.previousExpenses.month += prevMonthExpenses;
@@ -607,9 +544,7 @@ async function updateAnalyticsBatch(transactions, userId) {
   analytics.previousExpenses.quarter += prevQuarterExpenses;
   analytics.previousIncome.annual += prevAnnualIncome;
   analytics.previousExpenses.annual += prevAnnualExpenses;
-  analytics.previousInvestments.month += prevMonthInvestments;
-  analytics.previousInvestments.quarter += prevQuarterInvestments;
-  analytics.previousInvestments.annual += prevAnnualInvestments;
+
 
   // Recalculate Cash Flows
   analytics.cashFlow.total = analytics.income.total - analytics.expenses.total;
@@ -666,18 +601,7 @@ async function updateAnalyticsBatch(transactions, userId) {
     analytics.previousCashFlow.annual
   );
 
-  analytics.investmentsChange.month = calcChange(
-    analytics.investments.month,
-    analytics.previousInvestments.month
-  );
-  analytics.investmentsChange.quarter = calcChange(
-    analytics.investments.quarter,
-    analytics.previousInvestments.quarter
-  );
-  analytics.investmentsChange.annual = calcChange(
-    analytics.investments.annual,
-    analytics.previousInvestments.annual
-  );
+
 
   // Execute bulk updates for Time Series
   const dailyOps = Object.values(dailyAgg).map((item) => ({
@@ -687,7 +611,6 @@ async function updateAnalyticsBatch(transactions, userId) {
         $inc: {
           "totals.income": item.totals.income,
           "totals.expense": item.totals.expense,
-          "totals.investment": item.totals.investment,
           ...Object.entries(item.incomeCategories).reduce((acc, [cat, val]) => {
             acc[`incomeCategories.${cat}`] = val;
             return acc;
@@ -699,13 +622,7 @@ async function updateAnalyticsBatch(transactions, userId) {
             },
             {}
           ),
-          ...Object.entries(item.investmentCategories).reduce(
-            (acc, [cat, val]) => {
-              acc[`investmentCategories.${cat}`] = val;
-              return acc;
-            },
-            {}
-          ),
+
         },
       },
       upsert: true,
@@ -719,7 +636,6 @@ async function updateAnalyticsBatch(transactions, userId) {
         $inc: {
           "totals.income": item.totals.income,
           "totals.expense": item.totals.expense,
-          "totals.investment": item.totals.investment,
           ...Object.entries(item.incomeCategories).reduce((acc, [cat, val]) => {
             acc[`incomeCategories.${cat}`] = val;
             return acc;
@@ -731,13 +647,7 @@ async function updateAnalyticsBatch(transactions, userId) {
             },
             {}
           ),
-          ...Object.entries(item.investmentCategories).reduce(
-            (acc, [cat, val]) => {
-              acc[`investmentCategories.${cat}`] = val;
-              return acc;
-            },
-            {}
-          ),
+
         },
       },
       upsert: true,

@@ -279,11 +279,6 @@ describe("Analytics Service", () => {
           txnDate: new Date(), // Current
         },
         {
-          amount: 200,
-          txnType: "investment",
-          txnDate: new Date(), // Current
-        },
-        {
           amount: 1000,
           txnType: "income",
           txnDate: new Date(
@@ -297,7 +292,6 @@ describe("Analytics Service", () => {
       const updated = await Analytics.findOne({ userId });
       expect(updated.income.total).toBe(1100); // 100 + 1000
       expect(updated.expenses.total).toBe(50);
-      expect(updated.investments.total).toBe(200);
 
       // Current Month
       expect(updated.income.month).toBe(100);

@@ -34,10 +34,8 @@ async function verifyConsistency(userId, currentDate) {
       expectedDaily[startOfDay] = {
         income: 0,
         expense: 0,
-        investment: 0,
         incomeCategories: {},
         expenseCategories: {},
-        investmentCategories: {},
       };
     }
     const bucket = expectedDaily[startOfDay];
@@ -51,10 +49,6 @@ async function verifyConsistency(userId, currentDate) {
       bucket.expense += amt;
       bucket.expenseCategories[cat] =
         (bucket.expenseCategories[cat] || 0) + amt;
-    } else if (txn.txnType === "investment") {
-      bucket.investment += amt;
-      bucket.investmentCategories[cat] =
-        (bucket.investmentCategories[cat] || 0) + amt;
     }
   });
 
@@ -66,13 +60,11 @@ async function verifyConsistency(userId, currentDate) {
     if (!expected) {
       expect(doc.totals.income).toBe(0);
       expect(doc.totals.expense).toBe(0);
-      expect(doc.totals.investment).toBe(0);
       return;
     }
 
     expect(doc.totals.income).toBe(expected.income);
     expect(doc.totals.expense).toBe(expected.expense);
-    expect(doc.totals.investment).toBe(expected.investment);
 
     // Check categories
     for (const [cat, val] of Object.entries(expected.incomeCategories)) {
@@ -81,9 +73,7 @@ async function verifyConsistency(userId, currentDate) {
     for (const [cat, val] of Object.entries(expected.expenseCategories)) {
       expect(doc.expenseCategories[cat]).toBe(val);
     }
-    for (const [cat, val] of Object.entries(expected.investmentCategories)) {
-      expect(doc.investmentCategories[cat]).toBe(val);
-    }
+
   });
 
   // 4. Compute EXPECTED Monthly
@@ -99,10 +89,8 @@ async function verifyConsistency(userId, currentDate) {
       expectedMonthly[key] = {
         income: 0,
         expense: 0,
-        investment: 0,
         incomeCategories: {},
         expenseCategories: {},
-        investmentCategories: {},
       };
     }
     const bucket = expectedMonthly[key];
@@ -116,10 +104,6 @@ async function verifyConsistency(userId, currentDate) {
       bucket.expense += amt;
       bucket.expenseCategories[cat] =
         (bucket.expenseCategories[cat] || 0) + amt;
-    } else if (txn.txnType === "investment") {
-      bucket.investment += amt;
-      bucket.investmentCategories[cat] =
-        (bucket.investmentCategories[cat] || 0) + amt;
     }
   });
 
@@ -131,13 +115,11 @@ async function verifyConsistency(userId, currentDate) {
     if (!expected) {
       expect(doc.totals.income).toBe(0);
       expect(doc.totals.expense).toBe(0);
-      expect(doc.totals.investment).toBe(0);
       return;
     }
 
     expect(doc.totals.income).toBe(expected.income);
     expect(doc.totals.expense).toBe(expected.expense);
-    expect(doc.totals.investment).toBe(expected.investment);
 
     for (const [cat, val] of Object.entries(expected.incomeCategories)) {
       expect(doc.incomeCategories[cat]).toBe(val);
@@ -145,9 +127,7 @@ async function verifyConsistency(userId, currentDate) {
     for (const [cat, val] of Object.entries(expected.expenseCategories)) {
       expect(doc.expenseCategories[cat]).toBe(val);
     }
-    for (const [cat, val] of Object.entries(expected.investmentCategories)) {
-      expect(doc.investmentCategories[cat]).toBe(val);
-    }
+
   });
 
   // 5. Compute EXPECTED Summary (Analytics)
@@ -177,10 +157,8 @@ async function verifyConsistency(userId, currentDate) {
   const expSummary = {
     income: { total: 0, annual: 0, quarter: 0, month: 0 },
     expenses: { total: 0, annual: 0, quarter: 0, month: 0 },
-    investments: { total: 0, annual: 0, quarter: 0, month: 0 },
     previousIncome: { annual: 0, quarter: 0, month: 0 },
     previousExpenses: { annual: 0, quarter: 0, month: 0 },
-    previousInvestments: { annual: 0, quarter: 0, month: 0 },
   };
 
   txns.forEach((txn) => {
@@ -194,15 +172,11 @@ async function verifyConsistency(userId, currentDate) {
     const typeKey =
       txn.txnType === "income"
         ? "income"
-        : txn.txnType === "expense"
-        ? "expenses"
-        : "investments";
+        : "expenses";
     const prevKey =
       txn.txnType === "income"
         ? "previousIncome"
-        : txn.txnType === "expense"
-        ? "previousExpenses"
-        : "previousInvestments";
+        : "previousExpenses";
 
     // Total
     expSummary[typeKey].total += amt;
@@ -223,14 +197,14 @@ async function verifyConsistency(userId, currentDate) {
   // Verify Summary
   expect(storedAnalytics).toBeDefined();
 
-  ["income", "expenses", "investments"].forEach((k) => {
+  ["income", "expenses"].forEach((k) => {
     expect(storedAnalytics[k].total).toBe(expSummary[k].total);
     expect(storedAnalytics[k].annual).toBe(expSummary[k].annual);
     expect(storedAnalytics[k].quarter).toBe(expSummary[k].quarter);
     expect(storedAnalytics[k].month).toBe(expSummary[k].month);
   });
 
-  ["previousIncome", "previousExpenses", "previousInvestments"].forEach((k) => {
+  ["previousIncome", "previousExpenses"].forEach((k) => {
     expect(storedAnalytics[k].annual).toBe(expSummary[k].annual);
     expect(storedAnalytics[k].quarter).toBe(expSummary[k].quarter);
     expect(storedAnalytics[k].month).toBe(expSummary[k].month);
@@ -312,9 +286,9 @@ describe("Transaction Consistency Test Suite", () => {
       {
         label: "Prev Quarter",
         date: new Date(2025, 1, 10),
-        type: "investment",
+        type: "income",
         amount: 500,
-        category: "Stocks",
+        category: "Freelance",
       },
       {
         label: "Prev Year",
@@ -407,7 +381,7 @@ describe("Transaction Consistency Test Suite", () => {
     // Perform 50 random operations (reduced from 200 for speed in CI/Local, usually 50 is enough for check)
     // Or keep 200 if robust. Let's do 100.
     const ids = [];
-    const types = ["income", "expense", "investment", "transfer"];
+    const types = ["income", "expense", "transfer"];
     const categories = ["A", "B", "C", "D", "E"];
     const ITERATIONS = 100;
 
@@ -531,9 +505,9 @@ describe("Transaction Consistency Test Suite", () => {
       },
       {
         txnDate: new Date(2025, 4, 15).toISOString(), // Prev month
-        txnType: "investment",
+        txnType: "expense",
         amount: 1000,
-        category: "BulkInvest",
+        category: "BulkExpense",
       },
     ];
 

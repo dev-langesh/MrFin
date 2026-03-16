@@ -49,10 +49,10 @@ export default function TransactionPage() {
   const [summaryPeriod, setSummaryPeriod] = useState("quarter");
   const [income, setIncome] = useState([]);
   const [expense, setExpense] = useState([]);
-  const [investment, setInvestment] = useState([]);
+
   const [incomeDistribution, setIncomeDistribution] = useState([]);
   const [expenseDistribution, setExpenseDistribution] = useState([]);
-  const [investmentDistribution, setInvestmentDistribution] = useState([]);
+
   const [timeRange, setTimeRange] = useState({
     startDate: null,
     endDate: null,
@@ -60,8 +60,7 @@ export default function TransactionPage() {
   // Hover states for synchronized highlighting
   const [hoveredIncomeCategory, setHoveredIncomeCategory] = useState(null);
   const [hoveredExpenseCategory, setHoveredExpenseCategory] = useState(null);
-  const [hoveredInvestmentCategory, setHoveredInvestmentCategory] =
-    useState(null);
+
   const [loading, setLoading] = useState(true);
 
   async function fetchData() {
@@ -82,13 +81,9 @@ export default function TransactionPage() {
           ...payload,
           txnType: "expense",
         }),
-        analyticsService.getCategoryDistribution({
-          ...payload,
-          txnType: "investment",
-        }),
       ]);
 
-      const [seriesData, incomeDist, expenseDist, investmentDist] = await req;
+      const [seriesData, incomeDist, expenseDist] = await req;
 
       const processSeries = (data, key) => {
         return data.map((item) => {
@@ -103,7 +98,7 @@ export default function TransactionPage() {
 
       const incomeData = processSeries(seriesData, "income");
       const expenseData = processSeries(seriesData, "expense");
-      const investmentData = processSeries(seriesData, "investment");
+
 
       const hasData = (data) => data.some((item) => item.amount > 0);
 
@@ -114,15 +109,15 @@ export default function TransactionPage() {
 
       const incomeDistData = filterZero(incomeDist);
       const expenseDistData = filterZero(expenseDist);
-      const investmentDistData = filterZero(investmentDist);
+
 
       setIncome(hasData(incomeData) ? incomeData : []);
       setExpense(hasData(expenseData) ? expenseData : []);
-      setInvestment(hasData(investmentData) ? investmentData : []);
+
 
       setIncomeDistribution(incomeDistData);
       setExpenseDistribution(expenseDistData);
-      setInvestmentDistribution(investmentDistData);
+
 
       const checkDir = (data, setDir) => {
         if (!data || data.length === 0) return;
@@ -203,17 +198,7 @@ export default function TransactionPage() {
     }, {});
   }, [expenseDistribution]);
 
-  const investmentStackedKeys = useMemo(
-    () => investmentDistribution.map((i) => i.name),
-    [investmentDistribution]
-  );
-  const investmentStackedColors = useMemo(() => {
-    return investmentDistribution.reduce((acc, item, index) => {
-      const COLORS = PI_CHART_COLOR_SETS.investment;
-      acc[item.name] = COLORS[Math.min(index, COLORS.length - 1)];
-      return acc;
-    }, {});
-  }, [investmentDistribution]);
+
 
   // checkDir logic needs to be moved or memoized if it causes re-renders but it sets state so its fine.
 
@@ -346,47 +331,6 @@ export default function TransactionPage() {
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 items-stretch">
-        <div className="flex-1">
-          {loading ? (
-            <Skeleton className="h-[350px] w-full rounded-sm" />
-          ) : (
-            <ChartCard
-              title="Investment Over Time"
-              data={investment}
-              areaColor="chart-blue"
-              barColor="chart-blue-700"
-              label="Investment"
-              yKey="amount"
-              xKey="_id"
-              isMonthly={
-                timeRange.endDate && timeRange.startDate
-                  ? new Date(timeRange.endDate) -
-                      new Date(timeRange.startDate) >
-                    31536000000
-                  : false
-              }
-              stackedKeys={investmentStackedKeys}
-              stackedColors={investmentStackedColors}
-              hoveredCategory={hoveredInvestmentCategory}
-              setHoveredCategory={setHoveredInvestmentCategory}
-            />
-          )}
-        </div>
-        <div className="w-full md:w-[350px]">
-          {loading ? (
-            <Skeleton className="h-[300px] w-full rounded-sm" />
-          ) : (
-            <CategoryDistribution
-              data={investmentDistribution}
-              title="Investment Portfolio"
-              variant="investment"
-              hoveredCategory={hoveredInvestmentCategory}
-              setHoveredCategory={setHoveredInvestmentCategory}
-            />
-          )}
-        </div>
-      </div>
     </div>
   );
 }

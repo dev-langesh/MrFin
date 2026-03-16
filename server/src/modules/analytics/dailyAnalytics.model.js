@@ -21,7 +21,6 @@ const dailyAnalyticsSchema = new mongoose.Schema(
     totals: {
       income: { type: Number, default: 0 },
       expense: { type: Number, default: 0 },
-      investment: { type: Number, default: 0 },
     },
 
     // category level aggregation
@@ -35,11 +34,7 @@ const dailyAnalyticsSchema = new mongoose.Schema(
       of: Number,
       default: {},
     },
-    investmentCategories: {
-      type: Map,
-      of: Number,
-      default: {},
-    },
+
   },
   { timestamps: true }
 );

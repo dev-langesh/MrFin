@@ -140,16 +140,16 @@ describe("Analytics Module: The 'Production Ready' Audit Suite", () => {
       const txn = {
         userId,
         amount: 200,
-        txnType: "investment",
+        txnType: "expense",
         txnDate: oldDate,
-        category: "Stocks",
+        category: "Shopping",
       };
 
       await AnalyticsService.updateAnalyticsOnAdd(txn);
       let analytics = await AnalyticsService.getAnalytics(userId);
 
-      expect(analytics.investments.month).toBe(0);
-      expect(analytics.previousInvestments.month).toBe(200);
+      expect(analytics.expenses.month).toBe(0);
+      expect(analytics.previousExpenses.month).toBe(200);
 
       // 2. Move to May (Current Month)
       const newTxn = { ...txn, txnDate: now };
@@ -158,9 +158,9 @@ describe("Analytics Module: The 'Production Ready' Audit Suite", () => {
 
       analytics = await AnalyticsService.getAnalytics(userId);
 
-      expect(analytics.previousInvestments.month).toBe(0);
-      expect(analytics.investments.month).toBe(200);
-      expect(analytics.investments.quarter).toBe(200); // Both Apr and May turn Q2
+      expect(analytics.previousExpenses.month).toBe(0);
+      expect(analytics.expenses.month).toBe(200);
+      expect(analytics.expenses.quarter).toBe(200); // Both Apr and May turn Q2
     });
   });
 

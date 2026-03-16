@@ -85,7 +85,6 @@ async function getCategoryDistribution(
   // Map type to correct field
   let categoryField = "expenseCategories";
   if (type === "income") categoryField = "incomeCategories";
-  else if (type === "investment") categoryField = "investmentCategories";
 
   const oneYear = 365 * 24 * 60 * 60 * 1000;
   const isLongRange = end - start > oneYear;
